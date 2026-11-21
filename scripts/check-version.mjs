@@ -5,12 +5,12 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const constantsPath = resolve(
   repositoryRoot,
-  "custom_components/watchzone/const.py",
+  "custom_components/camera_optics/const.py",
 );
 const frontendPackagePath = resolve(repositoryRoot, "frontend/package.json");
 const manifestPath = resolve(
   repositoryRoot,
-  "custom_components/watchzone/manifest.json",
+  "custom_components/camera_optics/manifest.json",
 );
 
 const constants = await readFile(constantsPath, "utf8");
@@ -49,4 +49,4 @@ try {
   }
 }
 
-console.log(`WatchZone version ${version} is consistent.`);
+console.log(`CameraOptics version ${version} is consistent.`);

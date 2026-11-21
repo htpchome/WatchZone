@@ -8,12 +8,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.watchzone.backend_log import BackendDiagnosticLog
-from custom_components.watchzone.const import DOMAIN
-from custom_components.watchzone.diagnostics import (
+from custom_components.camera_optics.backend_log import BackendDiagnosticLog
+from custom_components.camera_optics.const import DOMAIN
+from custom_components.camera_optics.diagnostics import (
     async_get_config_entry_diagnostics,
 )
-from custom_components.watchzone.runtime import WatchZoneRuntime
+from custom_components.camera_optics.runtime import CameraOpticsRuntime
 
 
 async def test_diagnostics_returns_detached_backend_snapshot(
@@ -28,7 +28,7 @@ async def test_diagnostics_returns_detached_backend_snapshot(
 
         result = await async_get_config_entry_diagnostics(
             hass,
-            cast(ConfigEntry[WatchZoneRuntime], cast(Any, entry)),
+            cast(ConfigEntry[CameraOpticsRuntime], cast(Any, entry)),
         )
         snapshot = result["backend_log"]
         assert isinstance(snapshot, dict)

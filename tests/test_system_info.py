@@ -7,18 +7,20 @@ import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import __version__ as HA_VERSION
 
-from custom_components.watchzone.const import VERSION
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.const import VERSION
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.system_info import SystemInfoService
-from custom_components.watchzone.providers.frigate import system_info as frigate_module
-from custom_components.watchzone.providers.frigate.system_info import (
+from custom_components.camera_optics.features.system_info import SystemInfoService
+from custom_components.camera_optics.providers.frigate import (
+    system_info as frigate_module,
+)
+from custom_components.camera_optics.providers.frigate.system_info import (
     FrigateSystemInfoProvider,
 )
-from custom_components.watchzone.providers.system_info import ProviderSystemInfo
+from custom_components.camera_optics.providers.system_info import ProviderSystemInfo
 
 
 class _SystemInfoProvider:
@@ -48,7 +50,7 @@ async def test_service_collects_registered_provider_information(hass) -> None:
     info = await SystemInfoService(hass, registry).async_snapshot()
 
     assert info.home_assistant_version == HA_VERSION
-    assert info.watchzone_version == VERSION
+    assert info.camera_optics_version == VERSION
     assert info.providers[0].product_versions == ("2.0",)
 
 

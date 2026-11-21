@@ -20,9 +20,9 @@ function cssAlpha(color: string): number {
   return legacy ? Number(legacy[1]) : 1;
 }
 
-async function waitForWatchZoneDefinition(page: Page): Promise<void> {
+async function waitForCameraOpticsDefinition(page: Page): Promise<void> {
   await page.waitForFunction(
-    () => customElements.get("watchzone-card") !== undefined,
+    () => customElements.get("camera-optics-card") !== undefined,
   );
 }
 
@@ -90,21 +90,21 @@ test.afterEach(async ({ page }) => {
   expect(pageErrors.get(page)).toEqual([]);
 });
 
-test("loads the responsive WatchZone card shell", async ({ page }) => {
+test("loads the responsive CameraOptics card shell", async ({ page }) => {
   const consoleMessages: string[] = [];
   page.on("console", (message) => consoleMessages.push(message.text()));
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
-  await expect(page.locator("watchzone-card .shell")).toHaveAttribute(
+  await expect(page.locator("camera-optics-card .shell")).toHaveAttribute(
     "aria-label",
-    "WatchZone",
+    "CameraOptics",
   );
-  await expect(page.locator("watchzone-card ha-card")).toBeVisible();
+  await expect(page.locator("camera-optics-card ha-card")).toBeVisible();
   expect(
     consoleMessages.some(
       (message) =>
-        message.includes("WatchZone") &&
+        message.includes("CameraOptics") &&
         message.includes("CURRENT") &&
         message.includes(`v${expectedVersion} (${expectedBuild})`),
     ),
@@ -133,14 +133,14 @@ test("presents recorded media in the configured card-width bottom drawer", async
   );
   await page.setViewportSize({ height: 1_000, width: 1_280 });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       recorded_media_player_type: "bottom_drawer",
     });
     element.style.inlineSize = "500px";
@@ -159,7 +159,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
   });
 
   const openDrawer = async (): Promise<void> => {
-    await page.locator("watchzone-card").evaluate((element) => {
+    await page.locator("camera-optics-card").evaluate((element) => {
       element.dispatchEvent(
         new CustomEvent("wzc-recorded-media-open", {
           bubbles: true,
@@ -206,7 +206,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
 
   await openDrawer();
   const drawer = page.locator("wzc-recorded-media-bottom-drawer dialog");
-  const cardBox = await page.locator("watchzone-card").boundingBox();
+  const cardBox = await page.locator("camera-optics-card").boundingBox();
   const drawerBox = await drawer.boundingBox();
   expect(drawerBox?.width).toBeCloseTo(768, 0);
   expect((drawerBox?.x ?? 0) + (drawerBox?.width ?? 0) / 2).toBeCloseTo(
@@ -421,7 +421,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
     page.locator("wzc-recorded-media-bottom-drawer dialog"),
   ).toHaveCount(0);
 
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("wzc-recorded-media-open", {
         bubbles: true,
@@ -570,7 +570,7 @@ test("presents recorded media in the configured card-width bottom drawer", async
   await page.locator("wzc-recorded-media-bottom-drawer .close").click();
   await expect(drawer).toHaveCount(0);
 
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     element.dispatchEvent(
       new CustomEvent("wzc-recorded-media-open", {
         bubbles: true,
@@ -677,7 +677,7 @@ test("renders the fixed zero-network community card picker preview", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const stub = await page.evaluate(() => {
     const hass = {
@@ -702,7 +702,7 @@ test("renders the fixed zero-network community card picker preview", async ({
       hassUrl: (path: string) => path,
     };
     const Card = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as CustomElementConstructor & {
       getStubConfig(value: unknown): unknown;
     };
@@ -712,13 +712,13 @@ test("renders the fixed zero-network community card picker preview", async ({
     picker.style.inlineSize = "18rem";
     picker.style.blockSize = "45rem";
     const root = picker.attachShadow({ mode: "open" });
-    const card = document.createElement("watchzone-card") as HTMLElement & {
+    const card = document.createElement("camera-optics-card") as HTMLElement & {
       hass: unknown;
       setConfig(value: unknown): void;
     };
     card.style.inlineSize = "100%";
     card.style.blockSize = "100%";
-    card.setConfig({ type: "custom:watchzone-card", ...config });
+    card.setConfig({ type: "custom:camera-optics-card", ...config });
     root.append(card);
     document.body.replaceChildren(picker);
     card.hass = hass;
@@ -728,12 +728,12 @@ test("renders the fixed zero-network community card picker preview", async ({
   expect(stub).toEqual({ cameras: [{ entity_id: "camera.entry" }] });
   const preview = page.locator("wzc-card-picker-preview");
   await expect(preview).toBeVisible();
-  await expect(preview.locator(".brand")).toHaveText("WatchZone");
+  await expect(preview.locator(".brand")).toHaveText("CameraOptics");
   await expect(preview.locator(".camera-name")).toHaveCount(2);
   await expect(preview.locator(".module-controls .control")).toHaveCount(3);
   await expect(preview.locator(".accessories .control")).toHaveCount(4);
   await expect(preview.locator(".tile")).toHaveCount(3);
-  await expect(page.locator("watchzone-card .shell")).toHaveCount(0);
+  await expect(page.locator("camera-optics-card .shell")).toHaveCount(0);
   const presentation = await preview.evaluate((element) => {
     const root = element.shadowRoot;
     const live = root?.querySelector(".live");
@@ -769,44 +769,46 @@ test("renders the fixed zero-network community card picker preview", async ({
     return width / height;
   });
   expect(liveRatio).toBeCloseTo(16 / 9, 2);
-  const geometry = await page.locator("watchzone-card").evaluate((element) => {
-    const root = element.shadowRoot;
-    const shell = root?.querySelector("ha-card")?.getBoundingClientRect();
-    const previewElement = root?.querySelector(
-      "wzc-card-picker-preview",
-    ) as HTMLElement | null;
-    const previewRoot = previewElement?.shadowRoot;
-    const previewRect = previewRoot
-      ?.querySelector(".preview")
-      ?.getBoundingClientRect();
-    const liveRect = previewRoot
-      ?.querySelector(".live")
-      ?.getBoundingClientRect();
-    const cameraBarRect = previewRoot
-      ?.querySelector(".camera-bar")
-      ?.getBoundingClientRect();
-    const tilesRect = previewRoot
-      ?.querySelector(".tiles")
-      ?.getBoundingClientRect();
-    const tileRects = [...(previewRoot?.querySelectorAll(".tile") ?? [])].map(
-      (tile) => tile.getBoundingClientRect(),
-    );
-    const pickerRect = (
-      element.getRootNode() as ShadowRoot
-    ).host?.getBoundingClientRect();
-    return {
-      shellBottom: shell?.bottom ?? 0,
-      shellHeight: shell?.height ?? 0,
-      previewBottom: previewRect?.bottom ?? 0,
-      previewHeight: previewRect?.height ?? 0,
-      pickerBottom: pickerRect?.bottom ?? 0,
-      liveBottom: liveRect?.bottom ?? 0,
-      cameraBarTop: cameraBarRect?.top ?? 0,
-      tilesBottom: tilesRect?.bottom ?? 0,
-      thirdTileTop: tileRects[2]?.top ?? 0,
-      thirdTileHeight: tileRects[2]?.height ?? 0,
-    };
-  });
+  const geometry = await page
+    .locator("camera-optics-card")
+    .evaluate((element) => {
+      const root = element.shadowRoot;
+      const shell = root?.querySelector("ha-card")?.getBoundingClientRect();
+      const previewElement = root?.querySelector(
+        "wzc-card-picker-preview",
+      ) as HTMLElement | null;
+      const previewRoot = previewElement?.shadowRoot;
+      const previewRect = previewRoot
+        ?.querySelector(".preview")
+        ?.getBoundingClientRect();
+      const liveRect = previewRoot
+        ?.querySelector(".live")
+        ?.getBoundingClientRect();
+      const cameraBarRect = previewRoot
+        ?.querySelector(".camera-bar")
+        ?.getBoundingClientRect();
+      const tilesRect = previewRoot
+        ?.querySelector(".tiles")
+        ?.getBoundingClientRect();
+      const tileRects = [...(previewRoot?.querySelectorAll(".tile") ?? [])].map(
+        (tile) => tile.getBoundingClientRect(),
+      );
+      const pickerRect = (
+        element.getRootNode() as ShadowRoot
+      ).host?.getBoundingClientRect();
+      return {
+        shellBottom: shell?.bottom ?? 0,
+        shellHeight: shell?.height ?? 0,
+        previewBottom: previewRect?.bottom ?? 0,
+        previewHeight: previewRect?.height ?? 0,
+        pickerBottom: pickerRect?.bottom ?? 0,
+        liveBottom: liveRect?.bottom ?? 0,
+        cameraBarTop: cameraBarRect?.top ?? 0,
+        tilesBottom: tilesRect?.bottom ?? 0,
+        thirdTileTop: tileRects[2]?.top ?? 0,
+        thirdTileHeight: tileRects[2]?.height ?? 0,
+      };
+    });
   expect(geometry.shellHeight).toBeCloseTo(geometry.previewHeight, 0);
   expect(geometry.shellBottom).toBeCloseTo(geometry.previewBottom, 0);
   expect(geometry.pickerBottom - geometry.shellBottom).toBeGreaterThan(100);
@@ -815,7 +817,7 @@ test("renders the fixed zero-network community card picker preview", async ({
     (geometry.tilesBottom - geometry.thirdTileTop) / geometry.thirdTileHeight,
   ).toBeCloseTo(0.5, 1);
   const heights = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element.shadowRoot?.querySelector("ha-card");
       const before = Math.round(card?.getBoundingClientRect().height ?? 0);
@@ -846,15 +848,15 @@ test("uses the first real touch only to reveal hidden media controls", async ({
       }),
     );
     await touchPage.goto("/");
-    await waitForWatchZoneDefinition(touchPage);
-    const card = touchPage.locator("watchzone-card");
+    await waitForCameraOpticsDefinition(touchPage);
+    const card = touchPage.locator("camera-optics-card");
     await card.evaluate((element) => {
       const cardElement = element as HTMLElement & {
         hass: unknown;
         setConfig(config: unknown): void;
       };
       cardElement.setConfig({
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
         camera_switcher_overlay: true,
         cameras: [
           { entity_id: "camera.front", title: "Front" },
@@ -878,7 +880,7 @@ test("uses the first real touch only to reveal hidden media controls", async ({
         hassUrl: (path: string) => path,
         callService: async () => undefined,
         callWS: async (message: { type: string }) =>
-          message.type === "watchzone/reviews/list"
+          message.type === "camera_optics/reviews/list"
             ? { items: [] }
             : { ready: false },
       };
@@ -942,7 +944,7 @@ test("uses the first real touch only to reveal hidden media controls", async ({
 
 test("does not load camera code for a camera-free layout", async ({ page }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   expect(
     await page.evaluate(() => ({
@@ -957,7 +959,7 @@ test("does not load camera code for a camera-free layout", async ({ page }) => {
         ),
     })),
   ).toEqual({ cameraDefined: false, cameraResources: [] });
-  await expect(page.locator("watchzone-card")).toContainText(
+  await expect(page.locator("camera-optics-card")).toContainText(
     "No modules are configured.",
   );
 });
@@ -966,17 +968,18 @@ test("omits Events code and data work from the built-in Stages", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     const requests: string[] = [];
-    (window as Window & { watchzoneRequests?: string[] }).watchzoneRequests =
-      requests;
+    (
+      window as Window & { camera_opticsRequests?: string[] }
+    ).camera_opticsRequests = requests;
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_entity: "camera.front",
     });
     card.hass = {
@@ -993,8 +996,8 @@ test("omits Events code and data work from the built-in Stages", async ({
       hassUrl: (path: string) => path,
       callWS: async (message: { type: string }) => {
         requests.push(message.type);
-        if (message.type === "watchzone/reviews/list") return { items: [] };
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/reviews/list") return { items: [] };
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
         return undefined;
@@ -1007,9 +1010,9 @@ test("omits Events code and data work from the built-in Stages", async ({
   await expect(page.locator("wzc-events")).toHaveCount(0);
   const overhead = await page.evaluate(() => ({
     eventsDataRequests: (
-      (window as Window & { watchzoneRequests?: string[] }).watchzoneRequests ??
-      []
-    ).filter((type) => type.startsWith("watchzone/events/")),
+      (window as Window & { camera_opticsRequests?: string[] })
+        .camera_opticsRequests ?? []
+    ).filter((type) => type.startsWith("camera_optics/events/")),
     eventsModules: performance
       .getEntriesByType("resource")
       .map(({ name }) => name)
@@ -1028,14 +1031,14 @@ test("opens notification deep links independently of activity presentation", asy
   await page.goto(
     "/?camera=back&event=event-1&review=review-1&unrelated=preserved",
   );
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.front", title: "Front" },
         { entity_id: "camera.back", title: "Back" },
@@ -1058,7 +1061,7 @@ test("opens notification deep links independently of activity presentation", asy
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) => {
-        if (message.type === "watchzone/events/list") {
+        if (message.type === "camera_optics/events/list") {
           return {
             items: [
               {
@@ -1087,8 +1090,8 @@ test("opens notification deep links independently of activity presentation", asy
             ],
           };
         }
-        if (message.type === "watchzone/reviews/list") return { items: [] };
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/reviews/list") return { items: [] };
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
         return undefined;
@@ -1135,14 +1138,14 @@ test("starts the active camera poster before the full camera element loads", asy
   });
 
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_entity: "camera.front",
     });
     card.hass = {
@@ -1157,7 +1160,7 @@ test("starts the active camera poster before the full camera element loads", asy
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) =>
-        message.type === "watchzone/reviews/list"
+        message.type === "camera_optics/reviews/list"
           ? { items: [] }
           : { ready: false },
     };
@@ -1189,15 +1192,15 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
   }
 
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     host.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_entity: "camera.front",
     });
     host.hass = {
@@ -1212,7 +1215,7 @@ test("keeps picker and activity geometry stable across lazy loading", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) => {
-        if (message.type === "watchzone/reviews/list") {
+        if (message.type === "camera_optics/reviews/list") {
           return {
             items: Array.from({ length: 5 }, (_, index) => ({
               camera: "front",
@@ -1274,14 +1277,14 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.front", title: "Front Door" },
         { entity_id: "camera.back", title: "Back Yard" },
@@ -1316,7 +1319,7 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
     navigationCentering.viewportCenter,
     1,
   );
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     (element as HTMLElement).style.setProperty(
       "--wzc-color-text-reversed",
       "rgb(246, 247, 248)",
@@ -1430,13 +1433,13 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   );
   expect(navigationModuleBox?.height).toBeCloseTo(selectorBox?.height ?? 0, 1);
 
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_bar_rounded_corners: false,
       camera_bar_shadows: false,
       cameras: [
@@ -1457,15 +1460,15 @@ test("cycles a grouped camera from combined to each member and back", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         {
           additional_camera: {
@@ -1637,15 +1640,15 @@ test("keeps selected PC side-by-side and stacked groups combined", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.hall", title: "Hall" },
         {
@@ -1719,15 +1722,15 @@ test("keeps both grouped phone cameras in the physical swipe sequence", async ({
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_switcher_overlay: true,
       cameras: [
         {
@@ -1793,15 +1796,15 @@ test("releases grouped overlay and resize interaction before selecting another c
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       slide_transition: "fade",
       cameras: [
         {
@@ -2025,8 +2028,8 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     const cardElement = element as HTMLElement & {
       hass: unknown;
@@ -2037,7 +2040,7 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
         callback: (payload: unknown) => void,
         message: { entity_id?: string; type: string },
       ) => {
-        if (message.type === "watchzone/activity/subscribe") {
+        if (message.type === "camera_optics/activity/subscribe") {
           const target = window as unknown as {
             reviewNotifications?: Array<(payload: unknown) => void>;
           };
@@ -2093,7 +2096,7 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
       },
     };
     cardElement.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       alert_detection_takeover: "both",
       start_alert_takeover_on: true,
       cameras: [
@@ -2124,7 +2127,7 @@ test("keeps grouped interaction alive across slide alert takeover", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { entity_id?: string; type: string }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
         return undefined;
@@ -2213,8 +2216,8 @@ test("keeps activity loading out of an active camera transition", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const testWindow = window as typeof window & {
       __wzcReviewCalls?: string[];
     };
@@ -2224,7 +2227,7 @@ test("keeps activity loading out of an active camera transition", async ({
       setConfig(config: unknown): void;
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.front", title: "Front" },
         { entity_id: "camera.back", title: "Back" },
@@ -2249,11 +2252,11 @@ test("keeps activity loading out of an active camera transition", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { entity_id?: string; type: string }) => {
-        if (message.type === "watchzone/reviews/list") {
+        if (message.type === "camera_optics/reviews/list") {
           testWindow.__wzcReviewCalls?.push(message.entity_id ?? "");
           return { items: [] };
         }
-        if (message.type === "watchzone/events/list") return { items: [] };
+        if (message.type === "camera_optics/events/list") return { items: [] };
         return { ready: false };
       },
     };
@@ -2323,15 +2326,15 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
   const setTransition = (transition: "fade" | "none") =>
-    page.locator("watchzone-card").evaluate((element, slideTransition) => {
+    page.locator("camera-optics-card").evaluate((element, slideTransition) => {
       (
         element as HTMLElement & {
           setConfig(config: unknown): void;
         }
       ).setConfig({
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
         slide_transition: slideTransition,
         cameras: [
           { entity_id: "camera.front", title: "Front" },
@@ -2478,14 +2481,14 @@ test("uses readable camera navigation labels before HA state is available", asyn
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.hall" },
         { entity_id: "camera.front_door" },
@@ -2503,14 +2506,14 @@ test("advances the authoritative camera selection through slideshow controls", a
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_switcher_overlay: true,
       slide_advance_time: 10,
       slide_transition: "fade",
@@ -2593,14 +2596,14 @@ test("centers the slideshow icon inside its compact overlay button", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_switcher_overlay: true,
       cameras: [
         { entity_id: "camera.front", title: "Front" },
@@ -2611,7 +2614,7 @@ test("centers the slideshow icon inside its compact overlay button", async ({
 
   await expect(page.locator("wzc-slideshow button")).toHaveCount(1);
   await expect(page.locator("wzc-camera-switcher")).toHaveCount(1);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     (element as HTMLElement).style.inlineSize = "320px";
   });
   const [slideshowBox, iconBox] = await Promise.all([
@@ -2631,8 +2634,8 @@ test("filters live-video highlights by review classification", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
@@ -2642,7 +2645,7 @@ test("filters live-video highlights by review classification", async ({
         callback: (payload: unknown) => void,
         message: { entity_id?: string; type: string },
       ) => {
-        if (message.type === "watchzone/activity/subscribe") {
+        if (message.type === "camera_optics/activity/subscribe") {
           const target = window as unknown as {
             reviewNotifications?: Array<(payload: unknown) => void>;
           };
@@ -2698,7 +2701,7 @@ test("filters live-video highlights by review classification", async ({
       },
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       alert_detection_highlight: "alerts",
       camera_switcher_overlay: true,
       slide_advance_time: 30,
@@ -2725,7 +2728,7 @@ test("filters live-video highlights by review classification", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { entity_id?: string; type: string }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
         return undefined;
@@ -2871,9 +2874,9 @@ test("filters live-video highlights by review classification", async ({
   await expect(cameraButtons.nth(1)).toHaveAttribute("aria-selected", "true");
   const slideshowOverlay = page.locator("wzc-slideshow button");
   await expect(slideshowOverlay.locator(".status")).toHaveText("Hold");
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     const parent = element.parentNode;
-    if (!parent) throw new Error("WatchZone card has no parent");
+    if (!parent) throw new Error("CameraOptics card has no parent");
     const marker = document.createComment("dashboard-navigation");
     parent.insertBefore(marker, element);
     element.remove();
@@ -3010,8 +3013,8 @@ test("keeps minimal camera actions and media controls independent", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const target = window as unknown as {
       minimalMoreInfoCount?: number;
       minimalPipCount?: number;
@@ -3028,7 +3031,7 @@ test("keeps minimal camera actions and media controls independent", async ({
       setConfig(config: unknown): void;
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       stage_type: "minimal_camera_only",
       cameras: [{ entity_id: "camera.front", title: "Front" }],
     });
@@ -3061,7 +3064,7 @@ test("keeps minimal camera actions and media controls independent", async ({
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) =>
-        message.type === "watchzone/live/camera/ready"
+        message.type === "camera_optics/live/camera/ready"
           ? { ready: false }
           : undefined,
     };
@@ -3249,8 +3252,8 @@ test("blocks suspended Frigate playback in the minimal camera stage", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const target = window as unknown as { minimalLiveSourceCalls?: number };
     target.minimalLiveSourceCalls = 0;
     const card = element as HTMLElement & {
@@ -3258,7 +3261,7 @@ test("blocks suspended Frigate playback in the minimal camera stage", async ({
       setConfig(config: unknown): void;
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       stage_type: "minimal_camera_only",
       cameras: [
         {
@@ -3353,8 +3356,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
@@ -3392,7 +3395,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       });
     let firstReviewReviewed = false;
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       event_history_days: 7,
       cameras: [
         { entity_id: "camera.front", title: "Front" },
@@ -3435,21 +3438,21 @@ test("keeps activity content in an independently scrolling viewport", async ({
         reviewed?: boolean;
         type: string;
       }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
-        if (message.type === "watchzone/events/list") {
+        if (message.type === "camera_optics/events/list") {
           return {
             items: events(
               message.entity_id === "camera.back" ? "back" : "front",
             ),
           };
         }
-        if (message.type === "watchzone/reviews/set_reviewed") {
+        if (message.type === "camera_optics/reviews/set_reviewed") {
           firstReviewReviewed = message.reviewed === true;
           return { reviewed: firstReviewReviewed };
         }
-        if (message.type === "watchzone/reviews/list") {
+        if (message.type === "camera_optics/reviews/list") {
           const camera = message.entity_id === "camera.back" ? "back" : "front";
           return {
             items: events(camera).map((event, index) => ({
@@ -3489,7 +3492,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
             })),
           };
         }
-        if (message.type === "watchzone/reviews/tracking_details") {
+        if (message.type === "camera_optics/reviews/tracking_details") {
           return {
             objects: [
               {
@@ -3559,12 +3562,12 @@ test("keeps activity content in an independently scrolling viewport", async ({
             review_id: "review:front:0",
           };
         }
-        if (message.type === "watchzone/exports/prepare") {
+        if (message.type === "camera_optics/exports/prepare") {
           return {
             name: "front 2026-11-10 15:59:55 2026-11-10 16:00:29",
           };
         }
-        if (message.type === "watchzone/exports/create") {
+        if (message.type === "camera_optics/exports/create") {
           const requests = ((
             window as Window & {
               reviewExportRequests?: unknown[];
@@ -3573,7 +3576,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
           requests.push(message);
           return { export_id: "front-export", success: true };
         }
-        if (message.type === "watchzone/exports/list") {
+        if (message.type === "camera_optics/exports/list") {
           return {
             items: [
               {
@@ -4303,7 +4306,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
     let current: Element | null = dialogElement;
     let card: HTMLElement | null = null;
     while (current) {
-      if (current instanceof HTMLElement && current.matches("watchzone-card")) {
+      if (
+        current instanceof HTMLElement &&
+        current.matches("camera-optics-card")
+      ) {
         card = current;
         break;
       }
@@ -4311,7 +4317,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       current = root instanceof ShadowRoot ? root.host : current.parentElement;
     }
     if (!card)
-      throw new Error("Expected analysis dialog inside WatchZone card.");
+      throw new Error("Expected analysis dialog inside CameraOptics card.");
     const cardBounds = card.getBoundingClientRect();
     const dialogBounds = dialogElement.getBoundingClientRect();
     const viewportInset = 8;
@@ -4468,7 +4474,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(page.locator("wzc-review-media-dialog dialog")).toHaveCount(
     mediaDialogCount,
   );
-  const themedCard = page.locator("watchzone-card").first();
+  const themedCard = page.locator("camera-optics-card").first();
   await themedCard.evaluate((card) => {
     card.style.setProperty("--ha-card-background", "rgba(10, 20, 30, 0.5)");
     card.style.setProperty("--ha-card-backdrop-filter", "blur(2px)");
@@ -4673,7 +4679,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   const viewport = activityList.locator(".scroller");
   await expect(activityList.locator(".tile")).toHaveCount(6);
   await expect(viewport).toHaveCSS("overscroll-behavior-y", "auto");
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     element.style.setProperty(
       "--wzc-media-tile-background",
       "rgb(200, 200, 200)",
@@ -4739,7 +4745,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       };
     });
   expect(tileActionRadius.button).toBe(tileActionRadius.overlay);
-  await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
+  await expect(page.locator("camera-optics-card ha-card")).toHaveCSS(
     "border-radius",
     "21px",
   );
@@ -5136,7 +5142,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .toBe(true);
   const topLayerGeometry = await page.evaluate(async () => {
     const card = document
-      .querySelector("watchzone-card")
+      .querySelector("camera-optics-card")
       ?.shadowRoot?.querySelector<HTMLElement>("ha-card");
     const viewer = card?.querySelector("wzc-recorded-video-viewer");
     const presentation = viewer?.shadowRoot?.querySelector(
@@ -5759,13 +5765,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     .evaluate((button: HTMLButtonElement) => button.click());
   await expect(activityList).toContainText("back_yard");
   await expect(activityList).not.toContainText("driveway");
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       display_event_type_badges: false,
       display_object_badges: false,
       display_zone: false,
@@ -5782,7 +5788,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(activityList.locator(".tile")).toHaveCount(6);
   await expect(activityList.locator("wzc-badge")).toHaveCount(0);
   await expect(activityList).not.toContainText("back_yard");
-  await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
+  await expect(page.locator("camera-optics-card ha-card")).toHaveCSS(
     "border-radius",
     "0px",
   );
@@ -5806,8 +5812,8 @@ test("switches activity and recordings through the shared media calendar", async
     route.fulfill({ body: "", contentType: "video/mp4" }),
   );
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const today = Date.UTC(2026, 10, 9, 8) / 1000;
     const yesterday = Date.UTC(2026, 10, 8, 8) / 1000;
     const activity = [
@@ -5843,7 +5849,7 @@ test("switches activity and recordings through the shared media calendar", async
     card.style.setProperty("--ha-card-border-radius", "18px");
     card.style.setProperty("--wzc-popover-radius", "18px");
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       event_history_days: 5,
       cameras: [{ entity_id: "camera.front", title: "Front" }],
     });
@@ -5865,10 +5871,10 @@ test("switches activity and recordings through the shared media calendar", async
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { selected_date?: string; type: string }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
-        if (message.type === "watchzone/reviews/list") {
+        if (message.type === "camera_optics/reviews/list") {
           return {
             items: activity.map((item) => ({
               camera: "front",
@@ -5892,7 +5898,7 @@ test("switches activity and recordings through the shared media calendar", async
             })),
           };
         }
-        if (message.type === "watchzone/events/list") {
+        if (message.type === "camera_optics/events/list") {
           return {
             items: activity.map((item) => ({
               camera: "front",
@@ -5913,7 +5919,7 @@ test("switches activity and recordings through the shared media calendar", async
             })),
           };
         }
-        if (message.type === "watchzone/recordings/list") {
+        if (message.type === "camera_optics/recordings/list") {
           const selectedDate = message.selected_date ?? "2026-11-09";
           const latestStart =
             selectedDate === "2026-11-08"
@@ -5975,7 +5981,7 @@ test("switches activity and recordings through the shared media calendar", async
             }),
           };
         }
-        if (message.type === "watchzone/recordings/segment") {
+        if (message.type === "camera_optics/recordings/segment") {
           return {
             filename: "front-segment.mp4",
             path: "/segment.mp4",
@@ -5989,13 +5995,13 @@ test("switches activity and recordings through the shared media calendar", async
             preferred_transport: "file",
           };
         }
-        if (message.type === "watchzone/exports/prepare") {
+        if (message.type === "camera_optics/exports/prepare") {
           return { name: "Front selected recording" };
         }
-        if (message.type === "watchzone/exports/create") {
+        if (message.type === "camera_optics/exports/create") {
           return { export_id: "front-selected-recording" };
         }
-        if (message.type === "watchzone/exports/list") {
+        if (message.type === "camera_optics/exports/list") {
           return {
             items: [
               {
@@ -6159,7 +6165,7 @@ test("switches activity and recordings through the shared media calendar", async
   await navigation.locator(".stage-stack-button").nth(1).click();
   const recordings = page.locator("wzc-recordings");
   await expect(recordings.locator(".tile")).toHaveCount(8);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-media-tile-background", "rgb(200, 200, 200)");
     host.style.setProperty(
@@ -6392,7 +6398,7 @@ test("switches activity and recordings through the shared media calendar", async
     initialRateWidth ?? 0,
     0,
   );
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--wzc-color-background", "rgb(20, 21, 22)");
     host.style.setProperty("--wzc-color-surface", "rgb(30, 31, 32)");
@@ -6490,7 +6496,7 @@ test("switches activity and recordings through the shared media calendar", async
       .locator("svg"),
   ).toHaveCSS("fill", "rgb(250, 251, 252)");
   await expect(segmentManager).toContainText("Select a recording segment");
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty(
       "--wzc-color-surface-secondary",
@@ -6569,14 +6575,14 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     route.fulfill({ body: "", contentType: "video/mp4" }),
   );
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.front", title: "Front Door" },
         { entity_id: "camera.driveway", title: "Driveway" },
@@ -6606,16 +6612,16 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
         if (
-          message.type === "watchzone/reviews/list" ||
-          message.type === "watchzone/events/list"
+          message.type === "camera_optics/reviews/list" ||
+          message.type === "camera_optics/events/list"
         ) {
           return { items: [] };
         }
-        if (message.type === "watchzone/exports/list") {
+        if (message.type === "camera_optics/exports/list") {
           return {
             items: [
               {
@@ -6862,15 +6868,15 @@ test("lets the camera navigation shadow paint into the card padding", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front", title: "Front Door" }],
     });
   });
@@ -6912,14 +6918,14 @@ test("restores camera navigation after an inner-dashboard detach", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.front", title: "Front Door" },
         { entity_id: "camera.back", title: "Back Yard" },
@@ -6927,13 +6933,13 @@ test("restores camera navigation after an inner-dashboard detach", async ({
     });
   });
 
-  const card = page.locator("watchzone-card");
+  const card = page.locator("camera-optics-card");
   const navigation = card.locator("wzc-camera-navigation");
   await expect(navigation.locator("button")).toHaveCount(2);
 
   await card.evaluate((element) => {
     const parent = element.parentNode;
-    if (!parent) throw new Error("WatchZone card has no parent");
+    if (!parent) throw new Error("CameraOptics card has no parent");
     const marker = document.createComment("inner-dashboard-navigation");
     parent.insertBefore(marker, element);
     element.remove();
@@ -6956,15 +6962,15 @@ test("keeps the camera switcher overlay in tandem with camera navigation", async
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_switcher_overlay: true,
       cameras: [
         { entity_id: "camera.front", title: "Front Door" },
@@ -7013,15 +7019,15 @@ test("keeps the HA pre-editor wrapper stable with bounded navigation observation
     };
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.front", title: "Front Door" },
         { entity_id: "camera.back", title: "Back Yard" },
@@ -7137,14 +7143,14 @@ test("scrolls overflow camera navigation with directional counts", async ({
     };
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: Array.from({ length: 8 }, (_, index) => ({
         entity_id: `camera.camera_${index}`,
         title: `Camera ${index + 1}`,
@@ -7221,14 +7227,14 @@ test("preserves expanded camera-stage geometry across carousel selection", async
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
     });
   });
@@ -7395,8 +7401,8 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
   test.setTimeout(60_000);
   await installHaIconFixture(page);
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
@@ -7405,7 +7411,7 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       subscribeMessage: async () => () => undefined,
     };
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       camera_switcher_overlay: true,
       cameras: [
         {
@@ -7468,13 +7474,13 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
         ).lightCalls.push({ data, domain, service, target });
       },
       callWS: async (message: { type: string }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
-        if (message.type === "watchzone/talk/capability") {
+        if (message.type === "camera_optics/talk/capability") {
           return { supported: true };
         }
-        if (message.type === "watchzone/ptz/capability") {
+        if (message.type === "camera_optics/ptz/capability") {
           return {
             supported: true,
             pan: true,
@@ -8115,7 +8121,7 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     ),
   ).toBe(0);
   const persistentTalk = page.locator("wzc-persistent-talk .persistent-talk");
-  const cardHost = page.locator("watchzone-card");
+  const cardHost = page.locator("camera-optics-card");
   const dashboardPanelBounds = await page.evaluate(() => {
     const main = document.createElement("home-assistant-main");
     main.style.cssText =
@@ -8947,8 +8953,8 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
 }) => {
   await page.setViewportSize({ height: 900, width: 390 });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
@@ -8957,7 +8963,7 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
     (window as typeof window & { presetMessages?: unknown[] }).presetMessages =
       presetMessages;
     card.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front", ptz_enabled: true }],
     });
     card.hass = {
@@ -8974,10 +8980,10 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
       hassUrl: (path: string) => path,
       callWS: async (message: { type: string }) => {
         presetMessages.push(message);
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: false };
         }
-        if (message.type === "watchzone/ptz/capability") {
+        if (message.type === "camera_optics/ptz/capability") {
           return {
             supported: true,
             pan: true,
@@ -9058,12 +9064,14 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
           window as typeof window & {
             presetMessages?: Array<{ type?: string }>;
           }
-        ).presetMessages?.filter(({ type }) => type === "watchzone/ptz/preset"),
+        ).presetMessages?.filter(
+          ({ type }) => type === "camera_optics/ptz/preset",
+        ),
       ),
     )
     .toEqual([
       expect.objectContaining({
-        type: "watchzone/ptz/preset",
+        type: "camera_optics/ptz/preset",
         entity_id: "camera.front",
         preset: "One",
       }),
@@ -9074,7 +9082,7 @@ test("opens the PTZ panel and recalls a provider preset without a stop subscript
         window as typeof window & {
           presetMessages?: Array<{ type?: string }>;
         }
-      ).presetMessages?.some(({ type }) => type === "watchzone/ptz/move"),
+      ).presetMessages?.some(({ type }) => type === "camera_optics/ptz/move"),
     ),
   ).toBe(false);
 });
@@ -9084,14 +9092,14 @@ test("aligns phone carousel controls and stage handle to the active stage", asyn
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
     });
   });
@@ -9218,14 +9226,14 @@ test("keeps the camera stage ratio below the overlay controls' intrinsic width",
 }) => {
   await page.setViewportSize({ width: 220, height: 640 });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  await page.locator("watchzone-card").evaluate((element) => {
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front" }],
     });
   });
@@ -9277,8 +9285,8 @@ test("fits phone, tablet, and desktop viewports without horizontal overflow", as
   ]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
-    await waitForWatchZoneDefinition(page);
-    await expect(page.locator("watchzone-card ha-card")).toBeVisible();
+    await waitForCameraOpticsDefinition(page);
+    await expect(page.locator("camera-optics-card ha-card")).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -9291,10 +9299,10 @@ test("uses intrinsic card height in Home Assistant Panel view", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -9308,7 +9316,7 @@ test("uses intrinsic card height in Home Assistant Panel view", async ({
       document.body.replaceChildren(panel);
       card.setConfig({
         stage_type: "camera_only",
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       await new Promise<void>((resolve) =>
@@ -9341,8 +9349,8 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
 }) => {
   await page.setViewportSize({ width: 500, height: 1000 });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     document.body.style.margin = "0";
     const wrapper = document.createElement("div");
@@ -9352,7 +9360,7 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
     element.replaceWith(wrapper);
     wrapper.append(element);
     (element as HTMLElement & { setConfig(config: unknown): void }).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       card_height_mode: "fit_viewport",
       cameras: [{ entity_id: "camera.front" }],
     });
@@ -9455,7 +9463,7 @@ test("applies viewport and parent height modes without shrinking the Full Stage 
     element.replaceWith(container);
     container.append(element);
     cardElement.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       card_height_mode: "fill_container",
       cameras: [{ entity_id: "camera.front" }],
     });
@@ -9503,10 +9511,10 @@ test("applies outer shell appearance toggles without changing card identity", as
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -9515,7 +9523,7 @@ test("applies outer shell appearance toggles without changing card identity", as
       const shellBefore = card.shadowRoot?.querySelector("ha-card");
       card.style.setProperty("--ha-box-shadow-m", "rgb(1, 2, 3) 0px 4px 8px");
       card.setConfig({
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
         title: "Appearance",
         rounded_outer_corners: false,
         outer_shadows: false,
@@ -9543,7 +9551,7 @@ test("applies outer shell appearance toggles without changing card identity", as
         shellPadding: disabledShellPadding,
       };
       card.setConfig({
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
         title: "Appearance",
       });
       await card.updateComplete;
@@ -9597,7 +9605,7 @@ test("applies outer shell appearance toggles without changing card identity", as
   expect(result.enabled.hostBoxShadow).toContain("rgb(1, 2, 3)");
   expect(result.enabled.cardPadding).not.toBe("0px");
   expect(result.enabled.shellPadding).toBe("0px");
-  await expect(page.locator("watchzone-card ha-card")).toHaveCSS(
+  await expect(page.locator("camera-optics-card ha-card")).toHaveCSS(
     "isolation",
     "isolate",
   );
@@ -9614,10 +9622,10 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -9639,7 +9647,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
       card.setConfig({
         stage_type: "minimal_camera_only",
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       const minimalEdge = {
@@ -9650,7 +9658,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       card.setConfig({
         edge_to_edge_phone: false,
         stage_type: "minimal_camera_only",
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       const minimalRestored = {
@@ -9664,7 +9672,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
       );
       card.setConfig({
         card_height_mode_phone: "fit_viewport",
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       card.style.setProperty("--wzc-fit-viewport-block-size", "400px");
@@ -9685,7 +9693,7 @@ test("applies mobile edge-to-edge spacing to the Sections outer padding", async 
 
       card.setConfig({
         edge_to_edge_phone: false,
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       return {
@@ -9738,10 +9746,10 @@ test("keeps browser phone fit viewport stable across edge-to-edge spacing", asyn
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -9788,7 +9796,7 @@ test("keeps browser phone fit viewport stable across edge-to-edge spacing", asyn
       card.setConfig({
         card_height_mode_phone: "fit_viewport",
         edge_to_edge_phone: true,
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       await frame();
@@ -9797,7 +9805,7 @@ test("keeps browser phone fit viewport stable across edge-to-edge spacing", asyn
       card.setConfig({
         card_height_mode_phone: "fit_viewport",
         edge_to_edge_phone: false,
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       await frame();
@@ -9839,10 +9847,10 @@ test("keeps Companion edge-to-edge fit viewport inside the outer window", async 
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -9859,7 +9867,7 @@ test("keeps Companion edge-to-edge fit viewport inside the outer window", async 
       view.append(element);
       card.setConfig({
         card_height_mode_phone: "fit_viewport",
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       await new Promise<void>((resolve) =>
@@ -9909,10 +9917,10 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -9934,7 +9942,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
         card_height_mode: "auto",
         card_height_mode_phone: "fit_viewport",
         edge_to_edge_phone: true,
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       await card.updateComplete;
       await new Promise<void>((resolve) =>
@@ -9971,8 +9979,8 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   const setRotateAction = async (
     action: "double_column" | "fullscreen_live_video" | "none",
   ) => {
@@ -9985,7 +9993,7 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
         cameras: [{ entity_id: "camera.front" }],
         card_height_mode_phone: "fit_viewport",
         companion_rotate_action: companionRotateAction,
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
       });
       host.hass = {
         states: {
@@ -9999,7 +10007,7 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
         hassUrl: (path: string) => path,
         callService: async () => undefined,
         callWS: async (message: { type: string }) =>
-          message.type === "watchzone/reviews/list"
+          message.type === "camera_optics/reviews/list"
             ? { items: [] }
             : { ready: false },
       };
@@ -10284,8 +10292,8 @@ test("opens Minimal Camera Stage live video internally on Companion rotation", a
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
       hass: unknown;
@@ -10295,7 +10303,7 @@ test("opens Minimal Camera Stage live video internally on Companion rotation", a
       cameras: [{ entity_id: "camera.front" }],
       companion_rotate_action: "fullscreen_live_video",
       stage_type: "minimal_camera_only",
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
     });
     host.hass = {
       states: {
@@ -10340,8 +10348,8 @@ test("restores the active Swiper video after WebKit native fullscreen exits", as
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
       hass: unknown;
@@ -10353,7 +10361,7 @@ test("restores the active Swiper video after WebKit native fullscreen exits", as
         { entity_id: "camera.driveway" },
       ],
       companion_rotate_action: "double_column",
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
     });
     host.hass = {
       states: {
@@ -10372,7 +10380,7 @@ test("restores the active Swiper video after WebKit native fullscreen exits", as
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) =>
-        message.type === "watchzone/reviews/list"
+        message.type === "camera_optics/reviews/list"
           ? { items: [] }
           : { ready: false },
     };
@@ -10471,8 +10479,8 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
     });
   });
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate(async (element) => {
     const host = element as HTMLElement & {
       hass: unknown;
@@ -10501,7 +10509,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       ],
       card_height_mode_phone: "fit_viewport",
       camera_rounded_corners_phone: false,
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
     });
     host.hass = {
       states: {
@@ -10525,7 +10533,7 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
       hassUrl: (path: string) => path,
       callService: async () => undefined,
       callWS: async (message: { type: string }) =>
-        message.type === "watchzone/reviews/list"
+        message.type === "camera_optics/reviews/list"
           ? {
               items: Array.from({ length: 5 }, (_, index) => ({
                 analysis_description:
@@ -11319,19 +11327,19 @@ test("choreographs two Companion surfaces into 60/40 landscape columns", async (
   await expect(card).not.toHaveClass(/companion-phone-landscape/);
 });
 
-test("exposes and honors the WatchZone semantic theme-token contract", async ({
+test("exposes and honors the CameraOptics semantic theme-token contract", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     (
       element as HTMLElement & {
         setConfig(config: unknown): void;
       }
     ).setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front" }],
     });
   });
@@ -11569,7 +11577,7 @@ test("camera selection does not recursively republish dirty state", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page.evaluate(async () => {
     interface ContextRequest extends Event {
@@ -11619,22 +11627,24 @@ test("camera selection does not recursively republish dirty state", async ({
     document.addEventListener("context-request", handleContext);
 
     const cardConstructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as TestCardConstructor;
-    const previewCard = document.querySelector("watchzone-card") as PreviewCard;
+    const previewCard = document.querySelector(
+      "camera-optics-card",
+    ) as PreviewCard;
     previewCard.preview = true;
     previewCard.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Camera",
     });
     const editor = await cardConstructor.getConfigElement();
     editor.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Camera",
     });
     const dialog = document.createElement("hui-dialog-edit-card") as TestDialog;
     dialog._cardConfig = {
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Camera",
     };
     dialog._updateDirtyState = () => undefined;
@@ -11671,7 +11681,7 @@ test("camera selection does not recursively republish dirty state", async ({
       );
     await new Promise(requestAnimationFrame);
     const previewUpdated = !document
-      .querySelector("watchzone-card")
+      .querySelector("camera-optics-card")
       ?.shadowRoot?.textContent?.includes(
         "Select a camera in the card editor.",
       );
@@ -11723,10 +11733,10 @@ test("editor uses exclusive accordions and shared draft status", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
   await page.evaluate(async () => {
     const constructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as typeof HTMLElement & {
       getConfigElement(): Promise<
         HTMLElement & {
@@ -11738,7 +11748,7 @@ test("editor uses exclusive accordions and shared draft status", async ({
     const editor = await constructor.getConfigElement();
     editor.id = "accordion-editor";
     editor.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Accordion",
     });
     document.body.append(editor);
@@ -11968,16 +11978,16 @@ test("keeps the editor shell uniform and nested tasks independently solid", asyn
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
   await page.evaluate(async () => {
-    const card = document.querySelector("watchzone-card") as HTMLElement & {
+    const card = document.querySelector("camera-optics-card") as HTMLElement & {
       setConfig(config: unknown): void;
     };
     card.style.setProperty("--ha-card-background", "rgba(255, 255, 255, 0.14)");
-    card.setConfig({ type: "custom:watchzone-card" });
+    card.setConfig({ type: "custom:camera-optics-card" });
 
     const constructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as typeof HTMLElement & {
       getConfigElement(): Promise<
         HTMLElement & {
@@ -12039,13 +12049,13 @@ test("keeps the editor shell uniform and nested tasks independently solid", asyn
         themes: { "Frosted Glass": { modes: { dark: {} } } },
       },
     };
-    editor.setConfig({ type: "custom:watchzone-card" });
+    editor.setConfig({ type: "custom:camera-optics-card" });
     dialogRoot.append(editor);
     document.body.append(dialog);
     await editor.updateComplete;
   });
 
-  const cardSurface = page.locator("watchzone-card ha-card");
+  const cardSurface = page.locator("camera-optics-card ha-card");
   await expect(cardSurface).toHaveCSS(
     "background-color",
     "rgba(255, 255, 255, 0.14)",
@@ -12140,8 +12150,8 @@ test("assigns native information and solid task dialog surfaces", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
-  const card = page.locator("watchzone-card");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
       setConfig(config: unknown): void;
@@ -12157,7 +12167,7 @@ test("assigns native information and solid task dialog surfaces", async ({
     host.style.setProperty("--ha-dialog-scrim-backdrop-filter", "blur(3px)");
     host.style.setProperty("--mdc-dialog-scrim-color", "rgba(1, 2, 3, 0.4)");
     host.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front" }],
     });
   });
@@ -12252,10 +12262,10 @@ test("camera editor configures lights and confirms accessible removal", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
   await page.evaluate(async () => {
     const constructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as typeof HTMLElement & {
       getConfigElement(): Promise<
         HTMLElement & {
@@ -12267,7 +12277,7 @@ test("camera editor configures lights and confirms accessible removal", async ({
     const editor = await constructor.getConfigElement();
     editor.id = "camera-config-editor";
     editor.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [{ entity_id: "camera.front" }],
     });
     document.body.append(editor);
@@ -12496,10 +12506,10 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
   await page.evaluate(async () => {
     const constructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as typeof HTMLElement & {
       getConfigElement(): Promise<
         HTMLElement & {
@@ -12511,7 +12521,7 @@ test("camera editor configures and sanitizes an additional-camera group", async 
     const editor = await constructor.getConfigElement();
     editor.id = "group-config-editor";
     editor.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.porch", title: "Porch" },
         { entity_id: "camera.back", title: "Back" },
@@ -12719,10 +12729,10 @@ test("editor camera drag handles reorder the configured cameras", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
   await page.evaluate(async () => {
     const constructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as typeof HTMLElement & {
       getConfigElement(): Promise<
         HTMLElement & {
@@ -12734,7 +12744,7 @@ test("editor camera drag handles reorder the configured cameras", async ({
     const editor = await constructor.getConfigElement();
     editor.id = "sortable-editor";
     editor.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       cameras: [
         { entity_id: "camera.first" },
         { entity_id: "camera.second" },
@@ -12842,7 +12852,7 @@ test("round-trips boolean toggles through defaults before Save", async ({
   page,
 }) => {
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   const result = await page.evaluate(async () => {
     interface ContextRequest extends Event {
@@ -12882,15 +12892,15 @@ test("round-trips boolean toggles through defaults before Save", async ({
     document.addEventListener("context-request", handleContext);
 
     const baseline = {
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Appearance",
       cameras: [{ entity_id: "camera.front" }],
     };
-    const card = document.querySelector("watchzone-card") as TestCard;
+    const card = document.querySelector("camera-optics-card") as TestCard;
     card.preview = true;
     card.setConfig(baseline);
     const constructor = customElements.get(
-      "watchzone-card",
+      "camera-optics-card",
     ) as TestCardConstructor;
     const editor = await constructor.getConfigElement();
     editor.setConfig(baseline);
@@ -13074,7 +13084,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
     }),
   );
   await page.goto("/");
-  await waitForWatchZoneDefinition(page);
+  await waitForCameraOpticsDefinition(page);
 
   await page.evaluate(async () => {
     interface TestCard extends HTMLElement {
@@ -13162,7 +13172,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
         callback: (message: unknown) => void,
         message: { entity_id?: string; type: string },
       ) => {
-        if (message.type === "watchzone/camera/runtime/subscribe") {
+        if (message.type === "camera_optics/camera/runtime/subscribe") {
           runtimeSubscribers.add(callback);
           callback(runtimeSnapshot(message.entity_id));
         }
@@ -13187,7 +13197,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
         suspended?: boolean;
         type: string;
       }) => {
-        if (message.type === "watchzone/live/camera/ready") {
+        if (message.type === "camera_optics/live/camera/ready") {
           return { ready: true };
         }
         if (message.type === "camera/webrtc/get_client_config") {
@@ -13200,7 +13210,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
           // cancel it without producing an unhandled browser rejection.
           return new Promise(() => undefined);
         }
-        if (message.type === "watchzone/camera/runtime/set") {
+        if (message.type === "camera_optics/camera/runtime/set") {
           await new Promise((resolve) => window.setTimeout(resolve, 75));
           runtimeSuspended = message.suspended === true;
           const snapshot = runtimeSnapshot(message.entity_id);
@@ -13212,9 +13222,9 @@ test("restores controls after pre-editor and retains a replaced live connection"
     };
     testWindow.__wzcTestHass = hass;
 
-    const first = document.querySelector("watchzone-card") as TestCard;
+    const first = document.querySelector("camera-optics-card") as TestCard;
     first.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Front",
       camera_entity: "camera.front",
       start_live_unmuted_pc_tablet: true,
@@ -13330,7 +13340,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
 
   expect(
     await page.evaluate(async () => {
-      const card = document.querySelector("watchzone-card") as HTMLElement;
+      const card = document.querySelector("camera-optics-card") as HTMLElement;
       const camera = card.shadowRoot?.querySelector("wzc-camera");
       const view = camera?.shadowRoot?.querySelector("wzc-camera-view");
       const presentation = view?.shadowRoot?.querySelector(
@@ -13411,16 +13421,16 @@ test("restores controls after pre-editor and retains a replaced live connection"
     const routePageHide = new Event("pagehide");
     Object.defineProperty(routePageHide, "persisted", { value: false });
     window.dispatchEvent(routePageHide);
-    const first = document.querySelector("watchzone-card");
+    const first = document.querySelector("camera-optics-card");
     first?.remove();
     const replacement = document.createElement(
-      "watchzone-card",
+      "camera-optics-card",
     ) as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
     };
     replacement.setConfig({
-      type: "custom:watchzone-card",
+      type: "custom:camera-optics-card",
       title: "Front",
       camera_entity: "camera.front",
       rounded_outer_corners: false,
@@ -13531,7 +13541,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
   ).toBeLessThanOrEqual(1);
   await expect(connectionIndicator).toHaveCount(1);
   const layoutSizing = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement;
       const frame = async (): Promise<void> => {
@@ -13631,7 +13641,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
     width: page.viewportSize()?.width ?? 1_280,
   });
   await stageResizeHandle.scrollIntoViewIfNeeded();
-  const cardShell = page.locator("watchzone-card ha-card");
+  const cardShell = page.locator("camera-optics-card ha-card");
   const initialCardBox = await cardShell.boundingBox();
   const initialStageBox = await liveViewport.boundingBox();
   expect(initialStageBox).not.toBeNull();
@@ -13878,7 +13888,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
     )
     .toContain("rgb(7, 8, 9)");
   const cameraIdentityRetained = await page
-    .locator("watchzone-card")
+    .locator("camera-optics-card")
     .evaluate(async (element) => {
       const card = element as HTMLElement & {
         setConfig(config: unknown): void;
@@ -13886,7 +13896,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
       };
       const cameraBefore = card.shadowRoot?.querySelector("wzc-camera");
       card.setConfig({
-        type: "custom:watchzone-card",
+        type: "custom:camera-optics-card",
         title: "Front",
         camera_entity: "camera.front",
         rounded_outer_corners: false,
@@ -14032,7 +14042,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
   const mute = page.locator(
     'wzc-camera wzc-camera-controls [data-control="mute"]',
   );
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     element.style.setProperty("--wzc-color-primary", "rgb(0, 120, 255)");
     element.style.setProperty("--wzc-color-text-reversed", "rgb(1, 2, 3)");
   });
@@ -14077,7 +14087,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
     await video.evaluate((element) => (element as HTMLVideoElement).muted),
   ).toBe(false);
 
-  await page.locator("watchzone-card").evaluate((element) => {
+  await page.locator("camera-optics-card").evaluate((element) => {
     element.style.inlineSize = "320px";
   });
   await expect(

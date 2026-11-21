@@ -4,7 +4,7 @@ import { normalizeCardConfig } from "../src/core/config";
 import { CARD_TYPE, DEFAULT_CARD_TITLE } from "../src/core/constants";
 import { toYamlCardConfig } from "../src/core/yaml-config";
 
-describe("WatchZone YAML configuration manager", () => {
+describe("CameraOptics YAML configuration manager", () => {
   it("omits known defaults", () => {
     expect(
       toYamlCardConfig(

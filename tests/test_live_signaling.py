@@ -8,24 +8,24 @@ from homeassistant.exceptions import HomeAssistantError
 from webrtc_models import RTCIceCandidateInit
 from yarl import URL
 
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.live import (
+from custom_components.camera_optics.features.live import (
     HomeAssistantLiveSignalingSession,
     LiveSignalingService,
     _OwnedSession,
 )
-from custom_components.watchzone.providers.frigate.hls import (
+from custom_components.camera_optics.providers.frigate.hls import (
     async_prepare_hls_endpoint,
 )
-from custom_components.watchzone.providers.frigate.live import (
+from custom_components.camera_optics.providers.frigate.live import (
     FrigateLiveSignalingSession,
     async_prepare_session,
 )
-from custom_components.watchzone.providers.frigate.source import (
+from custom_components.camera_optics.providers.frigate.source import (
     _camera_name,
     _stream_name,
     async_resolve_source,
@@ -60,11 +60,11 @@ async def test_frigate_hls_uses_validated_camera_stream_worker() -> None:
 
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.hls.async_resolve_source",
+            "custom_components.camera_optics.providers.frigate.hls.async_resolve_source",
             new=AsyncMock(),
         ) as resolve_source,
         patch(
-            "custom_components.watchzone.providers.frigate.hls._camera",
+            "custom_components.camera_optics.providers.frigate.hls._camera",
             return_value=camera,
         ),
     ):
@@ -90,7 +90,10 @@ async def test_replacement_signaling_waits_for_prior_cleanup() -> None:
         _FakeHass(), ProviderRegistry()
     )
     service._sessions["session-1"] = _OwnedSession(  # noqa: SLF001
-        "owner", "camera.porch", "live", session  # type: ignore[arg-type]
+        "owner",
+        "camera.porch",
+        "live",
+        session,  # type: ignore[arg-type]
     )
 
     service.close("session-1")
@@ -160,7 +163,7 @@ async def test_provider_resolver_loads_the_entity_owner_dynamically() -> None:
 
     with (
         patch(
-            "custom_components.watchzone.features.live.er.async_get",
+            "custom_components.camera_optics.features.live.er.async_get",
             return_value=registry,
         ),
     ):
@@ -200,9 +203,7 @@ async def test_home_assistant_keeps_entity_trickle_ice_acceleration() -> None:
         )
     )
     camera = SimpleNamespace(
-        camera_capabilities=SimpleNamespace(
-            frontend_stream_types={StreamType.WEB_RTC}
-        )
+        camera_capabilities=SimpleNamespace(frontend_stream_types={StreamType.WEB_RTC})
     )
     service = LiveSignalingService(SimpleNamespace(), providers)  # type: ignore[arg-type]
 
@@ -212,7 +213,7 @@ async def test_home_assistant_keeps_entity_trickle_ice_acceleration() -> None:
             return_value=camera,
         ),
         patch(
-            "custom_components.watchzone.features.live.er.async_get",
+            "custom_components.camera_optics.features.live.er.async_get",
             return_value=SimpleNamespace(
                 async_get=Mock(return_value=SimpleNamespace(platform="frigate"))
             ),
@@ -251,7 +252,7 @@ async def test_talk_resolver_uses_the_registered_talk_capability() -> None:
     service = LiveSignalingService(SimpleNamespace(), providers)  # type: ignore[arg-type]
 
     with patch(
-        "custom_components.watchzone.features.live.er.async_get",
+        "custom_components.camera_optics.features.live.er.async_get",
         return_value=registry,
     ):
         resolved, fallback_reason = (  # noqa: SLF001
@@ -319,15 +320,15 @@ async def test_frigate_capability_uses_public_camera_identity_for_go2rtc() -> No
 
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.source.er.async_get",
+            "custom_components.camera_optics.providers.frigate.source.er.async_get",
             return_value=registry,
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.source.async_import_module",
+            "custom_components.camera_optics.providers.frigate.source.async_import_module",
             new=AsyncMock(return_value=frigate_module),
         ) as import_frigate,
         patch(
-            "custom_components.watchzone.providers.frigate.live.async_get_clientsession",
+            "custom_components.camera_optics.providers.frigate.live.async_get_clientsession",
             return_value=websession,
         ),
     ):
@@ -403,16 +404,18 @@ async def test_frigate_sources_are_scoped_to_their_owning_instance() -> None:
     }
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.source.er.async_get",
+            "custom_components.camera_optics.providers.frigate.source.er.async_get",
             return_value=registry,
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.source.async_import_module",
+            "custom_components.camera_optics.providers.frigate.source.async_import_module",
             new=AsyncMock(return_value=module),
         ),
     ):
         home = await async_resolve_source(
-            hass, "camera.home", cameras["camera.home"]  # type: ignore[arg-type]
+            hass,
+            "camera.home",
+            cameras["camera.home"],  # type: ignore[arg-type]
         )
         workshop = await async_resolve_source(
             hass,
@@ -428,9 +431,7 @@ async def test_frigate_sources_are_scoped_to_their_owning_instance() -> None:
 
 async def test_frigate_source_identity_survives_camera_suspension() -> None:
     """Suspension blocks playback without making go2rtc unconfigurable."""
-    entry = SimpleNamespace(
-        entry_id="entry-home", data={"url": "http://frigate:5000"}
-    )
+    entry = SimpleNamespace(entry_id="entry-home", data={"url": "http://frigate:5000"})
     registry = SimpleNamespace(
         async_get=lambda _entity_id: SimpleNamespace(
             platform="frigate", config_entry_id="entry-home"
@@ -455,16 +456,18 @@ async def test_frigate_source_identity_survives_camera_suspension() -> None:
 
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.source.er.async_get",
+            "custom_components.camera_optics.providers.frigate.source.er.async_get",
             return_value=registry,
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.source.async_import_module",
+            "custom_components.camera_optics.providers.frigate.source.async_import_module",
             new=AsyncMock(return_value=module),
         ),
     ):
         source = await async_resolve_source(
-            hass, "camera.deck", camera  # type: ignore[arg-type]
+            hass,
+            "camera.deck",
+            camera,  # type: ignore[arg-type]
         )
 
     assert source.stream_name == "deck"

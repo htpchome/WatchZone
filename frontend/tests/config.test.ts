@@ -13,7 +13,7 @@ import {
   MAX_LIGHTS_PER_CAMERA,
 } from "../src/core/constants";
 
-describe("WatchZone card configuration", () => {
+describe("CameraOptics card configuration", () => {
   it("sanitizes and bounds the card title", () => {
     const title = `  Front\u0000\n  Door   ${"x".repeat(80)}`;
     const normalized = normalizeCardConfig({ title }).title;
@@ -703,13 +703,13 @@ describe("WatchZone card configuration", () => {
       normalizeCardConfig({
         cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.front" }],
       }),
-    ).toThrow("WatchZone camera entities must be unique");
+    ).toThrow("CameraOptics camera entities must be unique");
     expect(() =>
       normalizeCardConfig({
         cameras: Array.from({ length: MAX_CAMERAS + 1 }, (_, index) => ({
           entity_id: `camera.${index}`,
         })),
       }),
-    ).toThrow(`WatchZone supports at most ${MAX_CAMERAS} cameras`);
+    ).toThrow(`CameraOptics supports at most ${MAX_CAMERAS} cameras`);
   });
 });

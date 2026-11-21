@@ -27,7 +27,7 @@ vi.mock("../src/api/activity-updates", () => ({
       api.subscribeMessage(
         callback,
         {
-          type: "watchzone/activity/subscribe",
+          type: "camera_optics/activity/subscribe",
           entity_id: entityId,
           kind,
         },
@@ -151,7 +151,7 @@ describe("reviews module", () => {
     });
     expect(callWS).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "watchzone/reviews/list",
+        type: "camera_optics/reviews/list",
         entity_id: "camera.front",
         limit: 10,
       }),
@@ -308,7 +308,8 @@ describe("reviews module", () => {
 
   it("downloads review media instead of navigating to the recording", async () => {
     const callWS = vi.fn(async (message: { type: string }) => {
-      if (message.type === "watchzone/reviews/list") return { items: reviews };
+      if (message.type === "camera_optics/reviews/list")
+        return { items: reviews };
       if (message.type === "auth/sign_path") {
         return { path: "/alert.mp4?download=true&authSig=signed" };
       }
@@ -451,9 +452,9 @@ describe("reviews module", () => {
   it("loads tracking details only after the information control opens", async () => {
     const callWS = vi.fn(
       async (message: { review_id?: string; type: string }) => {
-        if (message.type === "watchzone/reviews/list")
+        if (message.type === "camera_optics/reviews/list")
           return { items: reviews };
-        if (message.type === "watchzone/reviews/tracking_details") {
+        if (message.type === "camera_optics/reviews/tracking_details") {
           if (message.review_id === "frigate:review-2") {
             return {
               objects: [
@@ -553,7 +554,9 @@ describe("reviews module", () => {
       ).toHaveLength(2);
     });
     expect(callWS).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "watchzone/reviews/tracking_details" }),
+      expect.objectContaining({
+        type: "camera_optics/reviews/tracking_details",
+      }),
     );
     activityRoot(module)
       ?.querySelector<HTMLButtonElement>(".review-info")
@@ -562,7 +565,7 @@ describe("reviews module", () => {
       expect(callWS).toHaveBeenCalledWith({
         entity_id: "camera.front",
         review_id: "frigate:review-1",
-        type: "watchzone/reviews/tracking_details",
+        type: "camera_optics/reviews/tracking_details",
       });
     });
     await module.updateComplete;
@@ -609,7 +612,7 @@ describe("reviews module", () => {
       expect(callWS).toHaveBeenCalledWith({
         entity_id: "camera.front",
         review_id: "frigate:review-2",
-        type: "watchzone/reviews/tracking_details",
+        type: "camera_optics/reviews/tracking_details",
       });
     });
     await module.updateComplete;
@@ -637,7 +640,7 @@ describe("reviews module", () => {
 
   it("toggles reviewed state through the normalized reviews API", async () => {
     const callWS = vi.fn(async (message: { type: string }) =>
-      message.type === "watchzone/reviews/list"
+      message.type === "camera_optics/reviews/list"
         ? { items: reviews }
         : { reviewed: true },
     );
@@ -682,7 +685,7 @@ describe("reviews module", () => {
 
     await vi.waitFor(() => {
       expect(callWS).toHaveBeenCalledWith({
-        type: "watchzone/reviews/set_reviewed",
+        type: "camera_optics/reviews/set_reviewed",
         entity_id: "camera.front",
         review_id: "frigate:review-2",
         reviewed: true,
@@ -695,7 +698,7 @@ describe("reviews module", () => {
 
   it("marks an unreviewed review when its video is opened", async () => {
     const callWS = vi.fn(async (message: { type: string }) =>
-      message.type === "watchzone/reviews/list"
+      message.type === "camera_optics/reviews/list"
         ? { items: reviews }
         : { reviewed: true },
     );
@@ -752,7 +755,7 @@ describe("reviews module", () => {
       }),
     );
     expect(callWS).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "watchzone/reviews/set_reviewed" }),
+      expect.objectContaining({ type: "camera_optics/reviews/set_reviewed" }),
     );
     expect(snapshotRequest?.kind).toBe("snapshot");
     expect(snapshotRequest?.metadata?.duration).toBe(20);
@@ -768,7 +771,7 @@ describe("reviews module", () => {
     );
     await vi.waitFor(() => {
       expect(callWS).toHaveBeenCalledWith({
-        type: "watchzone/reviews/set_reviewed",
+        type: "camera_optics/reviews/set_reviewed",
         entity_id: "camera.front",
         review_id: "frigate:review-2",
         reviewed: true,
@@ -787,7 +790,7 @@ describe("reviews module", () => {
       reviewed: false,
     };
     const callWS = vi.fn(async (message: { type: string }) =>
-      message.type === "watchzone/reviews/list"
+      message.type === "camera_optics/reviews/list"
         ? { items: [inProgress] }
         : { reviewed: true },
     );
@@ -838,7 +841,7 @@ describe("reviews module", () => {
     await Promise.resolve();
 
     expect(callWS).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "watchzone/reviews/set_reviewed" }),
+      expect.objectContaining({ type: "camera_optics/reviews/set_reviewed" }),
     );
   });
 
@@ -849,12 +852,13 @@ describe("reviews module", () => {
       resolveCreate = resolve;
     });
     const callWS = vi.fn(async (message: { type: string }) => {
-      if (message.type === "watchzone/reviews/list") return { items: reviews };
-      if (message.type === "watchzone/exports/prepare") {
+      if (message.type === "camera_optics/reviews/list")
+        return { items: reviews };
+      if (message.type === "camera_optics/exports/prepare") {
         return { name: defaultName };
       }
-      if (message.type === "watchzone/exports/create") return create;
-      if (message.type === "watchzone/exports/list") {
+      if (message.type === "camera_optics/exports/create") return create;
+      if (message.type === "camera_optics/exports/list") {
         return {
           items: [
             {
@@ -908,7 +912,7 @@ describe("reviews module", () => {
       ?.querySelector<HTMLButtonElement>('button[aria-label="Export review"]')
       ?.click();
     expect(callWS).toHaveBeenCalledWith({
-      type: "watchzone/exports/prepare",
+      type: "camera_optics/exports/prepare",
       entity_id: "camera.front",
       start_time: 95,
       end_time: 129,
@@ -932,7 +936,7 @@ describe("reviews module", () => {
     await module.updateComplete;
     expect(
       callWS.mock.calls.some(
-        ([message]) => message.type === "watchzone/exports/create",
+        ([message]) => message.type === "camera_optics/exports/create",
       ),
     ).toBe(false);
 
@@ -960,7 +964,7 @@ describe("reviews module", () => {
 
     await vi.waitFor(() => {
       expect(callWS).toHaveBeenCalledWith({
-        type: "watchzone/exports/create",
+        type: "camera_optics/exports/create",
         entity_id: "camera.front",
         start_time: 75,
         end_time: 95,
@@ -1010,7 +1014,7 @@ describe("reviews module", () => {
         type: string;
       }) => ({
         items:
-          message.type === "watchzone/reviews/list" &&
+          message.type === "camera_optics/reviews/list" &&
           message.entity_id === "camera.driveway" &&
           message.bypass_cache === true
             ? [draft]
@@ -1060,7 +1064,7 @@ describe("reviews module", () => {
       expect.objectContaining({
         bypass_cache: true,
         entity_id: "camera.driveway",
-        type: "watchzone/reviews/list",
+        type: "camera_optics/reviews/list",
       }),
     );
   });
@@ -1173,7 +1177,7 @@ describe("reviews module", () => {
       locale: { language: "en", time_zone: "server" },
       resolveUrl: (path: string) => `https://ha.local${path}`,
       subscribeMessage: vi.fn(async (callback, message: { type: string }) => {
-        if (message.type === "watchzone/activity/subscribe") {
+        if (message.type === "camera_optics/activity/subscribe") {
           reviewUpdate = callback as (payload: unknown) => void;
         }
         return () => undefined;

@@ -7,8 +7,11 @@ import pytest
 from homeassistant.core import Context
 from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.watchzone.providers.exports import ExportRecord, ExportRequest
-from custom_components.watchzone.providers.frigate.exports import (
+from custom_components.camera_optics.providers.exports import (
+    ExportRecord,
+    ExportRequest,
+)
+from custom_components.camera_optics.providers.frigate.exports import (
     FrigateExportsProvider,
     _normalize_export,
 )
@@ -53,7 +56,7 @@ async def test_delete_falls_back_to_frigate_017(monkeypatch, status: int) -> Non
     request = AsyncMock(return_value=response)
     request_json = AsyncMock(return_value=None)
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.exports.async_resolve_source",
         AsyncMock(return_value=source),
     )
     monkeypatch.setattr(provider, "_validate_export", AsyncMock())
@@ -87,7 +90,7 @@ async def test_delete_uses_frigate_018_bulk_endpoint(monkeypatch) -> None:
     request = AsyncMock(return_value=response)
     request_json = AsyncMock()
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.exports.async_resolve_source",
         AsyncMock(return_value=source),
     )
     monkeypatch.setattr(provider, "_validate_export", AsyncMock())
@@ -106,7 +109,7 @@ async def test_default_name_matches_frigate_format(monkeypatch) -> None:
     provider = FrigateExportsProvider()
     source = SimpleNamespace(camera_name="front_door")
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.exports.async_resolve_source",
         AsyncMock(return_value=source),
     )
 
@@ -168,11 +171,11 @@ async def test_create_rejects_unverified_background_job(monkeypatch) -> None:
     provider.async_list_exports = AsyncMock(return_value=())
     sleep = AsyncMock()
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports._EXPORT_VERIFY_ATTEMPTS",
+        "custom_components.camera_optics.providers.frigate.exports._EXPORT_VERIFY_ATTEMPTS",
         2,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.exports.asyncio.sleep", sleep
+        "custom_components.camera_optics.providers.frigate.exports.asyncio.sleep", sleep
     )
 
     with pytest.raises(

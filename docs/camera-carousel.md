@@ -90,7 +90,7 @@ closed it, the normal provider connection path starts once.
 
 During a direct-manipulation swipe, the camera selection and live lease move as
 soon as Swiper selects the destination slide, but the shared selection remains
-marked unsettled until the WatchZone Motion transition completes. Activity
+marked unsettled until the CameraOptics Motion transition completes. Activity
 consumers defer camera-specific requests, sorting, and list rendering while
 that flag is false. Camera rerenders must not issue a redundant `slideTo` for
 the index whose Motion settlement is active.
@@ -184,7 +184,7 @@ replaces the slide, video, or media-session lease.
 - Card configuration selects `none`, `slide`, or `fade`; `slide` is the
   normalized default and is omitted from compact YAML output.
 - The camera carousel controller uses Swiper only for geometry and touch
-  arbitration at zero transition speed. WatchZone Motion owns the effect for
+  arbitration at zero transition speed. CameraOptics Motion owns the effect for
   touch swipes, previous/next navigation, camera-navigation or camera-switcher
   selection, and automatic activity takeover. Presentation components emit
   selection intent and do not implement a second transition path.

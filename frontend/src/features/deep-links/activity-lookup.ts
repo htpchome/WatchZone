@@ -26,7 +26,7 @@ export function findEvent(
       findActivity(
         api,
         entityId,
-        "watchzone/events/list",
+        "camera_optics/events/list",
         eventId,
         historyDays,
       ),
@@ -46,7 +46,7 @@ export function findReview(
       findActivity(
         api,
         entityId,
-        "watchzone/reviews/list",
+        "camera_optics/reviews/list",
         reviewId,
         historyDays,
       ),
@@ -81,7 +81,7 @@ function isEligibleDirectItem(
 async function findActivity<T extends ActivityItem>(
   api: HomeAssistantApi,
   entityId: string,
-  type: "watchzone/events/list" | "watchzone/reviews/list",
+  type: "camera_optics/events/list" | "camera_optics/reviews/list",
   targetId: string,
   historyDays: number,
 ): Promise<T | undefined> {
@@ -97,7 +97,7 @@ async function findActivity<T extends ActivityItem>(
       before,
       limit,
       bypass_cache: true,
-      ...(type === "watchzone/reviews/list" ? { summary_only: false } : {}),
+      ...(type === "camera_optics/reviews/list" ? { summary_only: false } : {}),
     });
     const match = response.items.find(({ id }) => matchesId(id, targetId));
     if (match) return match;

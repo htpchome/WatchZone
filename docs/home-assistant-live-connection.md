@@ -8,7 +8,7 @@ provider-specific behavior to this adapter.
 
 ## 1. Scope
 
-This contract governs WatchZone's browser-direct connection to a Home Assistant
+This contract governs CameraOptics's browser-direct connection to a Home Assistant
 `camera` entity. It supplements `architecture.md` and
 `docs/live-session-lifecycle.md`; those documents remain authoritative for
 module boundaries, retention, and audio intent.
@@ -20,14 +20,14 @@ supported path.
 
 ## 2. Original implementation boundary
 
-WatchZone does not copy, subclass, patch, or wrap Advanced Camera Card,
+CameraOptics does not copy, subclass, patch, or wrap Advanced Camera Card,
 FrigateViewCard, or Home Assistant frontend player implementations. The adapter
 is an original implementation against:
 
 - Home Assistant's authenticated frontend WebSocket connection.
-- Home Assistant's `camera/webrtc/get_client_config` contract and WatchZone's
-  provider-resolved `watchzone/live/webrtc/offer` and
-  `watchzone/live/webrtc/candidate` signaling contracts.
+- Home Assistant's `camera/webrtc/get_client_config` contract and CameraOptics's
+  provider-resolved `camera_optics/live/webrtc/offer` and
+  `camera_optics/live/webrtc/candidate` signaling contracts.
 - Standard browser `RTCPeerConnection`, `MediaStream`, and media-element APIs.
 
 External projects may be studied to understand observable architecture and
@@ -47,7 +47,7 @@ The initial design analysis compared these local source baselines:
 The relevant observation is architectural, not a benchmark claim. Advanced
 Camera Card prepares Home Assistant camera elements early and limits broad card
 updates. Home Assistant's generic camera stream can also perform capability,
-poster, HLS, and WebRTC work. WatchZone keeps its live UI and concrete adapter
+poster, HLS, and WebRTC work. CameraOptics keeps its live UI and concrete adapter
 lazy, but starts a pooled prewarm lease as soon as the configured entity and
 Home Assistant transport are available. Module loading and the eligible live
 connection attempts therefore run in parallel.
@@ -57,7 +57,7 @@ Home Assistant instance, browser, network, and cold/warm cache conditions.
 
 ## 4. Connection selection
 
-For the initial Home Assistant direct source, WatchZone uses a hedged startup:
+For the initial Home Assistant direct source, CameraOptics uses a hedged startup:
 
 1. WebRTC and HLS begin concurrently; neither waits for the other to fail.
 2. The first adapter to decode usable video becomes the initial presentation.
@@ -101,7 +101,7 @@ presentation selection.
 
 The connection sequence is:
 
-1. Waits for WatchZone's backend to confirm that Home Assistant has registered
+1. Waits for CameraOptics's backend to confirm that Home Assistant has registered
    the restored camera object. Restored entity state alone is not readiness;
    this prevents `Camera not found` requests during an HA restart.
 2. Requests Home Assistant's WebRTC client configuration.
@@ -109,7 +109,7 @@ The connection sequence is:
 4. Adds receive-only audio and video transceivers and the requested data
    channel, if any.
 5. Creates and installs the local offer.
-6. Subscribes to WatchZone's backend signaling exchange. The backend resolves
+6. Subscribes to CameraOptics's backend signaling exchange. The backend resolves
    an eligible provider capability and otherwise delegates to Home Assistant's
    public camera WebRTC contract.
 7. Includes local ICE candidates gathered while installing the offer in the
@@ -191,7 +191,7 @@ The card-level `low_latency_hls` setting defaults to `true`; YAML stores only
 the non-default opt-out. HLS session identity includes the selected mode so a
 retained low-latency session cannot be reused for a card that disabled it.
 Native HLS engines ultimately control their own interpretation of an LL-HLS
-playlist; the setting deterministically controls WatchZone's HLS.js path.
+playlist; the setting deterministically controls CameraOptics's HLS.js path.
 
 The HLS session owns its media element because its MediaSource playback state
 is element-bound. Closing destroys the playback engine, cancels in-flight
@@ -260,7 +260,7 @@ actively leased failed sessions sequentially in their original acquisition
 order. Healthy active and parked sessions remain attached to the same media
 objects and are reused instead of restarted. A full Home Assistant restart can
 accept WebSocket commands briefly
-before WatchZone's backend/provider commands are registered, so failed startup
+before CameraOptics's backend/provider commands are registered, so failed startup
 attempts during that recovery window use a separate bounded five-attempt
 backoff policy. This is independent of each adapter's bounded ordinary-media
 policy. Parked failed sessions remain inactive until reacquired. A foreground
@@ -290,7 +290,7 @@ continues to follow the forced-mute, audio-focus, lifetime, and autoplay rules i
 ## 9. Required evolution rules
 
 - Keep the concrete adapter dynamically imported and outside the eager graph.
-- Keep Home Assistant API typing in WatchZone's narrow boundary instead of
+- Keep Home Assistant API typing in CameraOptics's narrow boundary instead of
   passing the entire `hass` object into transport code.
 - Keep provider signaling adapters separate from the provider-neutral browser
   peer engine. Provider code supplies configuration and exchanges signaling;
@@ -316,7 +316,7 @@ continues to follow the forced-mute, audio-focus, lifetime, and autoplay rules i
 Home Assistant Direct remains the user-selected connection type and continues
 to use the existing Home Assistant camera entity, client ICE configuration,
 permissions, retained-session identity, and browser media path. For camera
-entities owned by the Frigate integration, WatchZone may fulfill only the
+entities owned by the Frigate integration, CameraOptics may fulfill only the
 signaling portion through its Python backend and Frigate's authenticated
 go2rtc WebSocket API. That API returns the SDP answer immediately and trickles
 ICE candidates instead of waiting for go2rtc's synchronous HTTP answer.
@@ -326,7 +326,7 @@ camera, a separately selectable go2rtc connection type, or a duplicate entity.
 The backend resolves it from the selected HA entity and its public stream
 source, keeps provider authentication out of the browser, and sends no media
 bytes through Python. If the Frigate capability cannot be prepared, the same
-WatchZone signaling endpoint delegates to Home Assistant's standard public
+CameraOptics signaling endpoint delegates to Home Assistant's standard public
 camera WebRTC contract. Other camera integrations always use that standard
 path.
 
@@ -380,7 +380,7 @@ not replace an available image with an empty surface.
 The Home Assistant boundary resolves `entity_picture` first and otherwise uses
 the entity's short-lived `access_token` with the camera proxy endpoint. Tokens
 must never be logged or persisted. A failed or unavailable still image falls
-back locally without delaying HLS or WebRTC startup. WatchZone must not perform
+back locally without delaying HLS or WebRTC startup. CameraOptics must not perform
 automatic canvas extraction from live video: privacy protections can block it
 without a user gesture and produce browser warnings. Future retained-frame work
 must use a media-native lifecycle or an explicit user action.

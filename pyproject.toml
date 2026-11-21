@@ -12,4 +12,4 @@ select = ["ASYNC", "B", "E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.14"
 strict = true
-files = ["custom_components/watchzone"]
+files = ["custom_components/camera_optics"]

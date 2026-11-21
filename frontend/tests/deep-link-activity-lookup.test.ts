@@ -19,7 +19,7 @@ describe("deep-link activity lookup", () => {
       target,
     );
     expect(callWS).toHaveBeenCalledWith({
-      type: "watchzone/reviews/get",
+      type: "camera_optics/reviews/get",
       entity_id: "camera.front",
       review_id: "target",
     });
@@ -65,7 +65,7 @@ describe("deep-link activity lookup", () => {
     );
     expect(callWS).toHaveBeenCalledTimes(2);
     expect(callWS.mock.calls[0]?.[0]).toEqual({
-      type: "watchzone/events/get",
+      type: "camera_optics/events/get",
       entity_id: "camera.front",
       event_id: "target",
     });

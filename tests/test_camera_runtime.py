@@ -9,17 +9,17 @@ from unittest.mock import AsyncMock, Mock, patch
 from homeassistant.core import Context, HomeAssistant, is_callback
 from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.camera_runtime import (
+from custom_components.camera_optics.features.camera_runtime import (
     CameraRuntimeService,
     CameraRuntimeSnapshot,
 )
-from custom_components.watchzone.providers.camera import CameraRuntimeState
-from custom_components.watchzone.providers.frigate.camera import (
+from custom_components.camera_optics.providers.camera import CameraRuntimeState
+from custom_components.camera_optics.providers.frigate.camera import (
     async_get_state,
     async_set_suspended,
 )
@@ -47,7 +47,7 @@ async def test_camera_readiness_waits_for_home_assistant_registration(
             {"homeassistant.components.camera.helper": camera_helper},
         ),
         patch(
-            "custom_components.watchzone.features.camera_runtime.asyncio.sleep",
+            "custom_components.camera_optics.features.camera_runtime.asyncio.sleep",
             AsyncMock(),
         ),
     ):
@@ -118,9 +118,7 @@ async def test_timed_suspension_preserves_provider_authority(
     """A timer never overrides a provider-reported external resume."""
     provider_suspended = False
 
-    async def get_state(
-        _hass: HomeAssistant, _entity_id: str
-    ) -> CameraRuntimeState:
+    async def get_state(_hass: HomeAssistant, _entity_id: str) -> CameraRuntimeState:
         return CameraRuntimeState(
             available=True,
             provider="frigate",
@@ -173,9 +171,7 @@ async def test_runtime_changes_publish_to_every_subscribed_client(
     """Provider-confirmed commands broadcast to every subscribed client."""
     provider_suspended = False
 
-    async def get_state(
-        _hass: HomeAssistant, _entity_id: str
-    ) -> CameraRuntimeState:
+    async def get_state(_hass: HomeAssistant, _entity_id: str) -> CameraRuntimeState:
         return CameraRuntimeState(
             available=True,
             provider="frigate",
@@ -202,12 +198,8 @@ async def test_runtime_changes_publish_to_every_subscribed_client(
     second_listener = Mock()
 
     with patch.object(service, "_provider", return_value=provider):
-        unsubscribe_first = service.async_subscribe(
-            "camera.porch", first_listener
-        )
-        unsubscribe_second = service.async_subscribe(
-            "camera.porch", second_listener
-        )
+        unsubscribe_first = service.async_subscribe("camera.porch", first_listener)
+        unsubscribe_second = service.async_subscribe("camera.porch", second_listener)
         await service.async_set_suspended(
             "camera.porch", True, None, Context(user_id="user")
         )
@@ -254,7 +246,7 @@ async def test_state_change_listeners_are_event_loop_callbacks(
 
     with (
         patch(
-            "custom_components.watchzone.features.camera_runtime."
+            "custom_components.camera_optics.features.camera_runtime."
             "async_track_state_change_event",
             side_effect=track_state_change,
         ),
@@ -278,9 +270,7 @@ async def test_external_provider_state_is_published_without_local_intent(
     """An external provider resume replaces the suspended presentation."""
     provider_suspended = True
 
-    async def get_state(
-        _hass: HomeAssistant, _entity_id: str
-    ) -> CameraRuntimeState:
+    async def get_state(_hass: HomeAssistant, _entity_id: str) -> CameraRuntimeState:
         return CameraRuntimeState(
             available=True,
             provider="frigate",
@@ -313,13 +303,11 @@ async def test_external_provider_state_is_published_without_local_intent(
         async_get=Mock(return_value=SimpleNamespace(platform="test-camera"))
     )
     with patch(
-        "custom_components.watchzone.features.camera_runtime.er.async_get",
+        "custom_components.camera_optics.features.camera_runtime.er.async_get",
         return_value=registry,
     ):
         initial = await service.async_snapshot("camera.porch")
-        unsubscribe = service.async_subscribe(
-            "camera.porch", listener, initial
-        )
+        unsubscribe = service.async_subscribe("camera.porch", listener, initial)
         provider_suspended = False
         await asyncio.wait_for(resumed.wait(), timeout=1)
 
@@ -348,7 +336,7 @@ async def test_camera_runtime_resolver_is_provider_extensible(
     service = CameraRuntimeService(hass, providers)
 
     with patch(
-        "custom_components.watchzone.features.camera_runtime.er.async_get",
+        "custom_components.camera_optics.features.camera_runtime.er.async_get",
         return_value=registry,
     ):
         assert service._provider("camera.garden") is provider  # noqa: SLF001

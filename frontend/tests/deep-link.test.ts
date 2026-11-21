@@ -64,7 +64,7 @@ describe("notification deep links", () => {
     ).toBeUndefined();
   });
 
-  it("removes only WatchZone parameters from normal and hash queries", () => {
+  it("removes only CameraOptics parameters from normal and hash queries", () => {
     const replaceState = vi.fn();
     removeDeepLinkParameters(
       {

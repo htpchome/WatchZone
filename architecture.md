@@ -1,12 +1,12 @@
-# WatchZone Architecture Contract
+# CameraOptics Architecture Contract
 
 ## 1. Purpose
 
-This document is the architectural contract for WatchZone. It defines the
+This document is the architectural contract for CameraOptics. It defines the
 boundaries, dependency rules, performance requirements, and structural
 decisions that all implementation work must follow.
 
-WatchZone is one Home Assistant custom integration containing both:
+CameraOptics is one Home Assistant custom integration containing both:
 
 - A Python backend running inside Home Assistant.
 - A TypeScript and Lit frontend rendered as a Lovelace card and editor.
@@ -15,9 +15,9 @@ They are built, tested, packaged, versioned, and released together as one
 integration. They are not independent products and do not carry compatibility
 layers for mixing frontend and backend releases.
 
-A configured WatchZone config entry is required. The frontend is packaged,
+A configured CameraOptics config entry is required. The frontend is packaged,
 served, and registered by the Python integration and has no supported
-standalone mode. Installing through HACS is followed by adding WatchZone under
+standalone mode. Installing through HACS is followed by adding CameraOptics under
 Home Assistant's Devices & services settings.
 
 The architecture is designed to support user-created layouts composed from
@@ -34,7 +34,7 @@ own responsibilities require them.
 
 ## 2. Architectural goals
 
-In priority order, WatchZone must be:
+In priority order, CameraOptics must be:
 
 1. **Correct and maintainable:** A change inside one feature must not cause
    unrelated features to change or fail.
@@ -52,7 +52,7 @@ In priority order, WatchZone must be:
 
 ## 3. Non-goals
 
-WatchZone does not:
+CameraOptics does not:
 
 - Store layout trees in Lovelace YAML.
 - Recreate FrigateViewCard's single-view architecture as the application root.
@@ -126,9 +126,9 @@ architecture decision recorded in this document or a future ADR.
 ├── dist/                          # Generated output; never source
 │   ├── frontend/                  # Vite entry and lazy chunks
 │   ├── package/                   # Assembled integration staging tree
-│   └── watchzone.zip              # HACS release asset
+│   └── camera-optics.zip              # HACS release asset
 ├── custom_components/
-│   └── watchzone/                 # Shipped Python integration
+│   └── camera_optics/                 # Shipped Python integration
 │       ├── __init__.py            # Composition root and HA lifecycle
 │       ├── manifest.json
 │       ├── const.py
@@ -172,7 +172,7 @@ from its first implementation:
 ```text
 frontend/src/stage/modules/camera/index.ts
 frontend/src/stage/components/two-way-talk/index.ts
-custom_components/watchzone/features/layouts/__init__.py
+custom_components/camera_optics/features/layouts/__init__.py
 ```
 
 The first version may be one cohesive implementation file. Additional files
@@ -231,7 +231,7 @@ These rules are mandatory:
    feature services, and serialize results. They do not contain feature logic.
 7. Backend features may depend on provider protocols and storage contracts,
    not on concrete provider internals.
-8. Providers translate external systems into WatchZone-owned models. Frigate
+8. Providers translate external systems into CameraOptics-owned models. Frigate
    response shapes must not leak across the application by default.
 9. Storage adapters persist and migrate data. They do not contain UI or
    provider behavior.
@@ -252,44 +252,44 @@ The frontend and backend are released in lockstep:
 - One integration version identifies the entire release.
 - All generated output is isolated beneath repository-root `dist/`. Vite emits
   frontend assets to `dist/frontend/`; release staging assembles the complete
-  integration beneath `dist/package/` and produces `dist/watchzone.zip`.
+  integration beneath `dist/package/` and produces `dist/camera-optics.zip`.
 - Packaging copies the built frontend beneath `frontend/` in the assembled
   integration.
 - Release validation fails if generated assets are missing or do not match the
   current source build.
 - Python registers and serves the packaged frontend assets.
 - Python registers the card as an awaited Lovelace module resource only after
-  WatchZone is configured and removes its registration cleanly when the
+  CameraOptics is configured and removes its registration cleanly when the
   integration is unloaded. The card must not use `extra_module_url` or
   `add_extra_js_url`; those paths are not ordered ahead of dashboard rendering
   and can lose custom-element registrations during frontend initialization.
 - The release must not depend on a separately installed Lovelace resource.
-- Frontend/backend compatibility shims are not maintained between WatchZone
+- Frontend/backend compatibility shims are not maintained between CameraOptics
   releases.
 
 The source repository uses HACS's standard integration layout:
-`custom_components/watchzone/` contains the integration source and
-`manifest.json`; `hacs.json` remains at the repository root. WatchZone does not
+`custom_components/camera_optics/` contains the integration source and
+`manifest.json`; `hacs.json` remains at the repository root. CameraOptics does not
 use HACS `content_in_root`.
 
-Tagged releases use HACS `zip_release` with the filename `watchzone.zip`.
+Tagged releases use HACS `zip_release` with the filename `camera-optics.zip`.
 HACS extracts that archive directly into
-`<config>/custom_components/watchzone`, so the archive root must contain the
+`<config>/custom_components/camera_optics`, so the archive root must contain the
 integration files themselves:
 
 ```text
-watchzone.zip
+camera-optics.zip
 ├── __init__.py
 ├── manifest.json
 ├── const.py
 ├── ...
 └── frontend/
-    ├── watchzone.js
+    ├── camera-optics.js
     └── ... lazy chunks and asset manifest
 ```
 
 The archive must not contain a wrapping `dist/`, `package/`,
-`custom_components/`, or `watchzone/` directory. Repository-root `dist/` is a
+`custom_components/`, or `camera_optics/` directory. Repository-root `dist/` is a
 local/CI staging convention, not a HACS installation requirement, and is never
 committed.
 
@@ -302,7 +302,7 @@ must have explicit schema versions and migrations.
 
 ### 7.1 Version and commit discipline
 
-`custom_components/watchzone/const.py` is the source of truth for the WatchZone
+`custom_components/camera_optics/const.py` is the source of truth for the CameraOptics
 version through its `VERSION` constant.
 
 - Every release-affecting commit pushed to `main` is an independently
@@ -408,7 +408,7 @@ grow only for a demonstrated cross-placeable requirement.
 Conceptually:
 
 ```ts
-interface WatchZonePlaceableDefinition<TConfig = unknown> {
+interface CameraOpticsPlaceableDefinition<TConfig = unknown> {
   readonly type: string;
   validateConfig(value: unknown): TConfig;
   define(): void;
@@ -491,10 +491,10 @@ The normative rules are defined in
 - A helper is not made into a custom element merely to create a file or claim
   reusability.
 - Small templates, pure functions, and private classes remain with their owner.
-- Shadow DOM is used for WatchZone element encapsulation.
+- Shadow DOM is used for CameraOptics element encapsulation.
 - Styling uses Home Assistant theme variables with resilient fallbacks.
 - Unsupported internal Home Assistant frontend elements are not treated as a
-  stable API. If used, they must be isolated behind a small WatchZone adapter.
+  stable API. If used, they must be isolated behind a small CameraOptics adapter.
 - Reactive state contains only values that affect rendering.
 - Derived data is computed or memoized at the owning boundary rather than
   duplicated into reactive state.
@@ -520,12 +520,12 @@ Home Assistant may assign a new `hass` object for any state change. Therefore:
 Every card configuration field uses Home Assistant's dirty-state editor
 lifecycle. Typing updates a local normalized draft and a stable `dirtyState`
 context key; it does not repeatedly emit `config-changed` or reconstruct the
-preview card. Draft preview uses a coalesced WatchZone-owned path that
+preview card. Draft preview uses a coalesced CameraOptics-owned path that
 preserves component identity. Save hands the final draft to Home Assistant;
 Cancel discards it. The normative behavior and required tests are defined in
 [docs/config-editor-lifecycle.md](docs/config-editor-lifecycle.md).
 
-WatchZone's editor is a write-only dirty-state consumer and therefore requests
+CameraOptics's editor is a write-only dirty-state consumer and therefore requests
 the context once without subscribing to provider publications. Dirty state only
 tracks unsaved work; it does not transport the draft into Home Assistant's card
 configuration. To preserve preview component identity, one isolated Home
@@ -543,18 +543,18 @@ is an explicit value and must not be collapsed into a missing property while a
 draft is normalized or published. Regression tests cover both directions and
 reverting a control before Save.
 
-WatchZone uses current Home Assistant controls and semantic theme tokens.
+CameraOptics uses current Home Assistant controls and semantic theme tokens.
 Project customization variables use the `--wzc-` prefix and resolve to Home
 Assistant tokens by default. Hardcoded application palettes and independent
 light/dark assumptions are prohibited.
 
 `frontend/src/styles/theme-tokens.ts` is the only frontend file allowed to
-consume Home Assistant theme variables directly. It maps them to WatchZone
+consume Home Assistant theme variables directly. It maps them to CameraOptics
 semantic tokens for primary, primary-dark, accent, surfaces, four text roles
 (primary, secondary, tertiary/disabled, and reversed), error, warning, success,
 borders, fills, radius scale, shadow scale, typography, card surfaces, and
 media overlays. Component styles consume `--wzc-*` tokens only. A new visual
-semantic state defines or reuses a WatchZone token before feature CSS uses it.
+semantic state defines or reuses a CameraOptics token before feature CSS uses it.
 The write-only `frontend/src/styles/home-assistant-card-bridge.ts` is the sole
 exception: it may assign Home Assistant's card-radius and card-shadow host
 hooks so appearance options cross HA's shadow-DOM boundary, but it must not
@@ -597,7 +597,7 @@ logical sizing, container-aware rules, bounded fluid values, and explicit
 overflow behavior. The card shell is the future constraint boundary for panel
 and full-size layouts and must not assume a dashboard column count or viewport.
 
-WatchZone supports current Chrome, Edge, Firefox, and Safari releases, plus
+CameraOptics supports current Chrome, Edge, Firefox, and Safari releases, plus
 Home Assistant Companion on Android and iOS and Home Assistant clients using
 Catalyst. Interfaces must work at phone, tablet, and desktop sizes with touch,
 pointer, and keyboard input. Chromium-only behavior, user-agent branching, and
@@ -640,7 +640,7 @@ owned beneath the provider boundary that can perform the capability:
 A camera belongs to one provider instance but may expose multiple live source
 candidates. For example, a Frigate camera may be viewable through Frigate's
 go2rtc endpoint or through a linked Home Assistant camera entity. Layouts and
-modules refer to the stable WatchZone camera ID, not directly to a transport
+modules refer to the stable CameraOptics camera ID, not directly to a transport
 URL.
 
 Conceptually, the backend returns data shaped like:
@@ -689,14 +689,14 @@ Provider and live-resolution rules:
 
 Live connections are owned by a document-scoped media-session manager, not by
 a card, module, layout renderer, preview, or editor element. The manager is a
-single typed runtime service shared by every WatchZone card instance in the
+single typed runtime service shared by every CameraOptics card instance in the
 same Home Assistant browser document.
 
 Mandatory behavior:
 
 - Re-rendering, moving, or temporarily disconnecting a live module does not
   recreate an unchanged live connection.
-- Layout and WatchZone view changes transfer presentation attachment while
+- Layout and CameraOptics view changes transfer presentation attachment while
   retaining the underlying session.
 - Pre-editor and editor previews acquire leases on existing sessions rather
   than creating duplicate connections for the same source.
@@ -745,7 +745,7 @@ Mandatory behavior:
 User audio intent is separate from temporary playback state:
 
 - A user's explicit muted or unmuted preference is stored per camera and
-  shared across WatchZone card instances for the lifetime of the current Home
+  shared across CameraOptics card instances for the lifetime of the current Home
   Assistant browser document. It survives route changes, background tabs, and
   window minimization but resets on a hard refresh or new browser document.
 - Per-camera startup defaults may differ between phone and tablet/desktop
@@ -766,7 +766,7 @@ An active two-way-talk peer follows the same document-lifetime navigation
 boundary through a dedicated document-scoped talk-session service. The Stage
 component and the document-level persistent tile are presentations of that
 service; neither a card nor a detached Lit element owns or preserves the peer.
-Leaving the matching camera, WatchZone view, dashboard, or Home Assistant route
+Leaving the matching camera, CameraOptics view, dashboard, or Home Assistant route
 keeps a connected peer while the document remains visible. Backgrounding,
 explicit dismissal, camera disablement, or document termination closes it.
 The persistent tile is an application feature and is never a Stage placeable.
@@ -828,7 +828,7 @@ layout; it is not a parallel layout definition in Lovelace.
 
 ### 9.2 Stored layout model
 
-The persisted model is a versioned WatchZone-owned JSON structure. At minimum,
+The persisted model is a versioned CameraOptics-owned JSON structure. At minimum,
 a saved layout contains:
 
 - Stable layout ID.
@@ -920,13 +920,13 @@ but the stored model and boundaries must not prevent them.
 
 ### 10.1 Home Assistant lifecycle
 
-- WatchZone has one primary config entry representing the application.
+- CameraOptics has one primary config entry representing the application.
 - Provider connections are configured as typed config subentries beneath the
-  WatchZone entry. The user can add, reconfigure, and remove provider instances
+  CameraOptics entry. The user can add, reconfigure, and remove provider instances
   through Home Assistant's UI.
 - Multiple provider types and multiple instances of the same provider are
   supported.
-- Use a typed `ConfigEntry[WatchZoneRuntime]` and `entry.runtime_data` for
+- Use a typed `ConfigEntry[CameraOpticsRuntime]` and `entry.runtime_data` for
   per-entry runtime objects.
 - Domain-global registrations are created once and cleaned up correctly.
 - `async_setup_entry` constructs the runtime and delegates to feature setup.
@@ -938,7 +938,7 @@ but the stored model and boundaries must not prevent them.
 
 ### 10.2 Runtime composition
 
-`WatchZoneRuntime` is a typed composition container, not a god object. It may
+`CameraOpticsRuntime` is a typed composition container, not a god object. It may
 hold references to feature services and provider instances, but it must not
 reimplement their behavior or expose unrestricted mutable dictionaries.
 
@@ -963,7 +963,7 @@ polling source and refresh schedule. It is not the application architecture.
 
 ### 10.4 Provider adapters
 
-External systems are accessed through narrow WatchZone-owned provider
+External systems are accessed through narrow CameraOptics-owned provider
 protocols.
 
 - Provider-specific authentication, endpoints, response shapes, and quirks
@@ -979,19 +979,19 @@ The first provider may be Frigate, but core module, camera, layout, and live
 connection contracts must not encode Frigate as the only possible source.
 
 Provider instances are isolated. Failure, reauthentication, or reload of one
-provider must not interrupt healthy providers. A WatchZone installation may,
+provider must not interrupt healthy providers. A CameraOptics installation may,
 for example, contain two Frigate instances and one MotionEye instance.
 
 ### 10.5 Backend extensions
 
-WatchZone supports independently installed backend extensions without making
-feature services depend on external packages or on WatchZone's private module
+CameraOptics supports independently installed backend extensions without making
+feature services depend on external packages or on CameraOptics's private module
 layout. The initial extension point is provider capabilities; additional areas
 may add their own extension points when a real use case exists.
 
-- `custom_components.watchzone.extensions` is the narrow, versioned public
+- `custom_components.camera_optics.extensions` is the narrow, versioned public
   Python contract. An external integration imports only this surface, declares
-  WatchZone as a Home Assistant dependency, registers during setup, and
+  CameraOptics as a Home Assistant dependency, registers during setup, and
   unregisters through its config-entry unload lifecycle.
 - Registration uses a stable provider ID, optional Home Assistant entity
   platform aliases, an exact extension API version, and explicit capability
@@ -1011,10 +1011,10 @@ may add their own extension points when a real use case exists.
   fallback behavior must remain available where the feature contract defines
   one.
 - Public extension models contain no provider credentials, clients, or mutable
-  WatchZone runtime objects. Provider authentication and secrets stay owned by
+  CameraOptics runtime objects. Provider authentication and secrets stay owned by
   the registering integration.
 - New extension areas receive a typed, purpose-specific contract and lifecycle;
-  WatchZone does not expose a generic service locator, unrestricted runtime
+  CameraOptics does not expose a generic service locator, unrestricted runtime
   dictionary, arbitrary import hook, or frontend-code injection mechanism.
 
 In Home Assistant terminology these are companion custom integrations, not
@@ -1033,7 +1033,7 @@ the extension registry.
 The backend exposes one normalized camera catalog across every configured
 provider. Each camera has:
 
-- A stable opaque WatchZone camera ID.
+- A stable opaque CameraOptics camera ID.
 - Provider instance ID and provider-native camera ID.
 - User-visible metadata.
 - Provider capabilities such as events, recordings, snapshots, PTZ, or audio.
@@ -1043,7 +1043,7 @@ provider. Each camera has:
 Names are not identifiers. Camera IDs remain stable across display-name
 changes and cannot collide between provider instances.
 
-Frontend modules consume WatchZone camera models and capability flags. A
+Frontend modules consume CameraOptics camera models and capability flags. A
 generic module must not branch on provider names. Provider-specific modules
 are allowed only for genuinely provider-specific behavior and must declare the
 required provider capability explicitly.
@@ -1056,7 +1056,7 @@ camera selector may list cameras from all configured providers.
 
 - Cross-provider queries fan out only to providers that advertise the required
   capability.
-- Results use WatchZone-owned models and deterministic ordering.
+- Results use CameraOptics-owned models and deterministic ordering.
 - Pagination remains bounded; cross-provider cursors are opaque to the
   frontend.
 - Provider-specific caches, rate limits, and retries remain owned by that
@@ -1074,15 +1074,15 @@ Use Home Assistant's authenticated WebSocket API for commands, queries, and
 subscriptions. Use authenticated HTTP views only when the payload or streaming
 semantics make WebSocket unsuitable, such as media byte delivery.
 
-Frontend code uses the `hass` connection through one WatchZone API client.
-Feature modules do not construct raw WatchZone WebSocket messages throughout
+Frontend code uses the `hass` connection through one CameraOptics API client.
+Feature modules do not construct raw CameraOptics WebSocket messages throughout
 the UI.
 
 ### 11.2 Command contract
 
 Every command or subscription has:
 
-- A namespaced type such as `watchzone/layout/get`.
+- A namespaced type such as `camera_optics/layout/get`.
 - Strict backend input validation.
 - Explicit TypeScript request and response types.
 - Authentication and the narrowest appropriate authorization check.
@@ -1120,7 +1120,7 @@ Failures are contained at their owner boundary:
 - A module handles its own data, rendering, and import failures.
 - The API client normalizes transport failures.
 - Backend API adapters translate feature exceptions into typed API errors.
-- Provider adapters translate external failures into WatchZone exceptions.
+- Provider adapters translate external failures into CameraOptics exceptions.
 
 Unknown module types remain represented in a layout and display an actionable
 placeholder. They must not be silently deleted during load or save.
@@ -1375,7 +1375,7 @@ A change is complete only when:
 
 ## 21. Authoritative platform references
 
-WatchZone follows supported Home Assistant APIs and current project guidance,
+CameraOptics follows supported Home Assistant APIs and current project guidance,
 including:
 
 - Home Assistant WebSocket extension API:

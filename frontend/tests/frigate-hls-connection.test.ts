@@ -46,7 +46,7 @@ describe("Frigate HLS source acquisition", () => {
       "/api/hls/token/master.m3u8",
     );
     expect(callWS).toHaveBeenCalledWith({
-      type: "watchzone/live/frigate/hls",
+      type: "camera_optics/live/frigate/hls",
       entity_id: "camera.front",
     });
   });

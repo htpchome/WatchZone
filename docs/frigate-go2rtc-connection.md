@@ -59,7 +59,7 @@ and `ptz.md`, which remain authoritative.
 - MSE uses the installed Frigate integration's instance-qualified authenticated
   go2rtc WebSocket proxy. The frontend requests a short-lived Home Assistant
   signed path and supplies only the backend-validated stream name.
-- WatchZone Python brokers authorization and source identity but does not proxy
+- CameraOptics Python brokers authorization and source identity but does not proxy
   MSE media bytes.
 - The MSE adapter bounds buffered history and corrects drift toward the live
   edge. It owns its MediaSource, SourceBuffer, WebSocket, object URL, video
@@ -96,7 +96,7 @@ and `ptz.md`, which remain authoritative.
   Assistant talk adapter or the presentation component.
 - Frigate PTZ capability discovery uses the owning integration's runtime PTZ
   information. Motion uses the Frigate integration's registered PTZ service
-  through the existing subscription-owned WatchZone safety lifecycle.
+  through the existing subscription-owned CameraOptics safety lifecycle.
 - Talk and PTZ configuration remains per camera and follows the active camera's
   selected provider in mixed cards.
 

@@ -66,7 +66,7 @@ const reviewExportConfirmEvent = unsafeStatic(EXPORT_NAME_CONFIRM_EVENT);
 const reviewTrackingCloseEvent = unsafeStatic(REVIEW_TRACKING_CLOSE_EVENT);
 const reviewTrackingRetryEvent = unsafeStatic(REVIEW_TRACKING_RETRY_EVENT);
 
-/** Active-camera provider review activity presented as WatchZone Reviews. */
+/** Active-camera provider review activity presented as CameraOptics Reviews. */
 export class ReviewsModule extends LitElement {
   public static properties = {
     api: { attribute: false },

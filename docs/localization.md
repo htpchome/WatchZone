@@ -1,6 +1,6 @@
 # Localization
 
-WatchZone follows the current Home Assistant user's locale. Display language is
+CameraOptics follows the current Home Assistant user's locale. Display language is
 not inferred from the browser, server host, integration title, or camera name.
 
 ## Frontend
@@ -20,7 +20,7 @@ not inferred from the browser, server host, integration title, or camera name.
 
 ## Backend
 
-Home Assistant loads `custom_components/watchzone/translations/<locale>.json`
+Home Assistant loads `custom_components/camera_optics/translations/<locale>.json`
 for config and subentry flows. `strings.json` remains the English source. Every
 backend locale must preserve the complete English key shape.
 

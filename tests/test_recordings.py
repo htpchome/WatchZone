@@ -3,12 +3,12 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from custom_components.watchzone.providers.frigate.recordings import (
+from custom_components.camera_optics.providers.frigate.recordings import (
     FrigateRecordingsProvider,
     _recording_days,
     _recording_hours,
 )
-from custom_components.watchzone.providers.recordings import (
+from custom_components.camera_optics.providers.recordings import (
     RecordingQuery,
     RecordingSegmentRequest,
 )
@@ -158,7 +158,7 @@ async def test_segment_download_is_resolved_by_the_frigate_provider(
         return source
 
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.recordings.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.recordings.async_resolve_source",
         resolve_source,
     )
 

@@ -3,13 +3,13 @@
 set -euo pipefail
 
 REPOSITORY_ROOT=$(cd "$(dirname "$0")/.." && pwd)
-SOURCE_DIR="$REPOSITORY_ROOT/custom_components/watchzone"
+SOURCE_DIR="$REPOSITORY_ROOT/custom_components/camera_optics"
 FRONTEND_DIR="$REPOSITORY_ROOT/dist/frontend"
 PACKAGE_DIR="$REPOSITORY_ROOT/dist/package"
-ARCHIVE_PATH="$REPOSITORY_ROOT/dist/watchzone.zip"
+ARCHIVE_PATH="$REPOSITORY_ROOT/dist/camera-optics.zip"
 
-if [ ! -f "$FRONTEND_DIR/watchzone.js" ]; then
-  echo "Missing frontend build: $FRONTEND_DIR/watchzone.js" >&2
+if [ ! -f "$FRONTEND_DIR/camera-optics.js" ]; then
+  echo "Missing frontend build: $FRONTEND_DIR/camera-optics.js" >&2
   exit 1
 fi
 
@@ -49,14 +49,14 @@ for required in \
   THIRD_PARTY_NOTICES.md \
   brand/icon.png \
   brand/icon@2x.png \
-  frontend/watchzone.js; do
+  frontend/camera-optics.js; do
   if ! unzip -Z1 "$ARCHIVE_PATH" | grep -Fx "$required" >/dev/null; then
     echo "Release archive is missing $required" >&2
     exit 1
   fi
 done
 
-if unzip -Z1 "$ARCHIVE_PATH" | grep -E '^(dist|package|custom_components|watchzone)/' >/dev/null; then
+if unzip -Z1 "$ARCHIVE_PATH" | grep -E '^(dist|package|custom_components|camera_optics)/' >/dev/null; then
   echo "Release archive contains a forbidden wrapping directory" >&2
   exit 1
 fi

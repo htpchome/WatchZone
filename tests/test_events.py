@@ -5,11 +5,11 @@ from typing import Any, cast
 
 import pytest
 
-from custom_components.watchzone.providers.frigate.events import (
+from custom_components.camera_optics.providers.frigate.events import (
     FrigateEventsProvider,
     _normalize_event,
 )
-from custom_components.watchzone.providers.frigate.source import FrigateSource
+from custom_components.camera_optics.providers.frigate.source import FrigateSource
 
 
 async def test_event_provider_gets_one_native_id_without_listing_history(
@@ -57,11 +57,11 @@ async def test_event_provider_gets_one_native_id_without_listing_history(
         }
 
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.events.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.events.async_resolve_source",
         resolve_source,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.events._get_json", get_json
+        "custom_components.camera_optics.providers.frigate.events._get_json", get_json
     )
 
     item = await FrigateEventsProvider().async_get_event(

@@ -8,7 +8,7 @@ const manifest = JSON.parse(
   await readFile(resolve(frontend, ".vite/manifest.json"), "utf8"),
 );
 const entry = manifest["src/main.ts"];
-const editor = manifest["src/editor/watchzone-card-editor.ts"];
+const editor = manifest["src/editor/camera-optics-card-editor.ts"];
 const cameraCapability = manifest["src/editor/camera-capability.controller.ts"];
 const sortableList = manifest["src/ui/sortable-list/index.ts"];
 const camera = manifest["src/stage/modules/camera/index.ts"];
@@ -16,8 +16,8 @@ const provider = manifest["src/providers/home-assistant/live/index.ts"];
 const webRtcAdapter = manifest["src/providers/home-assistant/live/webrtc.ts"];
 const hlsAdapter = manifest["src/providers/home-assistant/live/hls.ts"];
 
-if (!entry?.isEntry || entry.file !== "watchzone.js") {
-  throw new Error("Vite manifest is missing the stable WatchZone entry");
+if (!entry?.isEntry || entry.file !== "camera-optics.js") {
+  throw new Error("Vite manifest is missing the stable CameraOptics entry");
 }
 for (const [name, asset] of Object.entries({
   editor,

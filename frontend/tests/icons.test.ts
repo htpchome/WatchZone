@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { renderIcon } from "../src/ui/icons";
 
-describe("WatchZone icon registry", () => {
+describe("CameraOptics icon registry", () => {
   it("renders the required Picture-in-Picture pop-out geometry safely", () => {
     const host = document.createElement("div");
     render(renderIcon("pipPopOut"), host);

@@ -1,6 +1,6 @@
 """Tests for shared user-authored plain-text normalization."""
 
-from custom_components.watchzone.plain_text import normalize_plain_text
+from custom_components.camera_optics.plain_text import normalize_plain_text
 
 
 def test_plain_text_preserves_unicode_and_removes_controls() -> None:

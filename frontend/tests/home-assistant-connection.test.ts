@@ -46,7 +46,7 @@ class FakePeerConnection {
   public readonly createDataChannel = vi.fn();
   public readonly createOffer = vi.fn(async () => ({
     type: "offer" as RTCSdpType,
-    sdp: "watchzone-offer",
+    sdp: "camera_optics-offer",
   }));
   public readonly setLocalDescription = vi.fn(async () => {
     this.onicecandidate?.({
@@ -162,7 +162,7 @@ describe("Home Assistant WebRTC connection", () => {
       signaling_path: "frigate:trickle_ice",
       signaling_fallback_reason: null,
     });
-    offerCallback({ type: "answer", answer: "watchzone-answer" });
+    offerCallback({ type: "answer", answer: "camera_optics-answer" });
     await vi.waitFor(() =>
       expect(peer.setRemoteDescription).toHaveBeenCalled(),
     );
@@ -181,14 +181,14 @@ describe("Home Assistant WebRTC connection", () => {
     expect(api.subscribeMessage).toHaveBeenCalledWith(
       expect.any(Function),
       expect.objectContaining({
-        type: "watchzone/live/webrtc/offer",
+        type: "camera_optics/live/webrtc/offer",
         entity_id: "camera.front",
         offer:
-          "watchzone-offer\r\na=candidate:early 1 udp 1 192.0.2.1 1234 typ host\r\n",
+          "camera_optics-offer\r\na=candidate:early 1 udp 1 192.0.2.1 1234 typ host\r\n",
       }),
     );
     expect(callWS).toHaveBeenCalledWith({
-      type: "watchzone/live/webrtc/candidate",
+      type: "camera_optics/live/webrtc/candidate",
       entity_id: "camera.front",
       session_id: "session-1",
       candidate: {
@@ -197,7 +197,7 @@ describe("Home Assistant WebRTC connection", () => {
     });
     expect(callWS).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "watchzone/live/webrtc/candidate",
+        type: "camera_optics/live/webrtc/candidate",
         candidate: expect.objectContaining({
           candidate: expect.stringContaining("candidate:early"),
         }),

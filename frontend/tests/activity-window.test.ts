@@ -22,7 +22,7 @@ describe("activity window pagination", () => {
     const page = await listActivityWindow(
       api,
       "camera.front",
-      "watchzone/events/list",
+      "camera_optics/events/list",
       { historyDays: 1 },
     );
 
@@ -45,7 +45,7 @@ describe("activity window pagination", () => {
     const page = await listActivityWindow(
       api,
       "camera.front",
-      "watchzone/reviews/list",
+      "camera_optics/reviews/list",
       {
         before: 991,
         historyDays: 1,
@@ -71,7 +71,7 @@ describe("activity window pagination", () => {
     } as unknown as HomeAssistantApi;
 
     await expect(
-      listActivityWindow(api, "camera.front", "watchzone/events/list", {
+      listActivityWindow(api, "camera.front", "camera_optics/events/list", {
         historyDays: 1,
       }),
     ).resolves.toEqual({ hasMore: false, items: [item] });

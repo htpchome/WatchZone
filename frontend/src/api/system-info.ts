@@ -11,9 +11,9 @@ export interface ProviderSystemInfo {
 export interface SystemInfo {
   readonly home_assistant_version: string;
   readonly providers: readonly ProviderSystemInfo[];
-  readonly watchzone_version: string;
+  readonly camera_optics_version: string;
 }
 
 export function getSystemInfo(api: HomeAssistantApi): Promise<SystemInfo> {
-  return api.callWS<SystemInfo>({ type: "watchzone/system_info" });
+  return api.callWS<SystemInfo>({ type: "camera_optics/system_info" });
 }

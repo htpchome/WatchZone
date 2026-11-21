@@ -44,7 +44,7 @@ viewing. Recording discovery and grouping are governed by
 - Sources identify `file` or `hls` transport and include their content type.
 - The provider supplies a preferred transport. Candidates using that transport
   are attempted first while retaining provider order within each group.
-- Each candidate is attempted sequentially. WatchZone never races multiple
+- Each candidate is attempted sequentially. CameraOptics never races multiple
   recorded transports.
 - Native HLS is used when the video element reports support. HLS.js is loaded
   lazily only when native HLS is unavailable.
@@ -97,7 +97,7 @@ viewing. Recording discovery and grouping are governed by
   forward rates are `0.25×`, `0.5×`, `1×`, `2×`, `5×`, `10×`, and `25×`.
   The dropdown permits direct rate changes while the adjacent buttons step
   through the same ordered set. Segment previews retain the current viewer
-  rate. When a browser rejects `25×` as a native media rate, WatchZone combines
+  rate. When a browser rejects `25×` as a native media rate, CameraOptics combines
   the highest supported native step with frame-timed forward advancement to
   preserve the requested effective rate. Reverse playback is excluded because
   browser and HLS implementations do not support it consistently.
@@ -112,9 +112,9 @@ viewing. Recording discovery and grouping are governed by
 - Recorded media uses the same `MediaPresentationController` interaction
   contract as live video. A touch shows controls and starts their timer, a
   second touch hides them, and zoom or pan hides them. Double-click and
-  double-tap perform WatchZone display zoom; the captured double-click default
+  double-tap perform CameraOptics display zoom; the captured double-click default
   prevents the native video element from replacing that action with fullscreen.
-- While a recorded-video viewer is open, live WatchZone video in the same
+- While a recorded-video viewer is open, live CameraOptics video in the same
   document is temporarily forced muted through the media-session manager.
 - This forced state never changes a camera's explicit mute preference. When the
   final recorded-media container closes, each live presentation recomputes its
@@ -204,10 +204,10 @@ viewing. Recording discovery and grouping are governed by
   `draggable` value preserves the draggable presentation on non-phone clients.
   Physical phones always resolve recorded media to the bottom drawer regardless
   of the stored editor choice.
-- The drawer is a WatchZone-owned manual popover on a non-modal browser dialog,
+- The drawer is a CameraOptics-owned manual popover on a non-modal browser dialog,
   with a non-modal dialog fallback where the Popover API is unavailable. It has
   no scrim, does not light-dismiss, and does not prevent interaction with Home
-  Assistant navigation or other content outside WatchZone. Escape does not
+  Assistant navigation or other content outside CameraOptics. Escape does not
   dismiss the drawer.
 - The drawer enters from the physical bottom edge through the shared Motion
   boundary. It is horizontally centered on the owning card and uses the greater

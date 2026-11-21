@@ -111,7 +111,7 @@ bash .devcontainer/sync-integration.sh
 The Python package is copied to
 `/config/custom_components/<integration-domain>` and compiled frontend assets
 are copied beneath that integration's `frontend/` directory, matching the
-packaged HACS artifact. WatchZone serves and registers those assets from its
+packaged HACS artifact. CameraOptics serves and registers those assets from its
 Python integration; it does not require a separate `/config/www` Lovelace
 resource.
 

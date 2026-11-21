@@ -28,7 +28,7 @@ camera module. Actions must not be implemented inside a live connection adapter.
 - Every video is suppressed before it is connected or painted. Video elements
   are not pointer hit targets; the parent media surface owns zoom and pan while
   the controls overlay owns action input. This prevents a transient browser
-  video affordance from receiving a click intended for a WatchZone control.
+  video affordance from receiving a click intended for a CameraOptics control.
 - WebRTC media readiness reapplies suppression through the PiP helper and
   performs one coalesced geometry refresh. This accounts for Firefox creating
   its native PiP toggle after the video is mounted without adding carousel or
@@ -58,11 +58,11 @@ Suspension is a provider capability, not a live transport capability:
 The selected provider is the sole authority for actual suspension state. For a
 Frigate-owned entity, the Frigate integration's reported camera state determines
 whether the camera is suspended. Other providers must implement their own truth
-behind the same normalized contract. Frontend state and persisted WatchZone data
+behind the same normalized contract. Frontend state and persisted CameraOptics data
 must never override provider truth.
 
 Only an optional UTC resume deadline is persisted. If a provider restart or an
-external action resumes the camera before that deadline, WatchZone accepts the
+external action resumes the camera before that deadline, CameraOptics accepts the
 provider state and removes the obsolete timer; it does not re-suspend the
 camera. If the provider is temporarily unavailable at the deadline, resume is
 retried at a bounded one-minute interval until it succeeds or the integration
@@ -89,7 +89,7 @@ Its subscription disables the WebSocket library's automatic resubscribe so
 there is exactly one reconnect owner. The controller retains the last provider
 snapshot while Home Assistant is unavailable and creates one fresh runtime
 subscription when the connection becomes ready. If Home Assistant reports the
-connection ready just before WatchZone's WebSocket commands finish registering,
+connection ready just before CameraOptics's WebSocket commands finish registering,
 the controller preserves that snapshot and uses one bounded, cancellable retry
 schedule. Success, entity changes, disconnect, and element teardown cancel the
 schedule. This avoids both duplicate subscriptions and a one-shot retry racing
@@ -120,7 +120,7 @@ never through its executor.
 
 Built-ins and independently installed companion integrations implement the
 normalized camera-runtime protocol and register it through
-`custom_components.watchzone.extensions`. The feature resolves the capability
+`custom_components.camera_optics.extensions`. The feature resolves the capability
 from the provider registry; it does not derive a Python module path from an
 entity platform. Do not branch on provider names inside the camera module,
 live presentation, or shared session manager.

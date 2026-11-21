@@ -8,8 +8,8 @@ import pytest
 from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.watchzone.const import MAX_HLS_PREWARM_CAMERAS
-from custom_components.watchzone.features.hls_prewarm import HlsPrewarmService
+from custom_components.camera_optics.const import MAX_HLS_PREWARM_CAMERAS
+from custom_components.camera_optics.features.hls_prewarm import HlsPrewarmService
 
 
 def _camera(
@@ -70,7 +70,7 @@ async def test_selected_cameras_warm_sequentially_and_restore(
 async def test_existing_home_assistant_preload_is_preserved(
     hass: HomeAssistant,
 ) -> None:
-    """WatchZone never disables a preload setting it did not enable."""
+    """CameraOptics never disables a preload setting it did not enable."""
     hass.state = CoreState.running
     camera = _camera(original_preload=True)
     service = HlsPrewarmService(hass)

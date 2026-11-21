@@ -1,0 +1,1 @@
+"""CameraOptics provider capability contracts."""

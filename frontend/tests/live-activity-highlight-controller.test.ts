@@ -156,7 +156,7 @@ describe("live activity highlight controller", () => {
         entity_id: "camera.front",
         limit: 10,
         summary_only: true,
-        type: "watchzone/reviews/list",
+        type: "camera_optics/reviews/list",
       }),
     );
     expect(controller.classification).toBeUndefined();

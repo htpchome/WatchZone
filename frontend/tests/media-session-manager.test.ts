@@ -527,7 +527,7 @@ describe("MediaSessionManager", () => {
         failInitial = onFailure;
         return { stream: createStream(), close: vi.fn() };
       })
-      .mockRejectedValueOnce(new Error("WatchZone backend is starting"))
+      .mockRejectedValueOnce(new Error("CameraOptics backend is starting"))
       .mockResolvedValueOnce({ stream: createStream(), close: vi.fn() });
     const manager = new MediaSessionManager(factory);
     const lifecycle = createLifecycleApi();
@@ -557,7 +557,7 @@ describe("MediaSessionManager", () => {
         failInitial = onFailure;
         return { stream: createStream(), close: vi.fn() };
       })
-      .mockRejectedValue(new Error("WatchZone backend is unavailable"));
+      .mockRejectedValue(new Error("CameraOptics backend is unavailable"));
     const manager = new MediaSessionManager(factory);
     const lifecycle = createLifecycleApi();
     const lease = manager.acquireHomeAssistant(lifecycle.api, "camera.front");
@@ -571,7 +571,7 @@ describe("MediaSessionManager", () => {
     expect(factory).toHaveBeenCalledTimes(7);
     expect(lease.getSnapshot()).toMatchObject({
       state: "failed",
-      error: "WatchZone backend is unavailable",
+      error: "CameraOptics backend is unavailable",
     });
 
     lease.release();

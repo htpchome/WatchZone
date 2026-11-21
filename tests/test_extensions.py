@@ -4,13 +4,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.live_connection import LiveConnectionService
-from custom_components.watchzone.providers.live_connection import LiveSourceDescriptor
+from custom_components.camera_optics.features.live_connection import (
+    LiveConnectionService,
+)
+from custom_components.camera_optics.providers.live_connection import (
+    LiveSourceDescriptor,
+)
 
 
 def test_provider_capabilities_are_resolved_and_cleanly_unregistered() -> None:
@@ -87,9 +91,7 @@ async def test_live_connection_service_preserves_explicit_provider_choice() -> N
                 type=self.provider_id,
             )
 
-        async def async_talk_capability(
-            self, hass: object, entity_id: str
-        ) -> bool:
+        async def async_talk_capability(self, hass: object, entity_id: str) -> bool:
             del hass
             self.talk.append(entity_id)
             return self.provider_id == "frigate_go2rtc"
@@ -109,12 +111,8 @@ async def test_live_connection_service_preserves_explicit_provider_choice() -> N
         )
     service = LiveConnectionService(object(), registry)  # type: ignore[arg-type]
 
-    source = await service.async_resolve_source(
-        "home_assistant", "camera.front"
-    )
-    supported = await service.async_talk_capability(
-        "home_assistant", "camera.front"
-    )
+    source = await service.async_resolve_source("home_assistant", "camera.front")
+    supported = await service.async_talk_capability("home_assistant", "camera.front")
 
     assert source.type == "home_assistant"
     assert supported is False

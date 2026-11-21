@@ -47,7 +47,7 @@ but the Stage module and frontend transport remain provider-neutral.
   temporarily replaces it with a muted accelerated video preview. A stationary
   touch long press starts that same preview; movement, scrolling, cancellation,
   or release clears it without also opening the export.
-  The preview uses a signed WatchZone media path, and the thumbnail viewport has
+  The preview uses a signed CameraOptics media path, and the thumbnail viewport has
   fixed row geometry so source aspect ratio cannot resize the tile.
 - After approximately two rendered tiles have passed, a labeled Top action
   floats at the bottom center of the visible list or grid viewport and
@@ -65,7 +65,7 @@ but the Stage module and frontend transport remain provider-neutral.
   One frontend export-job owner performs active reconciliation; the library
   controller does not run a competing poll for that same export.
 - Frigate 0.17 may retain an accepted export in progress indefinitely. After a
-  bounded processing window, WatchZone identifies that provider row as stalled,
+  bounded processing window, CameraOptics identifies that provider row as stalled,
   stops polling it, and enables its confirmed Remove action so the user can
   clean up the provider-owned zombie record. Playback, rename, and download
   remain unavailable.
@@ -84,7 +84,7 @@ but the Stage module and frontend transport remain provider-neutral.
 - Listing, single-export lookup, and rename use the endpoints shared by Frigate
   0.17 and 0.18.
 - Creation delegates to the public `frigate.export_recording` entity action
-  registered by the Frigate Home Assistant integration. WatchZone passes the
+  registered by the Frigate Home Assistant integration. CameraOptics passes the
   originating user context and does not duplicate the integration's export
   request or authentication behavior.
 - The Frigate action is asynchronous and does not return an export ID. After it
@@ -98,5 +98,5 @@ but the Stage module and frontend transport remain provider-neutral.
   the 0.17 single-export DELETE endpoint only for endpoint-not-supported
   responses.
 - Export thumbnails and videos are resolved only after verifying that the
-  export belongs to the requested camera. WatchZone streams them through a
+  export belongs to the requested camera. CameraOptics streams them through a
   permission-checked, range-capable Home Assistant HTTP view.

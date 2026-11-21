@@ -1,4 +1,4 @@
-# WatchZone Agent Instructions
+# CameraOptics Agent Instructions
 
 These instructions apply to the entire repository.
 
@@ -87,7 +87,7 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
 
 ## Core boundaries
 
-- WatchZone is one mandatory Python integration with a packaged frontend.
+- CameraOptics is one mandatory Python integration with a packaged frontend.
 - Python owns provider communication, normalized camera data, user-created
   Stage Designs, persistence, permissions, and shared backend work. The
   frontend may ship immutable built-in Stage Design templates; both sources
@@ -125,7 +125,7 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
   isolated editor lifecycle adapter commits the complete draft immediately
   before Home Assistant handles Save, with feature detection and a public
   `config-changed` fallback. Do not access dialog internals elsewhere.
-- Use current Home Assistant controls and semantic theme tokens. WatchZone
+- Use current Home Assistant controls and semantic theme tokens. CameraOptics
   customization properties use the `--wzc-` prefix.
 - Use feature-based vertical slices with state/configuration flowing down and
   typed intents flowing up. Do not impose MVP or MVVM layers on simple Lit
@@ -136,7 +136,7 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
   behavior files must not contain `css` template literals.
 - `frontend/src/styles/theme-tokens.ts` is the only frontend source allowed to
   reference Home Assistant theme variables directly. Feature and component
-  styles consume semantic `--wzc-*` tokens only. Define a WatchZone token
+  styles consume semantic `--wzc-*` tokens only. Define a CameraOptics token
   before introducing a new visual semantic state.
 - Motion is the only frontend animation engine. CSS transitions, CSS
   animations/keyframes, direct Web Animations API calls, browser smooth
@@ -152,17 +152,17 @@ or future designer work, also read `docs/stage-layout-system.md` in full.
   `dist/`; source packages must not contain build output.
 - Vite writes frontend assets to `dist/frontend/`.
 - Release staging writes the assembled integration to `dist/package/` and the
-  HACS release archive to `dist/watchzone.zip`.
+  HACS release archive to `dist/camera-optics.zip`.
 - `dist/` is generated output. Never edit it manually or use it as the source
   of a code change.
-- A HACS release ZIP contains the contents of the WatchZone integration at the
+- A HACS release ZIP contains the contents of the CameraOptics integration at the
   ZIP root. It must not wrap them in `dist/`, `custom_components/`, or
-  `watchzone/` directories.
+  `camera_optics/` directories.
 - Source code must not import generated files.
 
 ## Version and commit rule
 
-- `custom_components/watchzone/const.py` `VERSION` is canonical.
+- `custom_components/camera_optics/const.py` `VERSION` is canonical.
 - Each release-affecting commit pushed to `main` is published for HACS testing
   and therefore must have a unique Semantic Version. During prerelease
   development, increment the prerelease identifier (for example,

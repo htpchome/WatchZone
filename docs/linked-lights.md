@@ -4,7 +4,7 @@
 
 - Each camera configuration may reference at most two existing Home Assistant
   light entities. Each reference may also store an optional Material Design
-  icon selected with Home Assistant's icon selector. WatchZone does not create
+  icon selected with Home Assistant's icon selector. CameraOptics does not create
   or duplicate light entities.
 - The camera editor selects the entity and optional icon together before a
   linked light is added. Selecting an entity already linked to that camera
@@ -43,7 +43,7 @@ uses `brightness_pct` for dimming. Optimistic fill is presentation state only
 and is replaced by the next Home Assistant entity update. Permission or service
 failures remain local to the component and produce a bounded error toast.
 After a Home Assistant restart, the control accepts the restored entity state
-as soon as Home Assistant republishes it; WatchZone does not poll or preserve a
+as soon as Home Assistant republishes it; CameraOptics does not poll or preserve a
 stale light state while the owning integration is still starting.
 
 ## Lifecycle and validation

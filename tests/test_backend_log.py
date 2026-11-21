@@ -2,8 +2,8 @@
 
 import logging
 
-import custom_components.watchzone.backend_log as backend_log_module
-from custom_components.watchzone.backend_log import BackendDiagnosticLog
+import custom_components.camera_optics.backend_log as backend_log_module
+from custom_components.camera_optics.backend_log import BackendDiagnosticLog
 
 
 def test_disabled_log_allocates_no_record_buffer() -> None:
@@ -26,7 +26,7 @@ def test_disabled_log_allocates_no_record_buffer() -> None:
 def test_capture_redacts_and_collapses_repeated_python_logs() -> None:
     """Captured backend records are sanitized and consecutive repeats collapse."""
     backend_log = BackendDiagnosticLog(enabled=True)
-    logger = logging.getLogger("custom_components.watchzone.providers.frigate.live")
+    logger = logging.getLogger("custom_components.camera_optics.providers.frigate.live")
     try:
         logger.warning(
             "Request %s failed with token=%s and Bearer %s",
@@ -58,7 +58,7 @@ def test_limits_release_memory_and_detach_handler(monkeypatch) -> None:
     """Count, byte, rate, disable, and close paths remain strictly bounded."""
     monkeypatch.setattr(backend_log_module, "_MAX_EVENTS_PER_SECOND", 1000)
     backend_log = BackendDiagnosticLog(enabled=True)
-    package_logger = logging.getLogger("custom_components.watchzone")
+    package_logger = logging.getLogger("custom_components.camera_optics")
 
     for index in range(300):
         backend_log.record(

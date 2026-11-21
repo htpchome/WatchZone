@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from custom_components.watchzone.providers.home_assistant.talk import (
+from custom_components.camera_optics.providers.home_assistant.talk import (
     _resolve_native_talk_capability,
 )
 

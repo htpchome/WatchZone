@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
     lib: {
       entry: resolve(import.meta.dirname, "src/main.ts"),
       formats: ["es"],
-      fileName: "watchzone",
+      fileName: "camera-optics",
     },
     rollupOptions: {
       output: {

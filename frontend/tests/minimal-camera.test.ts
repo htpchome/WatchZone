@@ -60,7 +60,7 @@ describe("minimal camera module", () => {
     );
     const objectUrl = vi
       .spyOn(URL, "createObjectURL")
-      .mockReturnValue("blob:watchzone-snapshot");
+      .mockReturnValue("blob:camera_optics-snapshot");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
       () => undefined,

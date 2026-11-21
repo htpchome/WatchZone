@@ -1,9 +1,9 @@
-/** Position a fixed modal over the center of the containing WatchZone card. */
+/** Position a fixed modal over the center of the containing CameraOptics card. */
 export function centerDialogOnCard(
   owner: Element,
   dialog: HTMLDialogElement,
 ): void {
-  const card = composedAncestor(owner, "watchzone-card");
+  const card = composedAncestor(owner, "camera-optics-card");
   if (!card) return;
   const cardBounds = card.getBoundingClientRect();
   const dialogBounds = dialog.getBoundingClientRect();

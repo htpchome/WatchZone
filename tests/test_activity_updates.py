@@ -9,22 +9,24 @@ from unittest.mock import AsyncMock, Mock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.activity_updates import ActivityUpdatesService
-from custom_components.watchzone.providers.activity_updates import (
+from custom_components.camera_optics.features.activity_updates import (
+    ActivityUpdatesService,
+)
+from custom_components.camera_optics.providers.activity_updates import (
     ActivityUpdateCallback,
     ActivityUpdateKind,
     ActivityUpdateNotification,
     ActivityUpdateUnsubscribe,
 )
-from custom_components.watchzone.providers.frigate.activity_updates import (
+from custom_components.camera_optics.providers.frigate.activity_updates import (
     FrigateActivityUpdatesProvider,
 )
-from custom_components.watchzone.providers.frigate.source import (
+from custom_components.camera_optics.providers.frigate.source import (
     FrigateActivityIdentity,
     async_resolve_activity_identity,
 )
@@ -166,11 +168,11 @@ async def test_frigate_provider_normalizes_review_change_feed(
     updates: list[ActivityUpdateNotification] = []
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.activity_updates.async_resolve_activity_identity",
+            "custom_components.camera_optics.providers.frigate.activity_updates.async_resolve_activity_identity",
             AsyncMock(return_value=source),
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.activity_updates.mqtt.async_subscribe",
+            "custom_components.camera_optics.providers.frigate.activity_updates.mqtt.async_subscribe",
             subscribe,
         ),
     ):
@@ -253,11 +255,11 @@ async def test_frigate_provider_treats_end_time_as_authoritative(
     updates: list[ActivityUpdateNotification] = []
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.activity_updates.async_resolve_activity_identity",
+            "custom_components.camera_optics.providers.frigate.activity_updates.async_resolve_activity_identity",
             AsyncMock(return_value=source),
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.activity_updates.mqtt.async_subscribe",
+            "custom_components.camera_optics.providers.frigate.activity_updates.mqtt.async_subscribe",
             subscribe,
         ),
     ):
@@ -297,11 +299,11 @@ async def test_frigate_provider_normalizes_event_invalidation_and_cleanup(
     updates: list[ActivityUpdateNotification] = []
     with (
         patch(
-            "custom_components.watchzone.providers.frigate.activity_updates.async_resolve_activity_identity",
+            "custom_components.camera_optics.providers.frigate.activity_updates.async_resolve_activity_identity",
             AsyncMock(return_value=source),
         ),
         patch(
-            "custom_components.watchzone.providers.frigate.activity_updates.mqtt.async_subscribe",
+            "custom_components.camera_optics.providers.frigate.activity_updates.mqtt.async_subscribe",
             subscribe,
         ),
     ):

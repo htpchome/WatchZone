@@ -34,7 +34,7 @@ export async function getEvent(
   eventId: string,
 ): Promise<EventItem | undefined> {
   const response = await api.callWS<{ readonly item: EventItem | null }>({
-    type: "watchzone/events/get",
+    type: "camera_optics/events/get",
     entity_id: entityId,
     event_id: eventId,
   });
@@ -49,7 +49,7 @@ export async function listEvents(
   return listActivityWindow<EventItem>(
     api,
     entityId,
-    "watchzone/events/list",
+    "camera_optics/events/list",
     options,
   );
 }

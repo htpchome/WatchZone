@@ -44,9 +44,9 @@ jobs:
             EXTRA_ARGS+=(--prerelease)
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/watchzone.zip --clobber
+            gh release upload "$TAG" dist/camera-optics.zip --clobber
           else
-            gh release create "$TAG" dist/watchzone.zip \
+            gh release create "$TAG" dist/camera-optics.zip \
               --target "$GITHUB_SHA" \
               --generate-notes \
               "${EXTRA_ARGS[@]}"

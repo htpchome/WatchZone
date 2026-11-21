@@ -125,7 +125,7 @@ describe("recordings module", () => {
       expect(module.shadowRoot?.querySelectorAll(".tile")).toHaveLength(1),
     );
     expect(callWS).toHaveBeenCalledWith({
-      type: "watchzone/recordings/list",
+      type: "camera_optics/recordings/list",
       entity_id: "camera.front",
       selected_date: "2026-11-09",
       timezone: "UTC",
@@ -151,7 +151,7 @@ describe("recordings module", () => {
     previousDay?.click();
     await vi.waitFor(() =>
       expect(callWS).toHaveBeenLastCalledWith({
-        type: "watchzone/recordings/list",
+        type: "camera_optics/recordings/list",
         entity_id: "camera.front",
         selected_date: "2026-11-08",
         timezone: "UTC",

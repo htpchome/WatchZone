@@ -25,7 +25,7 @@ export async function subscribeActivityUpdates(
   const unsubscribe = await api.subscribeMessage(
     callback,
     {
-      type: "watchzone/activity/subscribe",
+      type: "camera_optics/activity/subscribe",
       entity_id: entityId,
       kind,
     },

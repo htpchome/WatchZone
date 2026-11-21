@@ -23,14 +23,14 @@ import "../src/stage/modules/exports/exports";
 const readyExport = {
   camera: "front",
   created_time: 1_794_352_800,
-  download_path: "/api/watchzone/exports/front-1/video?download=true",
+  download_path: "/api/camera_optics/exports/front-1/video?download=true",
   entity_id: "camera.front",
   id: "front-1",
   in_progress: false,
   name: "Front visitor",
   revision: "one",
-  thumbnail_path: "/api/watchzone/exports/front-1/thumbnail?authSig=one",
-  video_path: "/api/watchzone/exports/front-1/video",
+  thumbnail_path: "/api/camera_optics/exports/front-1/thumbnail?authSig=one",
+  video_path: "/api/camera_optics/exports/front-1/video",
 };
 
 const processingExport = {
@@ -329,8 +329,8 @@ describe("exports module", () => {
     });
     let created = false;
     const callWS = vi.fn(async (message: { type: string }) => {
-      if (message.type === "watchzone/exports/create") return create;
-      if (message.type === "watchzone/exports/list") {
+      if (message.type === "camera_optics/exports/create") return create;
+      if (message.type === "camera_optics/exports/list") {
         return { items: created ? [readyExport] : [] };
       }
       return {};
@@ -368,7 +368,7 @@ describe("exports module", () => {
       expect(callWS).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "Front visitor",
-          type: "watchzone/exports/create",
+          type: "camera_optics/exports/create",
         }),
       );
     });
@@ -386,7 +386,7 @@ describe("exports module", () => {
 
   it("renames and confirms removal through separate mutations", async () => {
     const callWS = vi.fn(async (message: { type: string }) =>
-      message.type === "watchzone/exports/list"
+      message.type === "camera_optics/exports/list"
         ? { items: [readyExport] }
         : { success: true },
     );
@@ -427,7 +427,7 @@ describe("exports module", () => {
       );
     await vi.waitFor(() =>
       expect(callWS).toHaveBeenCalledWith({
-        type: "watchzone/exports/rename",
+        type: "camera_optics/exports/rename",
         entity_id: "camera.front",
         export_id: "front-1",
         name: "Renamed visitor",
@@ -457,7 +457,7 @@ describe("exports module", () => {
       ?.click();
     await vi.waitFor(() =>
       expect(callWS).toHaveBeenCalledWith({
-        type: "watchzone/exports/delete",
+        type: "camera_optics/exports/delete",
         entity_id: "camera.front",
         export_id: "front-1",
       }),

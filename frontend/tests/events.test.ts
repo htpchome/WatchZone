@@ -19,7 +19,7 @@ vi.mock("../src/api/activity-updates", () => ({
       api.subscribeMessage(
         callback,
         {
-          type: "watchzone/activity/subscribe",
+          type: "camera_optics/activity/subscribe",
           entity_id: entityId,
           kind,
         },
@@ -103,7 +103,7 @@ describe("events module", () => {
     expect(subscribeMessage).toHaveBeenCalledWith(
       expect.any(Function),
       {
-        type: "watchzone/activity/subscribe",
+        type: "camera_optics/activity/subscribe",
         entity_id: "camera.front",
         kind: "events",
       },
@@ -244,7 +244,7 @@ describe("events module", () => {
     });
     expect(callWS).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        type: "watchzone/events/list",
+        type: "camera_optics/events/list",
         entity_id: "camera.front",
         limit: 10,
       }),

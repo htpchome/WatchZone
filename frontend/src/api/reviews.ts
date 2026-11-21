@@ -87,7 +87,7 @@ export async function getReview(
   reviewId: string,
 ): Promise<ReviewItem | undefined> {
   const response = await api.callWS<{ readonly item: ReviewItem | null }>({
-    type: "watchzone/reviews/get",
+    type: "camera_optics/reviews/get",
     entity_id: entityId,
     review_id: reviewId,
   });
@@ -102,7 +102,7 @@ export async function listReviews(
   return listActivityWindow<ReviewItem>(
     api,
     entityId,
-    "watchzone/reviews/list",
+    "camera_optics/reviews/list",
     options,
   );
 }
@@ -123,7 +123,7 @@ export async function listReviewIndex(
     const response = await api.callWS<{
       readonly items: readonly ReviewIndexItem[];
     }>({
-      type: "watchzone/reviews/list",
+      type: "camera_optics/reviews/list",
       entity_id: entityId,
       after: windowAfter,
       before,
@@ -155,7 +155,7 @@ export async function listRecentReviewStates(
   const response = await api.callWS<{
     readonly items: readonly RecentReviewState[];
   }>({
-    type: "watchzone/reviews/list",
+    type: "camera_optics/reviews/list",
     entity_id: entityId,
     after: before - 24 * 60 * 60,
     before,
@@ -173,7 +173,7 @@ export async function setReviewReviewed(
   reviewed: boolean,
 ): Promise<void> {
   await api.callWS({
-    type: "watchzone/reviews/set_reviewed",
+    type: "camera_optics/reviews/set_reviewed",
     entity_id: entityId,
     review_id: reviewId,
     reviewed,
@@ -186,7 +186,7 @@ export async function getReviewTrackingDetails(
   reviewId: string,
 ): Promise<ReviewTrackingDetails> {
   return api.callWS<ReviewTrackingDetails>({
-    type: "watchzone/reviews/tracking_details",
+    type: "camera_optics/reviews/tracking_details",
     entity_id: entityId,
     review_id: reviewId,
   });

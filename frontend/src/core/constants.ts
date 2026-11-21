@@ -1,10 +1,11 @@
-export const APP_NAME = "WatchZone";
+export const APP_NAME = "CameraOptics";
 export const APP_ID = "wzc";
-export const INTEGRATION_ID = "watchzone";
+export const INTEGRATION_ID = "camera_optics";
+export const CARD_ID = "camera-optics";
 export const APP_VERSION = __APP_VERSION__;
 export const APP_BUILD = __APP_BUILD__;
 
-export const CARD_TAG = `${INTEGRATION_ID}-card`;
+export const CARD_TAG = `${CARD_ID}-card`;
 export const CARD_TYPE = `custom:${CARD_TAG}`;
 export const CARD_PICKER_PREVIEW_TAG = `${APP_ID}-card-picker-preview`;
 export const EDITOR_TAG = `${CARD_TAG}-editor`;

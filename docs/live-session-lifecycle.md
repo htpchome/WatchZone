@@ -3,12 +3,12 @@
 ## 1. Status and scope
 
 This document is normative. It expands the retained-media requirements in
-`architecture.md` and governs every WatchZone live connection adapter, live
+`architecture.md` and governs every CameraOptics live connection adapter, live
 module, preview surface, editor surface, and card instance.
 
 Its goals are to:
 
-- Preserve healthy live connections across WatchZone layout and view changes.
+- Preserve healthy live connections across CameraOptics layout and view changes.
 - Preserve connections while moving between normal view, pre-editor, and
   editor preview.
 - Preserve eligible connections while navigating within Home Assistant's
@@ -19,16 +19,16 @@ Its goals are to:
 
 ## 2. Guarantees and limits
 
-WatchZone guarantees retention only while the same Home Assistant browser
+CameraOptics guarantees retention only while the same Home Assistant browser
 document and JavaScript realm remain alive.
 
 Retention is expected across:
 
 - Module rerenders.
 - Responsive reflow and module movement.
-- WatchZone layout changes.
-- WatchZone internal view changes.
-- Dashboard edit mode and WatchZone pre-editor/editor preview.
+- CameraOptics layout changes.
+- CameraOptics internal view changes.
+- Dashboard edit mode and CameraOptics pre-editor/editor preview.
 - Navigation to another dashboard or another Home Assistant route when the
   frontend keeps the same document alive.
 
@@ -39,9 +39,9 @@ Retention cannot be guaranteed across:
 - Home Assistant frontend restart or module replacement.
 - Device sleep that terminates network or decoder resources.
 - Provider restart, expired authorization, or network loss.
-- Browser resource reclamation outside WatchZone's control.
+- Browser resource reclamation outside CameraOptics's control.
 
-After a non-retainable transition, WatchZone reconnects from saved camera and
+After a non-retainable transition, CameraOptics reconnects from saved camera and
 audio preferences without claiming the original connection survived.
 
 ## 3. Ownership model
@@ -51,7 +51,7 @@ audio preferences without claiming the original connection survived.
 `MediaSessionManager` owns every live session. Its lifetime is the Home
 Assistant browser document, not the lifetime of a Lit element.
 
-The manager is created by the eager WatchZone entry and obtained through one
+The manager is created by the eager CameraOptics entry and obtained through one
 idempotent accessor. Re-evaluating or accidentally loading the entry twice must
 reuse the compatible existing manager rather than create a second pool.
 
@@ -104,7 +104,7 @@ An adapter declares one supported attachment strategy:
   returns that exact player to the stage host; neither transition acquires a
   replacement transport or creates a second decoder.
 - **WebKit native fullscreen:** The browser temporarily owns the active video
-  presentation. On `webkitendfullscreen`, WatchZone rebinds that exact player
+  presentation. On `webkitendfullscreen`, CameraOptics rebinds that exact player
   to its current presentation host, reapplies mute/playback state, and resumes
   it before responsive carousel geometry is reconciled. The exit must not fall
   back to a poster, replace the player, or renegotiate the retained session.
@@ -122,7 +122,7 @@ DOM location, card ID, or layout node ID.
 The key includes every value that changes the underlying connection identity,
 such as:
 
-- WatchZone camera ID.
+- CameraOptics camera ID.
 - Resolved live source ID and connection type.
 - Stream profile or quality selection.
 - Authentication/session scope when relevant.
@@ -215,7 +215,7 @@ same key merely because the preview uses a different component tree.
 
 ### 6.3 Home Assistant route navigation
 
-When WatchZone card elements disconnect because the user navigates elsewhere
+When CameraOptics card elements disconnect because the user navigates elsewhere
 inside Home Assistant:
 
 - Elements release presentation leases; they do not directly close sessions.
@@ -316,7 +316,7 @@ invent independent retention, audio-preference, retry, or eviction policies.
 
 ### 9.1 Separate values
 
-WatchZone tracks these values separately:
+CameraOptics tracks these values separately:
 
 - **User preference:** `default`, `muted`, or `unmuted` for a camera.
 - **Forced mute reasons:** A set of temporary safety or platform conditions.
@@ -349,7 +349,7 @@ restored when the final forced reason clears and browser policy permits.
 
 ### 9.3 Scope and lifetime
 
-User mute preference is keyed by stable WatchZone camera ID and scoped to:
+User mute preference is keyed by stable CameraOptics camera ID and scoped to:
 
 - The current Home Assistant browser document and JavaScript realm.
 - The authenticated user represented by that document.
@@ -371,7 +371,7 @@ muted rather than borrowing another user's or camera's choice.
 
 ### 9.4 Audio focus
 
-WatchZone defaults to one audible session per document unless a future explicit
+CameraOptics defaults to one audible session per document unless a future explicit
 feature permits more.
 
 Granting audio focus to one session temporarily forces other sessions muted.

@@ -35,4 +35,4 @@ if (activeCardVersion !== APP_VERSION) {
   );
 }
 
-export { DashboardCard } from "./card/watchzone-card";
+export { DashboardCard } from "./card/camera-optics-card";

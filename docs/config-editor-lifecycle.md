@@ -3,7 +3,7 @@
 ## 1. Status and scope
 
 This document is normative. It governs every Lovelace card configuration
-field, editor control, and editor-preview update in WatchZone. Its purpose is
+field, editor control, and editor-preview update in CameraOptics. Its purpose is
 to preserve the editor and preview component trees while a user types. Home
 Assistant must not reconstruct the card on every input event.
 
@@ -52,9 +52,9 @@ complete normalized draft to Home Assistant.
 ## 3. Home Assistant dirty-state integration
 
 The primary editor path requests Home Assistant's `dirtyState` context with a
-composed `context-request` event. The editor seeds its stable WatchZone key
+composed `context-request` event. The editor seeds its stable CameraOptics key
 with the baseline and updates that same key with each normalized draft. The
-first write for the key establishes the baseline. WatchZone only needs the
+first write for the key establishes the baseline. CameraOptics only needs the
 context's stable writer closure, so it makes a one-time, non-subscribing context
 request. It must not subscribe to provider publications unless a future feature
 actually reads `isDirty` or `isEffectiveDirty`; write-only subscription creates
@@ -68,7 +68,7 @@ Assistant treats that event as card configuration and may reconstruct the
 preview, destroying component identity and eventually expensive live media
 state.
 
-Semantic control changes update the dirty-state slice and WatchZone soft
+Semantic control changes update the dirty-state slice and CameraOptics soft
 preview without emitting `config-changed`, preserving the preview card and its
 live media identity. Immediately before Home Assistant handles Save, the
 isolated `HomeAssistantEditorBridge` commits the complete normalized draft to
@@ -80,7 +80,7 @@ other module may depend on those members or the dialog's action structure.
 Home Assistant also caps a sections-view editor preview to
 `--ha-view-sections-column-max-width`, including while the edit dialog is in
 large mode. The same bridge temporarily sets that inherited property to `100%`
-on the active WatchZone dialog so the preview can use the available preview
+on the active CameraOptics dialog so the preview can use the available preview
 pane. The override belongs to the edit dialog rather than the custom Config
 tab: Home Assistant may disconnect that editor when switching to Visibility or
 Layout while retaining the same preview. The bridge therefore keeps the width
@@ -92,7 +92,7 @@ card rendering or saved configuration.
 
 If the dirty-state context or Save boundary is unavailable, the compatibility
 path emits one public `config-changed` event with the complete draft. Typing may
-update WatchZone's soft preview, but it does not repeatedly emit that event.
+update CameraOptics's soft preview, but it does not repeatedly emit that event.
 
 Stage Management follows the same semantic-control path. `stage_type` is the
 persisted master selection that filters the Stage Design choices shown for the
@@ -107,7 +107,7 @@ Minimal Camera Configuration disclosure directly below Stage Management.
 
 ## 4. Soft preview updates
 
-Draft preview is a WatchZone-owned presentation path. It never mutates saved
+Draft preview is a CameraOptics-owned presentation path. It never mutates saved
 configuration.
 
 - Text input is coalesced with a short delay.
@@ -193,9 +193,9 @@ is shown beside that fallback and remains part of that camera's configuration.
 - Before adding a control, verify its current name and behavior against the
   supported Home Assistant frontend documentation and source.
 - Unsupported Home Assistant internals are isolated behind a small adapter.
-- Use Home Assistant semantic theme tokens. WatchZone customization tokens
+- Use Home Assistant semantic theme tokens. CameraOptics customization tokens
   begin with `--wzc-` and resolve to Home Assistant tokens by default.
-- The isolated editor lifecycle bridge applies WatchZone's dedicated opaque
+- The isolated editor lifecycle bridge applies CameraOptics's dedicated opaque
   editor-shell surface to Home Assistant's owning card-edit dialog for the
   complete dialog lifetime, including Config, Visibility, and Layout, and
   restores the previous inline surface state when that dialog closes. The

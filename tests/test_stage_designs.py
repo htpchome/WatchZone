@@ -7,11 +7,11 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.watchzone.features.layouts import (
+from custom_components.camera_optics.features.layouts import (
     StageDesignStore,
     validate_stage_design,
 )
-from custom_components.watchzone.features.layouts.store import StageRevisionConflict
+from custom_components.camera_optics.features.layouts.store import StageRevisionConflict
 
 
 def _design(*, revision: int = 0) -> dict[str, object]:

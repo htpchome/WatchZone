@@ -18,8 +18,8 @@ const obsoleteOwnershipRoots = [
   resolve(sourceRoot, "media"),
 ];
 const backendBoundaryRoots = [
-  resolve(root, "custom_components/watchzone/api"),
-  resolve(root, "custom_components/watchzone/features"),
+  resolve(root, "custom_components/camera_optics/api"),
+  resolve(root, "custom_components/camera_optics/features"),
 ];
 const publicProviderResolvers = new Set([
   "activity-update-resolver",

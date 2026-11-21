@@ -125,7 +125,7 @@ controller:
 5. Double activation zooms the media and leaves actionable controls on their
    normal hide timer. A second double activation returns it to `1x`. The
    presentation captures the browser `dblclick` default so a recorded video's
-   native controls cannot substitute fullscreen for WatchZone display zoom.
+   native controls cannot substitute fullscreen for CameraOptics display zoom.
 6. Touching an overlay control activates only that control. It cannot also be
    interpreted as a media tap, double tap, pan, or pinch.
 7. Toggle controls use their explicit active state on touch and do not retain a

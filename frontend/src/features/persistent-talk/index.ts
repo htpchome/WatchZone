@@ -1,7 +1,7 @@
 import { PERSISTENT_TALK_TAG } from "../../core/constants";
 import { PersistentTalkSession } from "./session";
 
-const SESSION_KEY = Symbol.for("watchzone.persistent-talk-session");
+const SESSION_KEY = Symbol.for("camera-optics.persistent-talk-session");
 
 export function getPersistentTalkSession(): PersistentTalkSession {
   const runtime = window as unknown as Record<PropertyKey, unknown>;

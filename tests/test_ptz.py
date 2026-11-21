@@ -12,17 +12,17 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     ProviderRegistry,
 )
-from custom_components.watchzone.features.ptz import PtzService
-from custom_components.watchzone.providers.frigate.ptz import FrigatePtzProvider
-from custom_components.watchzone.providers.home_assistant.ptz import (
+from custom_components.camera_optics.features.ptz import PtzService
+from custom_components.camera_optics.providers.frigate.ptz import FrigatePtzProvider
+from custom_components.camera_optics.providers.home_assistant.ptz import (
     HomeAssistantPtzProvider,
 )
-from custom_components.watchzone.providers.ptz import PtzCapabilities
+from custom_components.camera_optics.providers.ptz import PtzCapabilities
 
 
 class FakePtzProvider:
@@ -216,7 +216,7 @@ async def test_frigate_ptz_movement_requires_runtime_capability(
 
     hass.services.async_register("frigate", "ptz", async_move)
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.home_assistant.ptz."
+        "custom_components.camera_optics.providers.home_assistant.ptz."
         "async_ptz_capabilities",
         async_no_capabilities,
     )

@@ -1,4 +1,4 @@
-# WatchZone Future Roadmap
+# CameraOptics Future Roadmap
 
 ## Purpose
 
@@ -8,7 +8,7 @@ expensive to add later. It is not a release schedule, a compatibility promise,
 or a substitute for the normative rules in `architecture.md` and `docs/`.
 
 The capability inventory is informed by the useful parts of FrigateViewCard,
-but WatchZone will not reproduce its fixed page/view architecture or copy its
+but CameraOptics will not reproduce its fixed page/view architecture or copy its
 implementation. Features are independent modules, presentations, controls,
 provider services, and connection adapters that users compose into layouts.
 
@@ -25,7 +25,7 @@ provider services, and connection adapters that users compose into layouts.
 - Users assemble layouts from modules such as live cameras, camera selectors,
   companion cameras, event lists, recordings, timelines, and navigation or
   control groups.
-- WatchZone will not expose FrigateViewCard-style Single, Wide, Mobile,
+- CameraOptics will not expose FrigateViewCard-style Single, Wide, Mobile,
   Preview, or Card pages as application modes. Equivalent arrangements may be
   assembled by users and may eventually be offered as optional layout
   templates.
@@ -52,7 +52,7 @@ provider services, and connection adapters that users compose into layouts.
 7. Python-owned persisted schemas are versioned and migrated. Temporary UI
    controls are not treated as permanent schemas merely because they exist in
    the early editor.
-8. Every visual feature consumes WatchZone theme tokens and supports container
+8. Every visual feature consumes CameraOptics theme tokens and supports container
    responsiveness, touch, pointer, keyboard, and the supported browser/app
    matrix.
 
@@ -89,10 +89,10 @@ designer UI so saved layouts are declarative and testable.
 - Frigate provider for cameras, reviews, events, clips, snapshots, recordings,
   PTZ capabilities, presets, talkback capability, stream profiles, and camera
   suspend/resume state.
-- MotionEye and future providers through the same WatchZone camera and media
+- MotionEye and future providers through the same CameraOptics camera and media
   models where their capabilities overlap.
 - Home Assistant-native cameras and controls where no richer provider exists.
-- Stable WatchZone camera IDs independent of display names and transport URLs.
+- Stable CameraOptics camera IDs independent of display names and transport URLs.
 - Provider health, partial failure, reauthentication, bounded concurrency, and
   per-provider caching without taking down unrelated providers.
 - Capability-driven camera metadata for audio, PTZ, presets, talkback,
@@ -150,7 +150,7 @@ designer UI so saved layouts are declarative and testable.
 - Independent card-shell, camera-component, overlay, and module appearance
   settings through semantic tokens.
 - Typed component elevation choices (`medium`, `small`, or `none`) backed by
-  the WatchZone shadow scale; temporary boolean toggles map into this choice
+  the CameraOptics shadow scale; temporary boolean toggles map into this choice
   until the layout/theme designer exposes the complete control.
 
 ### 5. Camera suspend and resume
@@ -265,7 +265,7 @@ designer UI so saved layouts are declarative and testable.
 - Optional pre/post-roll around event media without pretending unavailable
   recording spans exist.
 - Camera-group recordings remain distinct tracks when their timelines overlap.
-- WatchZone's recording-segment workflow will be designed around normalized
+- CameraOptics's recording-segment workflow will be designed around normalized
   ranges and backend capabilities rather than copying FrigateViewCard's segment
   editor or assuming every provider stores footage like Frigate.
 
@@ -311,7 +311,7 @@ designer UI so saved layouts are declarative and testable.
   snapshots with authorization and missing-target handling.
 - Supported URL state is consumed once and cleaned without hardcoding Home
   Assistant dashboard paths.
-- WatchZone internal navigation components may exist, but fixed application
+- CameraOptics internal navigation components may exist, but fixed application
   pages and global dashboard takeover are not assumed.
 
 ### 16. Operational quality

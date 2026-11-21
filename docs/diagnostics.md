@@ -1,4 +1,4 @@
-# WatchZone Diagnostics Contract and Test Reference
+# CameraOptics Diagnostics Contract and Test Reference
 
 ## 1. Purpose
 
@@ -70,9 +70,9 @@ Interpretation:
 - `signalingPath: "home_assistant:standard"` means Home Assistant's generic
   camera signaling contract was used.
 - `signalingFallbackReason` is present only when provider preparation failed
-  and WatchZone selected standard signaling. Its value is a sanitized code.
+  and CameraOptics selected standard signaling. Its value is a sanitized code.
 - `hlsMode: "low_latency"` means the media playlist advertised LL-HLS partial
-  segments and blocking reload, and WatchZone enabled HLS.js low-latency mode.
+  segments and blocking reload, and CameraOptics enabled HLS.js low-latency mode.
 - `hlsMode: "standard"` means LL-HLS was disabled or not advertised.
 - `answerMs` measures WebRTC answer arrival, not decoded video.
 - `firstFrameMs` measures the first decodable frame for that transport.
@@ -112,7 +112,7 @@ network path, and cold/retained conditions.
 
 If `hlsMode` is `standard` while the toggle is enabled, inspect Home
 Assistant's `stream` configuration, proxy HTTP version, and client capability.
-WatchZone must not claim LL-HLS unless the returned playlist proves it.
+CameraOptics must not claim LL-HLS unless the returned playlist proves it.
 
 ## 6. Security and sharing
 
@@ -157,15 +157,15 @@ those results using the procedures above.
 
 ## 8. Backend diagnostic logging
 
-WatchZone provides one integration-scoped backend diagnostic log. It is
-disabled by default and can be enabled or disabled from the WatchZone
+CameraOptics provides one integration-scoped backend diagnostic log. It is
+disabled by default and can be enabled or disabled from the CameraOptics
 integration options. The enabled preference is stored as config-entry options;
 the log records are never persisted and never use Home Assistant's recorder
 database.
 
 When disabled, the facility has no event deque and does not intercept Python
 log records. Enabling it allocates one bounded buffer and captures sanitized
-structured events plus warnings and errors already emitted from the WatchZone
+structured events plus warnings and errors already emitted from the CameraOptics
 Python package. Disabling it or unloading the integration detaches the Python
 handler, clears the buffer, resets its counters, and releases the deque.
 Restarting Home Assistant also discards the history.

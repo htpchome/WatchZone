@@ -864,6 +864,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"camera-optics-frontend@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "camera-optics-frontend@workspace:."
+  dependencies:
+    "@eslint/js": "npm:^10.0.1"
+    "@playwright/test": "npm:1.62.1"
+    "@types/node": "npm:^20.19.43"
+    "@webcomponents/scoped-custom-element-registry": "npm:0.0.10"
+    eslint: "npm:^10.14.0"
+    eslint-plugin-lit: "npm:^2.3.1"
+    eslint-plugin-wc: "npm:^3.1.0"
+    globals: "npm:^17.13.0"
+    hls.js: "npm:1.7.4"
+    jsdom: "npm:^29.1.1"
+    lit: "npm:^3.3.3"
+    motion: "npm:14.12.0"
+    prettier: "npm:^3.9.10"
+    swiper: "npm:14.4.0"
+    terser: "npm:^5.51.2"
+    typescript: "npm:^6.0.3"
+    typescript-eslint: "npm:^8.72.1"
+    vite: "npm:^8.3.5"
+    vitest: "npm:^4.1.12"
+  languageName: unknown
+  linkType: soft
+
 "chai@npm:^6.2.2":
   version: 6.3.0
   resolution: "chai@npm:6.3.0"
@@ -2436,32 +2462,6 @@ __metadata:
   checksum: 10c0/8712774c1aeb62dec22928bf1cdfd11426c2c9383a1a63f2bcae18db87ca574165a0fbe96b312b73652149167ac6c7f4cf5409f2eb101d9c805efe0e4bae798b
   languageName: node
   linkType: hard
-
-"watchzone-frontend@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "watchzone-frontend@workspace:."
-  dependencies:
-    "@eslint/js": "npm:^10.0.1"
-    "@playwright/test": "npm:1.62.1"
-    "@types/node": "npm:^20.19.43"
-    "@webcomponents/scoped-custom-element-registry": "npm:0.0.10"
-    eslint: "npm:^10.14.0"
-    eslint-plugin-lit: "npm:^2.3.1"
-    eslint-plugin-wc: "npm:^3.1.0"
-    globals: "npm:^17.13.0"
-    hls.js: "npm:1.7.4"
-    jsdom: "npm:^29.1.1"
-    lit: "npm:^3.3.3"
-    motion: "npm:14.12.0"
-    prettier: "npm:^3.9.10"
-    swiper: "npm:14.4.0"
-    terser: "npm:^5.51.2"
-    typescript: "npm:^6.0.3"
-    typescript-eslint: "npm:^8.72.1"
-    vite: "npm:^8.3.5"
-    vitest: "npm:^4.1.12"
-  languageName: unknown
-  linkType: soft
 
 "webidl-conversions@npm:^8.0.1":
   version: 8.0.1

@@ -2,7 +2,7 @@
 
 ## 1. Supported environments
 
-WatchZone is designed for the current stable versions of:
+CameraOptics is designed for the current stable versions of:
 
 - Chrome and Edge.
 - Firefox.
@@ -41,7 +41,7 @@ new browser API makes another platform easier or faster.
   safe-area values there would offset the same control differently by host
   device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
   exception: its outer card boundary underlaps the complete bottom inset so
-  media tiles can travel behind host chrome. WatchZone does not draw a cover
+  media tiles can travel behind host chrome. CameraOptics does not draw a cover
   surface over that content. The complete hardware inset remains retained for
   underlap and scroll clearance. Floating media-list controls are offset above
   that complete inset and never occupy the unsafe band. In Companion, the edge-to-edge card overlaps Home
@@ -62,7 +62,7 @@ new browser API makes another platform easier or faster.
 
 ### 2.1 Responsive and input profile
 
-WatchZone device labels are presentation classes derived from the component's
+CameraOptics device labels are presentation classes derived from the component's
 actual container; they are not claims about physical hardware. User-agent,
 platform-string, screen-resolution, and operating-system parsing are
 prohibited for layout or interaction decisions.
@@ -133,10 +133,10 @@ The built-in mobile Full Stage has one narrower host-specific exception. On a
 physical phone inside Companion, an explicit card preference may leave the
 ordinary phone presentation unchanged, present the compatible wide Stage
 variant as a viewport-edge 60/40 overlay, or open that overlay's existing
-WatchZone camera presentation to its viewport-covering state. The
+CameraOptics camera presentation to its viewport-covering state. The
 same Stage nodes and live sessions are retained in a 60/40 camera/activity
-composition. Companion owns the physical WebView rotation; WatchZone does not
-add a second `rotate()`. On the first landscape aspect-ratio change, WatchZone
+composition. Companion owns the physical WebView rotation; CameraOptics does not
+add a second `rotate()`. On the first landscape aspect-ratio change, CameraOptics
 commits the final 60/40 destination before the ordinary wide responsive layout
 can paint. The Stage supplies two persistent nested surfaces: Camera with
 camera navigation, and activity navigation with the active Activity stack.
@@ -190,7 +190,7 @@ camera dialog. Neutral actions such as AI analysis and information controls
 retain ordinary text/icon semantics.
 
 Primary-action contrast prefers Home Assistant's current `on-primary` semantic
-tokens. When those tokens are unavailable, WatchZone preserves compatibility
+tokens. When those tokens are unavailable, CameraOptics preserves compatibility
 with established themes by falling back to the legacy `--text-primary-color`,
 then the theme's white color, and finally white. Current Home Assistant
 semantics therefore protect controls from themes that incorrectly alias the
@@ -222,7 +222,7 @@ Use this matrix when selecting tokens for a new overlay surface:
 | ----------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | HA glass          | AI analysis, recorded-media viewers, minimal live viewer, informational dialogs    | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for ordinary modal dialogs; none for either recorded-media viewer |
 | Solid task        | Filter, calendar, Suspend Camera, recorded-media information, forms, confirmations | `--wzc-task-dialog-background`   | `--wzc-task-dialog-backdrop-filter` (`none`)   | `--wzc-task-dialog-radius`, `--wzc-task-dialog-shadow` | `--wzc-dialog-scrim-*` for modal tasks; none for popovers                                |
-| Editor shell      | Home Assistant card editor, WatchZone editor content                               | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                                 |
+| Editor shell      | Home Assistant card editor, CameraOptics editor content                               | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                                 |
 
 `--wzc-popover-*` is a compatibility alias of the solid-task family, not a
 fourth presentation. Filter and calendar components may consume that alias for
@@ -252,7 +252,7 @@ The isolated editor bridge applies the editor-shell role to Home Assistant's
 owning card-edit dialog for its complete lifetime, including Home Assistant's
 Visibility and Layout tabs, then restores the original inline surface state on
 close. The custom editor does not paint a second editor surface. Features
-consume only these WatchZone roles and do not branch on a specific theme name
+consume only these CameraOptics roles and do not branch on a specific theme name
 or synthesize colors from multiple translucent card and page surfaces.
 
 ## 3. Media rules
@@ -268,8 +268,8 @@ background-lifecycle capability checks.
   must not be confused with explicit user closure.
 - `pagehide` is not proof of final document destruction in WebKit or embedded
   Home Assistant WebViews and must not close the document-scoped session pool.
-- Native iOS video fullscreen cannot contain WatchZone-authored overlays and
-  therefore displays the platform's native controls rather than WatchZone's
+- Native iOS video fullscreen cannot contain CameraOptics-authored overlays and
+  therefore displays the platform's native controls rather than CameraOptics's
   control and information overlays.
 - iOS, iPadOS, Companion, and Catalyst lifecycle events can require reconnection
   even when ordinary desktop navigation retains a session.
@@ -289,7 +289,7 @@ Browser-visible changes run Playwright against:
   outside Apple hardware.
 
 The browser harness loads the same scoped custom-element registry polyfill used
-by Home Assistant before importing WatchZone. A test environment without that
+by Home Assistant before importing CameraOptics. A test environment without that
 polyfill does not exercise Home Assistant's custom-element constructor rules
 and is insufficient for card lifecycle validation.
 
@@ -328,7 +328,7 @@ not be hidden behind generic failure messages.
 Affected Mac Catalyst WebKit releases may keep displaying the ordinary pointer
 when camera pan uses `move` or the stage handle uses `ns-resize`. Custom URL
 cursors do not reliably change that behavior, and CSS exposes no capability
-test for whether an accepted cursor value was actually painted. WatchZone keeps
+test for whether an accepted cursor value was actually painted. CameraOptics keeps
 the standard cursors used by other clients and does not add user-agent
 detection for this visual-only Catalyst limitation; the interactions remain
 fully functional.

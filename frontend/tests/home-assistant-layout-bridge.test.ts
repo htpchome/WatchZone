@@ -12,7 +12,7 @@ function sectionsHost(): {
   const sections = document.createElement("hui-sections-view");
   const wrapper = document.createElement("div");
   const container = document.createElement("div");
-  const host = document.createElement("watchzone-card");
+  const host = document.createElement("camera-optics-card");
   container.className = "container";
   wrapper.className = "wrapper";
   container.append(host);
@@ -35,7 +35,7 @@ afterEach(() => {
 describe("Home Assistant layout bridge", () => {
   it("uses intrinsic card height only inside Panel view", () => {
     const panel = document.createElement("hui-panel-view");
-    const host = document.createElement("watchzone-card");
+    const host = document.createElement("camera-optics-card");
     const bridge = new HomeAssistantLayoutBridge(host);
     panel.append(host);
     document.body.append(panel);
@@ -70,7 +70,7 @@ describe("Home Assistant layout bridge", () => {
 
   it("keeps shared padding until the last card releases ownership", () => {
     const first = sectionsHost();
-    const secondHost = document.createElement("watchzone-card");
+    const secondHost = document.createElement("camera-optics-card");
     first.container.append(secondHost);
     const second = new HomeAssistantLayoutBridge(secondHost);
     first.wrapper.style.padding = "0px 32px";
@@ -89,7 +89,7 @@ describe("Home Assistant layout bridge", () => {
 
   it("does nothing outside Sections and preserves later external changes", () => {
     const container = document.createElement("div");
-    const host = document.createElement("watchzone-card");
+    const host = document.createElement("camera-optics-card");
     container.style.padding = "10px";
     container.append(host);
     document.body.append(container);
@@ -108,7 +108,7 @@ describe("Home Assistant layout bridge", () => {
 
   it("does nothing when the Sections implementation has no open container", () => {
     const sections = document.createElement("hui-sections-view");
-    const host = document.createElement("watchzone-card");
+    const host = document.createElement("camera-optics-card");
     sections.append(host);
     document.body.append(sections);
 

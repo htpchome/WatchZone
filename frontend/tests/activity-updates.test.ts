@@ -7,7 +7,7 @@ import {
 import type { HomeAssistantApi } from "../src/core/home-assistant";
 
 describe("activity updates", () => {
-  it("subscribes only through WatchZone's normalized backend boundary", async () => {
+  it("subscribes only through CameraOptics's normalized backend boundary", async () => {
     const unsubscribe = vi.fn();
     const subscribeMessage = vi.fn().mockResolvedValue(unsubscribe);
     const api = { subscribeMessage } as unknown as HomeAssistantApi;
@@ -23,7 +23,7 @@ describe("activity updates", () => {
     expect(subscribeMessage).toHaveBeenCalledWith(
       callback,
       {
-        type: "watchzone/activity/subscribe",
+        type: "camera_optics/activity/subscribe",
         entity_id: "camera.driveway",
         kind: "reviews",
       },

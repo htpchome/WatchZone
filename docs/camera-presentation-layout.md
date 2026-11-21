@@ -35,11 +35,11 @@ retained session, and respects reduced-motion preference.
   internal row or column gaps, maximum view width, or grid allocation.
 - On a physical phone, edge-to-edge `fit_viewport` presentation extends through
   the complete device bottom safe-area inset. Media lists scroll beneath that
-  area without a WatchZone-drawn cover surface, while the complete hardware
+  area without a CameraOptics-drawn cover surface, while the complete hardware
   inset remains reserved as trailing scroll padding so the final tile is not
   stranded beneath the home indicator. Home Assistant's reported
   `--safe-area-inset-bottom` is authoritative, with the browser environment
-  inset as fallback. WatchZone does not reduce the hardware inset itself or
+  inset as fallback. CameraOptics does not reduce the hardware inset itself or
   apply it to ordinary card-contained surfaces. In Companion, the card uses an
   equal trailing layout overlap without adding that inset to the card viewport
   height. Home Assistant's own safe-area spacing therefore does not create
@@ -65,7 +65,7 @@ default height. The camera stage reserves `--wzc-camera-stage-aspect-ratio`,
 which defaults to `16 / 9`. Outer padding is outside that ratio.
 
 Home Assistant Panel view provides a definite viewport-height allocation even
-when the user has not explicitly resized the card. WatchZone uses intrinsic
+when the user has not explicitly resized the card. CameraOptics uses intrinsic
 height in that view so its camera stage retains the natural ratio and the page
 can scroll through later modules. This does not override explicit grid-row
 height assigned in Sections view.
@@ -103,7 +103,7 @@ ceiling is removed, but its three-item minimum remains.
 
 When a viewport or parent allocation cannot contain the Stage's minimum usable
 height, the card grows beyond the requested target. The containing Home
-Assistant view or custom layout must then scroll; WatchZone does not shrink the
+Assistant view or custom layout must then scroll; CameraOptics does not shrink the
 camera or make the media region unusable. Module minimums derive from current
 CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
@@ -133,7 +133,7 @@ pull-down size must not survive after its resize handle is removed or push the
 landscape camera navigation outside the fixed WebView.
 
 Fullscreen Live Video starts from the same retained Full Stage and immediately
-opens its existing WatchZone camera overlay to the viewport-covering state.
+opens its existing CameraOptics camera overlay to the viewport-covering state.
 It does not request browser-native video fullscreen, create another Camera
 module, or acquire another media session. The existing pull handle remains the
 owner of returning to the Double Column state. Camera Only exposes the same
@@ -144,7 +144,7 @@ existing internal live dialog as a viewport-covering presentation and closes
 that automatically opened presentation when the phone returns to portrait.
 
 Configured Fullscreen Live Video does not wait behind the 60/40 orientation
-animation. WatchZone commits that layout underneath, immediately places the
+animation. CameraOptics commits that layout underneath, immediately places the
 retained Camera overlay over it, and leaves the pull handle able to reveal the
 settled columns while the phone remains rotated. Returning to portrait from an
 expanded overlay uses the Camera module's measured fullscreen bounds as the
@@ -153,7 +153,7 @@ overlay before the portrait destination exists.
 The expanded target is the layout viewport itself, expressed relative to the
 Stage grid. It does not inherit the grid's safe-area inset or a transient
 pre-settlement offset reported by the card host during mobile rotation.
-WatchZone covers the pending landscape frames with the semantic Camera-stage
+CameraOptics covers the pending landscape frames with the semantic Camera-stage
 background while the committed Stage grid, safe-area origin, and Camera
 carousel complete their frame-coalesced layout work, then exposes the Camera
 once at its final viewport target. It never presents an intermediate Camera
@@ -174,7 +174,7 @@ current orientation preference is applied.
 Orientation retains the same Stage nodes and live sessions. The Stage owns two
 real nested containers: Camera plus camera navigation, and activity navigation
 plus the active Activity stack. Companion rotates the complete WebView. On the
-first aspect-ratio change WatchZone commits the final 60/40 layout and starts
+first aspect-ratio change CameraOptics commits the final 60/40 layout and starts
 one Motion timeline immediately, translating and scaling those two containers
 from their rotated prior geometry into the new destinations. It does not add
 another rotation, fade detached navigation, render duplicate media, wait for a
@@ -182,7 +182,7 @@ viewport-settle timer, or defer Motion to a later animation frame.
 The pull handle is not exposed until its final gutter position has been
 measured and it remeasures automatically when either surface changes size. The
 landscape overlay continues to cover Home Assistant's top navigation. On the
-first portrait resize, WatchZone releases that fixed overlay immediately so
+first portrait resize, CameraOptics releases that fixed overlay immediately so
 the card returns directly to Home Assistant flow. The actual flow position is
 authoritative: a visible Home Assistant header naturally places the card below
 it, while a hidden or disabled header introduces no synthetic offset.

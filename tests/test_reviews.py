@@ -6,14 +6,14 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from custom_components.watchzone.api.reviews import _review_summary
-from custom_components.watchzone.providers.frigate.reviews import (
+from custom_components.camera_optics.api.reviews import _review_summary
+from custom_components.camera_optics.providers.frigate.reviews import (
     FrigateReviewsProvider,
     _capture_window,
     _normalize_review,
 )
-from custom_components.watchzone.providers.frigate.source import FrigateSource
-from custom_components.watchzone.providers.reviews import ReviewQuery
+from custom_components.camera_optics.providers.frigate.source import FrigateSource
+from custom_components.camera_optics.providers.reviews import ReviewQuery
 
 
 def _source() -> FrigateSource:
@@ -81,9 +81,7 @@ def test_review_normalization_preserves_classification_and_media() -> None:
     assert item.classification == "alert"
     assert item.reviewed is True
     assert item.analysis_title == "Resident entering garage"
-    assert item.analysis_description == (
-        "A resident walks toward the parked car."
-    )
+    assert item.analysis_description == ("A resident walks toward the parked car.")
     assert item.analysis_score == 0.98
     assert item.score == 0.93
     assert item.analysis_concerns == ("Gate left open",)
@@ -305,11 +303,11 @@ async def test_review_provider_filters_motion_before_frigate_limit(
         return {}
 
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.reviews.async_resolve_source",
         resolve_source,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._get_json",
+        "custom_components.camera_optics.providers.frigate.reviews._get_json",
         get_json,
     )
     provider = FrigateReviewsProvider()
@@ -374,15 +372,15 @@ async def test_review_provider_gets_one_normalized_id_without_listing_history(
         }
 
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.reviews.async_resolve_source",
         resolve_source,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._get_json", get_json
+        "custom_components.camera_optics.providers.frigate.reviews._get_json", get_json
     )
     related_events = AsyncMock(return_value={})
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._async_related_events",
+        "custom_components.camera_optics.providers.frigate.reviews._async_related_events",
         related_events,
     )
     provider = FrigateReviewsProvider()
@@ -451,15 +449,15 @@ async def test_review_summary_skips_related_event_and_config_enrichment(
     config = AsyncMock()
     related_events = AsyncMock()
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.reviews.async_resolve_source",
         resolve_source,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._get_json",
+        "custom_components.camera_optics.providers.frigate.reviews._get_json",
         get_json,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._async_related_events",
+        "custom_components.camera_optics.providers.frigate.reviews._async_related_events",
         related_events,
     )
     provider = FrigateReviewsProvider()
@@ -499,18 +497,16 @@ async def test_review_provider_sets_reviewed_state(
     hass = cast(Any, SimpleNamespace())
     post_json = AsyncMock(return_value={"success": True})
 
-    async def resolve_source(
-        resolved_hass: Any, entity_id: str
-    ) -> FrigateSource:
+    async def resolve_source(resolved_hass: Any, entity_id: str) -> FrigateSource:
         del resolved_hass, entity_id
         return source
 
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.reviews.async_resolve_source",
         resolve_source,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._post_json",
+        "custom_components.camera_optics.providers.frigate.reviews._post_json",
         post_json,
     )
 
@@ -617,17 +613,15 @@ async def test_review_tracking_details_normalize_timeline(
                 },
             ]
         if path == "api/config":
-            return {
-                "cameras": {"front": {"detect": {"height": 1080, "width": 1920}}}
-            }
+            return {"cameras": {"front": {"detect": {"height": 1080, "width": 1920}}}}
         raise AssertionError(f"Unexpected request: {path}")
 
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews.async_resolve_source",
+        "custom_components.camera_optics.providers.frigate.reviews.async_resolve_source",
         resolve_source,
     )
     monkeypatch.setattr(
-        "custom_components.watchzone.providers.frigate.reviews._get_json",
+        "custom_components.camera_optics.providers.frigate.reviews._get_json",
         get_json,
     )
 

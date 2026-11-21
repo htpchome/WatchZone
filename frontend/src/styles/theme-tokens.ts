@@ -6,7 +6,7 @@ export const HA_DIALOG_SURFACE_BACKDROP_FILTER_PROPERTY =
   "--ha-dialog-surface-backdrop-filter";
 
 /**
- * The only Home Assistant theme boundary in WatchZone.
+ * The only Home Assistant theme boundary in CameraOptics.
  *
  * Components consume semantic --wzc-* tokens exclusively. Keeping HA token
  * aliases here makes theme changes and future design-system migrations local.

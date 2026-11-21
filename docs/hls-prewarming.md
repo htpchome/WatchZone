@@ -2,17 +2,17 @@
 
 ## Scope and ownership
 
-WatchZone can keep Home Assistant's existing HLS stream worker prepared for an
+CameraOptics can keep Home Assistant's existing HLS stream worker prepared for an
 explicitly selected set of camera entities. This is integration-level shared
 backend work. It is not inferred from a currently mounted card, stored in card
 YAML, or enabled for every camera in Home Assistant.
 
 The allowlist is configured from the **Preloaded Cameras** child tile under
-**Settings > Devices & services > WatchZone**. A maximum of twelve cameras may
+**Settings > Devices & services > CameraOptics**. A maximum of twelve cameras may
 be selected. This prevents special-purpose cameras, such as a printer camera,
 from consuming resources unless the user deliberately opts them in.
 
-For each selected entity, WatchZone:
+For each selected entity, CameraOptics:
 
 1. Resolves the existing Home Assistant camera entity.
 2. Creates or reuses that entity's single Home Assistant stream worker.
@@ -31,8 +31,8 @@ acquires its frontend transport immediately; an inactive phone camera may be
 closed by frontend network policy while its explicitly allowed server stream
 remains prepared.
 
-WatchZone remembers the runtime keepalive value it encountered. Deselecting a
-camera or unloading WatchZone restores only a value WatchZone changed. An HLS
+CameraOptics remembers the runtime keepalive value it encountered. Deselecting a
+camera or unloading CameraOptics restores only a value CameraOptics changed. An HLS
 output that is already idle is removed; an output with an active consumer is
 left intact and returns to Home Assistant's normal idle cleanup.
 
@@ -53,7 +53,7 @@ lifecycle.
 
 ## Prototype test procedure
 
-1. Select one camera from WatchZone's **Preloaded Cameras** tile.
+1. Select one camera from CameraOptics's **Preloaded Cameras** tile.
 2. Allow enough time for that camera to produce HLS segments.
 3. Open a fresh browser document so no retained frontend session can satisfy
    the test.

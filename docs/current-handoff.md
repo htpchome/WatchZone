@@ -8,17 +8,34 @@ This is a replaceable working snapshot, not an architectural contract.
 
 Work in `/workspaces/WatchZone`. Before changing code, read the required
 contracts, then verify `git status`, `git log -1`, and
-`custom_components/watchzone/const.py`; do not trust this snapshot over the
+`custom_components/camera_optics/const.py`; do not trust this snapshot over the
 repository. Preserve unrelated changes. The user owns commits and syncs.
 
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `a19ca8a` —
-  `v0.0.4-dev.500 - fix(live): serialize WebRTC upgrade retries`.
-- Version being prepared: `0.0.4-dev.501`.
-- Proposed subject:
+- HEAD before this work: `a77ce74` —
   `v0.0.4-dev.501 - refactor(ui): organize shared primitives`.
+- Version being prepared: `0.0.4-dev.502`.
+- Proposed subject:
+  `v0.0.4-dev.502 - refactor(identity): rename app to CameraOptics`.
+
+## CameraOptics identity
+
+- The product and Home Assistant display name are `CameraOptics`.
+- The Home Assistant domain, Python package, WebSocket namespace, and HTTP
+  namespace are `camera_optics`.
+- The Lovelace type is `custom:camera-optics-card`; the stable frontend entry
+  is `camera-optics.js`; the HACS artifact is `camera-optics.zip`.
+- The development repository and workspace remain `WatchZone`. Repository URLs
+  therefore continue to point at `htpchome/WatchZone` during this phase.
+- Internal `wzc` custom properties, element names, persisted node IDs, events,
+  and diagnostics identity remain stable.
+- Devcontainer setup and sync scripts use `CameraOptics` and `camera_optics`
+  from `.devcontainer/project.env` without changing the repository-derived
+  workspace or Docker volume names.
+- Brand icons retain their existing blue square treatment and dimensions, with
+  a centered white `CO` mark.
 
 ## Persistent two-way talk
 
@@ -65,7 +82,7 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   consumes the launcher, so it cannot reappear on a later camera switch.
 - The camera action returns to the captured Home Assistant route, selects the
   session camera through the existing deep link, and scrolls the matching
-  WatchZone surface into view. The tile then yields to the normal controls.
+  CameraOptics surface into view. The tile then yields to the normal controls.
 - Camera switching or card removal preserves a connected call. An incomplete
   connection attempt is cancelled if its initiating surface leaves. Background
   and frozen-document policy still closes and dismisses the session.
@@ -116,14 +133,19 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   zoom. The UI root contains no loose implementation files, compatibility
   re-exports, or generic barrel module.
 
-## Validation for `dev.501`
+## Validation for `dev.502`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
-- Unit tests cover desktop background retention, stale retained-player
+- Frontend unit tests pass 539/539 and cover desktop background retention,
+  stale retained-player
   replacement, phone background closure, MSE foreground frame validation,
   WebRTC cooldown preservation across camera reacquisition, stopped-launcher
   disposal, and mute-preference refresh on camera reactivation.
+- Python Ruff and mypy validation pass. Pytest passes 118/121; the remaining
+  failures predate and are unrelated to the identity rename: two stale test
+  expectations against the installed Home Assistant/data behavior and one
+  missing `turbojpeg` development dependency.
 - Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
   additionally asserts one ready button versus three connected buttons and a
   stable shared-control bounding box across connection state changes. The

@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-WatchZone includes software developed by third parties. The following notices
+CameraOptics includes software developed by third parties. The following notices
 and license terms apply to those portions of the software.
 
 ## hls.js — Apache-2.0

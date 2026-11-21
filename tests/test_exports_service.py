@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 
 from homeassistant.core import Context
 
-from custom_components.watchzone.features.exports import ExportsService
+from custom_components.camera_optics.features.exports import ExportsService
 
 
 async def test_default_name_normalizes_provider_text() -> None:
@@ -16,9 +16,7 @@ async def test_default_name_normalizes_provider_text() -> None:
     service = ExportsService(SimpleNamespace(), SimpleNamespace())
     service._provider = Mock(return_value=provider)  # type: ignore[method-assign]
 
-    assert (
-        await service.async_default_name("camera.front", 10, 20) == "Visitor clip"
-    )
+    assert await service.async_default_name("camera.front", 10, 20) == "Visitor clip"
 
 
 async def test_create_normalizes_title_before_provider_boundary() -> None:

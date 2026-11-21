@@ -7,29 +7,29 @@ the integration runtime or adding concrete-provider branches to core features.
 ## Scope
 
 The first public extension point is a provider capability registry. It supports
-both WatchZone's built-in providers and independently installed Home Assistant
+both CameraOptics's built-in providers and independently installed Home Assistant
 custom integrations. A companion integration can implement one or more narrow
 capabilities, such as camera runtime control, accelerated live signaling,
 recordings, or two-way-talk signaling, without being copied beneath
-WatchZone's source package. Live and talk signaling are registered separately
+CameraOptics's source package. Live and talk signaling are registered separately
 even when one provider implementation can fulfill both; a feature resolves
 only the capability it owns.
 
 An extension is a companion custom integration, not a Home Assistant Supervisor
-add-on. WatchZone does not download, install, or execute unregistered Python
-packages. The companion integration declares WatchZone as a dependency and is
+add-on. CameraOptics does not download, install, or execute unregistered Python
+packages. The companion integration declares CameraOptics as a dependency and is
 installed and trusted separately by the user.
 
 ## Public contract
 
-External integrations import only `custom_components.watchzone.extensions`.
+External integrations import only `custom_components.camera_optics.extensions`.
 That module exports:
 
 - `EXTENSION_API_VERSION`;
 - `ProviderExtension` and the provider capability protocols/models;
 - `register_provider_extension()`.
 
-The remaining WatchZone Python package is private implementation. An extension
+The remaining CameraOptics Python package is private implementation. An extension
 must not import feature services, API handlers, storage, runtime composition, or
 concrete built-in providers.
 
@@ -51,12 +51,12 @@ implementing the structural protocol or a stateful instance when identity and
 lifecycle justify a class.
 
 The version 4 activity-update capability subscribes and normalizes inside the
-provider adapter. Frontend clients receive only WatchZone activity messages
-through `watchzone/activity/subscribe`; provider subscription identities, raw
+provider adapter. Frontend clients receive only CameraOptics activity messages
+through `camera_optics/activity/subscribe`; provider subscription identities, raw
 MQTT payloads, and provider-specific Home Assistant WebSocket commands do not
 cross that boundary.
 
-WatchZone's composition root imports its built-in capability modules as part of
+CameraOptics's composition root imports its built-in capability modules as part of
 Home Assistant's integration-module load, then registers those already-loaded
 objects during setup. Optional integration modules discovered later must use
 Home Assistant's async import helper. Provider registration and request paths
@@ -65,7 +65,7 @@ must never call Python's blocking `import_module()` on the event loop.
 ## Lifecycle example
 
 ```python
-from custom_components.watchzone.extensions import (
+from custom_components.camera_optics.extensions import (
     EXTENSION_API_VERSION,
     ProviderExtension,
     register_provider_extension,
@@ -98,12 +98,12 @@ lifecycle.
 - Provider implementations own authentication, clients, external API quirks,
   normalization, and provider resources.
 - API handlers own Home Assistant transport validation and authorization; an
-  extension does not register frontend-facing WatchZone messages directly.
+  extension does not register frontend-facing CameraOptics messages directly.
 - Active sessions own their acquired provider resource. Unregistration blocks
   new resolutions; it does not reach into unrelated active session ownership.
 - A provider failure affects only its capability. Defined generic fallbacks,
   such as standard Home Assistant WebRTC signaling, remain core behavior.
-- External providers never receive the mutable `WatchZoneRuntime` or domain
+- External providers never receive the mutable `CameraOpticsRuntime` or domain
   data dictionary.
 
 ## Adding other extension areas

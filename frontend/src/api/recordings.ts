@@ -61,7 +61,7 @@ export async function listRecordings(
   options: RecordingWindowOptions,
 ): Promise<RecordingWindow> {
   return api.callWS<RecordingWindow>({
-    type: "watchzone/recordings/list",
+    type: "camera_optics/recordings/list",
     entity_id: entityId,
     selected_date: options.selectedDate,
     timezone: options.timezone,
@@ -82,7 +82,7 @@ export async function resolveRecordingSegment(
   endTime: number,
 ): Promise<RecordingSegmentMedia> {
   return api.callWS<RecordingSegmentMedia>({
-    type: "watchzone/recordings/segment",
+    type: "camera_optics/recordings/segment",
     entity_id: entityId,
     start_time: startTime,
     end_time: endTime,

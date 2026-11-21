@@ -433,10 +433,10 @@ describe("recorded media player", () => {
   it("selects, previews, and downloads a bounded recording segment", async () => {
     const start = Date.UTC(2026, 10, 10, 14) / 1000;
     const callWS = vi.fn(async (message: { readonly type: string }) => {
-      if (message.type === "watchzone/exports/prepare") {
+      if (message.type === "camera_optics/exports/prepare") {
         return { name: "Front selected recording" };
       }
-      if (message.type === "watchzone/recordings/segment") {
+      if (message.type === "camera_optics/recordings/segment") {
         return {
           filename: "front-segment.mp4",
           path: "/segment.mp4",
@@ -533,7 +533,7 @@ describe("recorded media player", () => {
     buttons.find((button) => button.textContent?.includes("Preview"))?.click();
     await vi.waitFor(() =>
       expect(callWS).toHaveBeenCalledWith({
-        type: "watchzone/recordings/segment",
+        type: "camera_optics/recordings/segment",
         entity_id: "camera.front",
         start_time: start - 60,
         end_time: start + 120,
@@ -622,7 +622,7 @@ describe("recorded media player", () => {
     )?.[0] as HTMLAnchorElement | undefined;
     expect(downloadAnchor?.dataset.recordedMediaOpener).toBe("true");
     expect(callWS).toHaveBeenCalledWith({
-      type: "watchzone/recordings/segment",
+      type: "camera_optics/recordings/segment",
       entity_id: "camera.front",
       start_time: start - 60,
       end_time: start + 120,

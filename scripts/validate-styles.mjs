@@ -104,7 +104,7 @@ for (const path of await collectTypeScript(sourceRoot)) {
     );
   }
   if (!isStyleBoundary) {
-    const nonWatchZoneVariables = [
+    const nonCameraOpticsVariables = [
       ...source.matchAll(/var\(\s*(--[a-z0-9-]+)/gi),
     ]
       .map((match) => match[1])
@@ -116,11 +116,11 @@ for (const path of await collectTypeScript(sourceRoot)) {
       .filter((name) => !allowedHomeAssistantTokens.get(path)?.has(name));
     if (
       unexpectedHomeAssistantTokens.length > 0 ||
-      nonWatchZoneVariables.length > 0
+      nonCameraOpticsVariables.length > 0
     ) {
       violations.push(
         `${relativePath}: component CSS may reference only --wzc-* variables; found ${[
-          ...new Set(nonWatchZoneVariables),
+          ...new Set(nonCameraOpticsVariables),
           ...new Set(unexpectedHomeAssistantTokens),
         ].join(", ")}`,
       );

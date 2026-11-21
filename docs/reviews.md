@@ -13,7 +13,7 @@
 - A review tile exposes its reviewed state as a compact labeled control in the
   tile metadata area; it does not obscure the thumbnail. Its visible label
   names the current state while its accessible label names the toggle action.
-- Reviewed uses WatchZone's canonical success base (`#43a047`); unreviewed uses
+- Reviewed uses CameraOptics's canonical success base (`#43a047`); unreviewed uses
   its canonical warning base (`#ffa600`). Themes do not replace those status
   colors. Both use a short outline pill with a checkmark; unreviewed adds a
   plus sign. The visible pill remains compact in the standard tile while its
@@ -27,7 +27,7 @@
   mutation path. Snapshot viewing does not change review state, and opening an
   already-reviewed video does not issue a redundant mutation.
 - The mutation requires camera-control permission. Providers translate the
-  WatchZone review ID and desired boolean into their own authenticated API.
+  CameraOptics review ID and desired boolean into their own authenticated API.
 - Review filtering and realtime reconciliation consume the same updated item;
   a second tile-local state model is not permitted.
 
@@ -98,7 +98,7 @@
   not create parallel activity state.
 - Realtime activity is subscribed and normalized by the owning Python provider
   capability. The browser consumes the authenticated provider-neutral
-  WatchZone subscription and never parses Frigate MQTT or subscribes to a
+  CameraOptics subscription and never parses Frigate MQTT or subscribes to a
   provider's Home Assistant WebSocket commands directly.
 - Dashboard detachment pauses the card subscription without discarding the
   current takeover. The backend retains one shared provider channel and its

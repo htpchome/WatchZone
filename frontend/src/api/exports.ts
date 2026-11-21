@@ -28,7 +28,7 @@ export async function prepareExport(
   range: ExportRange,
 ): Promise<string> {
   const result = await api.callWS<{ readonly name: string }>({
-    type: "watchzone/exports/prepare",
+    type: "camera_optics/exports/prepare",
     ...range,
   });
   return result.name;
@@ -40,7 +40,7 @@ export async function createExport(
   name: string,
 ): Promise<string> {
   const result = await api.callWS<{ readonly export_id: string }>({
-    type: "watchzone/exports/create",
+    type: "camera_optics/exports/create",
     ...range,
     name,
   });
@@ -53,7 +53,7 @@ export async function listExports(
   entityIds: readonly string[],
 ): Promise<readonly ExportItem[]> {
   const result = await api.callWS<ExportWindow>({
-    type: "watchzone/exports/list",
+    type: "camera_optics/exports/list",
     entity_ids: entityIds,
   });
   return result.items;
@@ -65,7 +65,7 @@ export async function renameExport(
   name: string,
 ): Promise<void> {
   await api.callWS({
-    type: "watchzone/exports/rename",
+    type: "camera_optics/exports/rename",
     entity_id: item.entity_id,
     export_id: item.id,
     name,
@@ -77,7 +77,7 @@ export async function deleteExport(
   item: Pick<ExportItem, "entity_id" | "id">,
 ): Promise<void> {
   await api.callWS({
-    type: "watchzone/exports/delete",
+    type: "camera_optics/exports/delete",
     entity_id: item.entity_id,
     export_id: item.id,
   });

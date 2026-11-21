@@ -10,7 +10,7 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
 - The persistent two-way-talk tile is a document-level application feature,
   not a Stage module, component, slot, or designer-placeable. It becomes
   available automatically after a talk session connects and renders only when
-  no connected WatchZone surface is presenting that session's camera.
+  no connected CameraOptics surface is presenting that session's camera.
 - Below the 600px container breakpoint, the built-in Full Stage presents it in
   Camera's responsive controls slot. At 600px and wider, the Stage variant
   moves the same stable component node into activity-navigation's centered
@@ -137,13 +137,13 @@ does not contain signaling-path conditions.
   and sticky Home Assistant surfaces cannot cover it.
 - The persistent camera action returns to the dashboard route where talk
   started, selects the session's stable camera entity, and scrolls its matching
-  WatchZone card into view. Once that camera surface is active, the tile hides
+  CameraOptics card into view. Once that camera surface is active, the tile hides
   and the ordinary talk controls present the same session.
 - The two small active side controls are icon-only surfaces. They remain
   transparent during hover, press, and idle states so they never cover the
   shared soundwave canvas; non-overlay hover changes only the icon color.
 - While talk is active, the center microphone uses the connected color. Muting
-  the outgoing microphone changes that center surface to WatchZone's fixed
+  the outgoing microphone changes that center surface to CameraOptics's fixed
   detection-warning color. Hover preserves the current connected or muted
   surface instead of replacing it with a neutral hover state.
 - The speaker control uses one talk-session mute state across the normal and
@@ -161,7 +161,7 @@ does not contain signaling-path conditions.
 Responsive relocation may synchronously disconnect and reconnect the same
 stable component node. Cleanup defers through that DOM handoff and preserves
 the active peer when the node reconnects. After connection, active-camera
-change, component/card removal, editor/layout replacement, WatchZone internal
+change, component/card removal, editor/layout replacement, CameraOptics internal
 navigation, Home Assistant route navigation, and dashboard changes detach the
 Stage presentation but preserve the document-owned talk peer. A matching
 camera surface reattaches the ordinary controls without creating a new peer.

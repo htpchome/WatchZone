@@ -92,7 +92,7 @@ overlay surface and state contract; only their shape differs from the square
 Camera controls. Activity integration is limited to the configurable
 alert/detection outline and never loads takeover or navigation behavior.
 
-The Minimal Camera Stage's default tap action is WatchZone's Open Live View,
+The Minimal Camera Stage's default tap action is CameraOptics's Open Live View,
 not Home Assistant more-info. It opens a draggable and resizable HA-glass live
 dialog that reparents the same session-owned media element into the dialog and
 returns it to the stage on close. Its footer offers a snapshot download from

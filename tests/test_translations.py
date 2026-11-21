@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-TRANSLATIONS = Path("custom_components/watchzone/translations")
+TRANSLATIONS = Path("custom_components/camera_optics/translations")
 SUPPORTED_LOCALES = {
     "ca",
     "de",

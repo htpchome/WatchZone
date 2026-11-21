@@ -1,4 +1,4 @@
-"""Tests for WatchZone setup and frontend registration."""
+"""Tests for CameraOptics setup and frontend registration."""
 
 import logging
 from pathlib import Path
@@ -15,7 +15,7 @@ from homeassistant.components.lovelace.resources import (
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.watchzone import (
+from custom_components.camera_optics import (
     _prewarm_camera_ids,
     _register_builtin_providers,
     async_migrate_entry,
@@ -23,8 +23,8 @@ from custom_components.watchzone import (
     async_setup_entry,
     async_unload_entry,
 )
-from custom_components.watchzone.backend_log import BackendDiagnosticLog
-from custom_components.watchzone.const import (
+from custom_components.camera_optics.backend_log import BackendDiagnosticLog
+from custom_components.camera_optics.const import (
     CAMERA_PRELOAD_TITLE,
     CARD_MODULE_URL,
     CONF_DIAGNOSTIC_LOGGING,
@@ -33,8 +33,8 @@ from custom_components.watchzone.const import (
     SUBENTRY_TYPE_CAMERA_PRELOAD,
     SUBENTRY_UNIQUE_ID_CAMERA_PRELOAD,
 )
-from custom_components.watchzone.providers.frigate import camera as frigate_camera
-from custom_components.watchzone.providers.frigate import live as frigate_live
+from custom_components.camera_optics.providers.frigate import camera as frigate_camera
+from custom_components.camera_optics.providers.frigate import live as frigate_live
 
 
 def test_builtin_provider_composition_is_idempotent(hass: HomeAssistant) -> None:
@@ -77,7 +77,7 @@ async def test_setup_registers_packaged_frontend(
     hass: HomeAssistant, tmp_path: Path
 ) -> None:
     """The stable entry is uncached and hashed assets are cached."""
-    card_path = tmp_path / "watchzone.js"
+    card_path = tmp_path / "camera-optics.js"
     card_path.write_text("", encoding="utf-8")
     asset_path = tmp_path / "assets"
     asset_path.mkdir()
@@ -85,8 +85,8 @@ async def test_setup_registers_packaged_frontend(
     register_view = Mock()
 
     with (
-        patch("custom_components.watchzone._CARD_PATH", card_path),
-        patch("custom_components.watchzone._ASSET_DIRECTORY", asset_path),
+        patch("custom_components.camera_optics._CARD_PATH", card_path),
+        patch("custom_components.camera_optics._ASSET_DIRECTORY", asset_path),
         patch.object(
             hass,
             "http",
@@ -213,16 +213,15 @@ async def test_setup_failure_releases_diagnostic_handler(
     hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
 
     with patch(
-        "custom_components.watchzone._async_register_card_resource",
+        "custom_components.camera_optics._async_register_card_resource",
         side_effect=RuntimeError("registration failed"),
     ):
         with pytest.raises(RuntimeError, match="registration failed"):
             await async_setup_entry(hass, entry)
 
-    package_logger = logging.getLogger("custom_components.watchzone")
+    package_logger = logging.getLogger("custom_components.camera_optics")
     assert not any(
-        isinstance(handler, BackendDiagnosticLog)
-        for handler in package_logger.handlers
+        isinstance(handler, BackendDiagnosticLog) for handler in package_logger.handlers
     )
 
 
@@ -233,7 +232,7 @@ async def test_entry_updates_existing_card_resource(hass: HomeAssistant) -> None
     resources = ResourceStorageCollection(hass, LovelaceStorage(hass, None))
     hass.data[LOVELACE_DATA] = SimpleNamespace(resources=resources)
     existing = await resources.async_create_item(
-        {"res_type": "module", "url": "/watchzone/frontend/watchzone.js?v=old"}
+        {"res_type": "module", "url": "/camera_optics/frontend/camera-optics.js?v=old"}
     )
 
     assert await async_setup_entry(hass, entry)

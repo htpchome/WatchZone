@@ -1,7 +1,7 @@
 {
-  "name": "WatchZone",
+  "name": "CameraOptics",
   "zip_release": true,
   "hide_default_branch": true,
-  "filename": "watchzone.zip",
+  "filename": "camera-optics.zip",
   "homeassistant": "2026.8.0"
 }

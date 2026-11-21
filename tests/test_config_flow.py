@@ -1,11 +1,11 @@
-"""Tests for the WatchZone config flow."""
+"""Tests for the CameraOptics config flow."""
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.watchzone.const import (
+from custom_components.camera_optics.const import (
     CAMERA_PRELOAD_TITLE,
     CONF_DIAGNOSTIC_LOGGING,
     CONF_HLS_PREWARM_CAMERAS,
@@ -53,7 +53,7 @@ async def test_user_flow_creates_single_entry(hass: HomeAssistant) -> None:
 
 
 async def test_user_flow_rejects_second_entry(hass: HomeAssistant) -> None:
-    """WatchZone has one primary config entry."""
+    """CameraOptics has one primary config entry."""
     MockConfigEntry(domain=DOMAIN, data={}).add_to_hass(hass)
 
     result = await hass.config_entries.flow.async_init(

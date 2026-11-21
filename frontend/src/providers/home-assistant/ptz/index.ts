@@ -15,7 +15,7 @@ const capabilityCache = new WeakMap<
   Map<string, Promise<PtzCapability>>
 >();
 
-/** PTZ operations exposed by WatchZone's Home Assistant backend adapter. */
+/** PTZ operations exposed by CameraOptics's Home Assistant backend adapter. */
 export class HomeAssistantPtzProvider {
   public capability(
     api: HomeAssistantApi,

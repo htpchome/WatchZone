@@ -5,7 +5,7 @@
 - Recordings is an independently lazy-loaded Stage module. It does not import
   Reviews, Events, Camera, or another placeable.
 - The Python recordings feature resolves a provider capability and returns
-  WatchZone-owned recording days and hourly ranges. Provider response shapes
+  CameraOptics-owned recording days and hourly ranges. Provider response shapes
   and URLs do not leak into the module.
 - The Frigate adapter owns authenticated summary and segment queries. It
   exposes Home Assistant-authenticated playback and download candidates.
@@ -97,7 +97,7 @@
   Hover or focus shows the provider-normalized review thumbnail and localized
   classification/time label. Marker metadata failure does not fail recording
   discovery or playback.
-- Scrubber availability, marker, gap, and pointer colors are fixed WatchZone
+- Scrubber availability, marker, gap, and pointer colors are fixed CameraOptics
   product colors exposed through semantic `--wzc-recording-scrubber-*` tokens;
   they do not derive from Home Assistant theme colors.
 - The shell surrounding that fixed-color timeline inherits the recorded-media
@@ -121,7 +121,7 @@
   finishes. Reset restores the complete hour and Cancel deactivates selection
   without closing the viewer.
 - Download sends only the entity identity and selected wall-clock timestamps
-  to the WatchZone WebSocket boundary. Python checks camera read permission and
+  to the CameraOptics WebSocket boundary. Python checks camera read permission and
   duration bounds, resolves the owning provider capability, and returns
   provider-neutral preview sources, preferred transport, filename, and an
   authenticated download path. The frontend never constructs a Frigate URL.

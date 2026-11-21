@@ -3,13 +3,13 @@
 ## Status and scope
 
 This document is normative. It governs every time-based visual transition in
-the WatchZone frontend, including entrances, exits, visibility fades, layout
+the CameraOptics frontend, including entrances, exits, visibility fades, layout
 settlement, carousel transitions, animated scrolling, spinners, gesture snap,
 zoom settlement, disclosure indicators, and continuous visualizations.
 
 ## Single engine
 
-Motion is the only animation engine used by WatchZone. The shared boundaries
+Motion is the only animation engine used by CameraOptics. The shared boundaries
 under `frontend/src/ui/motion.ts` and `frontend/src/ui/motion-value.ts` are the
 only sources allowed to start Motion animations.
 
@@ -64,7 +64,7 @@ Motion must not eagerly load an otherwise unused feature.
 Libraries may continue to own direct manipulation when their value follows the
 user's pointer without elapsed-time interpolation. Their timed settlement must
 be disabled. For the camera carousel, Swiper retains touch arbitration and
-slide geometry with `speed: 0`; WatchZone Motion owns the configured slide or
+slide geometry with `speed: 0`; CameraOptics Motion owns the configured slide or
 fade transition and its actual completion lifecycle.
 
 ## Validation

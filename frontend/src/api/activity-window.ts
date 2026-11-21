@@ -29,7 +29,7 @@ export interface ActivityWindowOptions {
 export async function listActivityWindow<T extends ActivityWindowItem>(
   api: HomeAssistantApi,
   entityId: string,
-  type: "watchzone/events/list" | "watchzone/reviews/list",
+  type: "camera_optics/events/list" | "camera_optics/reviews/list",
   options: ActivityWindowOptions,
 ): Promise<ActivityWindowPage<T>> {
   const windowBefore = Date.now() / 1000;
@@ -45,7 +45,7 @@ export async function listActivityWindow<T extends ActivityWindowItem>(
     before,
     limit,
     bypass_cache: options.bypassCache ?? false,
-    ...(type === "watchzone/reviews/list" ? { summary_only: false } : {}),
+    ...(type === "camera_optics/reviews/list" ? { summary_only: false } : {}),
   });
   const items = sortedItems(response.items);
   const oldestStart = items.at(-1)?.start_time;

@@ -1,0 +1,2377 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { DashboardCard } from "../src/card/camera-optics-card";
+import { normalizeCardConfig, type CardConfig } from "../src/core/config";
+import type { HomeAssistantMessage } from "../src/core/home-assistant";
+import {
+  ACCORDION_ITEM_TAG,
+  CARD_TYPE,
+  EDITOR_DIRTY_STATE_KEY,
+  EDITOR_GENERAL_INFO_TAG,
+  EDITOR_TEXT_PREVIEW_DELAY_MS,
+} from "../src/core/constants";
+import type { AccordionItem } from "../src/ui/accordion";
+import type { SegmentedControl } from "../src/ui/segmented-control";
+import type { ToastRegion } from "../src/ui/toast/region";
+import { iconPath } from "../src/ui/icons";
+import type { CardEditor } from "../src/editor/camera-optics-card-editor";
+
+interface ContextRequest extends Event {
+  callback?: (context: {
+    setState(config: CardConfig, key: string): void;
+  }) => void;
+  context?: string;
+  subscribe?: boolean;
+}
+
+interface InputElement extends HTMLElement {
+  value: string;
+}
+
+interface TestBooleanSelector extends HTMLElement {
+  value: boolean;
+}
+
+function queryBooleanSelector(
+  editor: CardEditor,
+  selector: string,
+): TestBooleanSelector | null {
+  return (
+    (editor.shadowRoot?.querySelector(
+      selector,
+    ) as TestBooleanSelector | null) ??
+    (editor.shadowRoot
+      ?.querySelector("wzc-editor-height-selector")
+      ?.shadowRoot?.querySelector(selector) as TestBooleanSelector | null)
+  );
+}
+
+interface TestEditCardDialog extends HTMLElement {
+  _cardConfig?: CardConfig;
+  _updateDirtyState?: (config: CardConfig) => void;
+}
+
+interface LocalizingTestHass {
+  localize(key: string): string;
+}
+
+async function openEditorSection(
+  editor: CardEditor,
+  key: string,
+): Promise<AccordionItem> {
+  const item = editor.shadowRoot?.querySelector<AccordionItem>(
+    `${ACCORDION_ITEM_TAG}[item-key="${key}"]`,
+  );
+  if (!item) throw new Error(`Editor section ${key} was not rendered`);
+  await item.updateComplete;
+  const details = item.shadowRoot?.querySelector("details");
+  if (!details) throw new Error(`Editor section ${key} has no disclosure`);
+  if (!details.open) {
+    details.open = true;
+    details.dispatchEvent(new Event("toggle"));
+    await Promise.all([editor.updateComplete, item.updateComplete]);
+  }
+  return item;
+}
+
+async function inputTitle(
+  editor: CardEditor,
+  title: string,
+): Promise<InputElement> {
+  await openEditorSection(editor, "general");
+  const input = editor.shadowRoot?.querySelector("ha-input") as InputElement;
+  input.value = title;
+  input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+  return input;
+}
+
+async function setBooleanSelector(
+  editor: CardEditor,
+  selector: string,
+  checked: boolean,
+): Promise<TestBooleanSelector> {
+  let control = queryBooleanSelector(editor, selector);
+  if (!control && selector.includes("data-config-key")) {
+    const key = selector.match(/data-config-key="([^"]+)"/)?.[1] ?? "";
+    const hasMinimalCameraSettings = Boolean(
+      editor.shadowRoot?.querySelector(
+        `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
+      ),
+    );
+    const section =
+      key === "mobile_data_saving"
+        ? "mobile-and-touch"
+        : key === "view_timelapse_on_thumbnail_hover"
+          ? "reviews"
+          : key.startsWith("display_")
+            ? "display"
+            : key === "edge_to_edge_phone" && hasMinimalCameraSettings
+              ? "minimal-camera-configuration"
+              : [
+                    "rounded_outer_corners",
+                    "outer_shadows",
+                    "outer_padding",
+                    "edge_to_edge_phone",
+                    "camera_rounded_corners",
+                    "camera_shadows",
+                    "camera_bar_rounded_corners",
+                    "camera_bar_shadows",
+                    "event_rounded_corners",
+                    "event_shadows",
+                  ].includes(key.replace(/_phone$/, "")) ||
+                  key === "edge_to_edge_phone"
+                ? "layout"
+                : editor.shadowRoot?.querySelector(
+                      `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
+                    )
+                  ? "minimal-camera-configuration"
+                  : "live-media-player";
+    await openEditorSection(editor, section);
+    control = queryBooleanSelector(editor, selector);
+    if (!control && section === "layout") {
+      const heightSettings = editor.shadowRoot?.querySelector(
+        "wzc-editor-height-selector",
+      );
+      await heightSettings?.updateComplete;
+      control = queryBooleanSelector(editor, selector);
+    }
+  }
+  if (!control)
+    throw new Error(`Boolean selector ${selector} was not rendered`);
+  control.value = checked;
+  control.dispatchEvent(
+    new CustomEvent("value-changed", {
+      detail: { value: checked },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  return control;
+}
+
+describe("camera-optics-card-editor", () => {
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    HTMLDialogElement.prototype.showModal ??= function (): void {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close ??= function (): void {
+      this.removeAttribute("open");
+    };
+    await import("../src/main");
+    await import("../src/editor/camera-optics-card-editor");
+  });
+
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.useRealTimers();
+  });
+
+  it("groups settings into closed accordions and reports draft status", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Original" });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const items = [
+      ...(editor.shadowRoot?.querySelectorAll<AccordionItem>(
+        ACCORDION_ITEM_TAG,
+      ) ?? []),
+    ];
+    expect(items.map((item) => item.heading)).toEqual([
+      "Camera Settings",
+      "Stage Management",
+      "Mobile and Touch",
+      "Live Media Player",
+      "Recorded Media Player",
+      "Reviews",
+      "General Settings",
+      "Layout Settings",
+    ]);
+    expect(items.find((item) => item.itemKey === "layout")?.icon).toBe(
+      "rulerSquare",
+    );
+    expect(items.every((item) => item.childElementCount === 0)).toBe(true);
+    expect(items.every((item) => !item.open)).toBe(true);
+    const liveMedia = await openEditorSection(editor, "live-media-player");
+    expect(liveMedia.childElementCount).toBe(7);
+    expect(
+      liveMedia.querySelector('[data-setting="alert-detection-highlight"]'),
+    ).not.toBeNull();
+    const ptzControl = liveMedia.querySelector<SegmentedControl>(
+      '[data-setting="ptz-overlay-control"]',
+    );
+    await ptzControl?.updateComplete;
+    expect(
+      ptzControl?.shadowRoot
+        ?.querySelector('[data-value="start_open"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      ptzControl?.shadowRoot?.querySelector('[data-value="open_in_drawer"]'),
+    ).toHaveProperty("disabled", true);
+    const transitionControl = liveMedia.querySelector<SegmentedControl>(
+      '[data-setting="slide-transition"]',
+    );
+    await transitionControl?.updateComplete;
+    expect(
+      transitionControl?.shadowRoot
+        ?.querySelector('[data-value="slide"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+    const recordedMedia = await openEditorSection(
+      editor,
+      "recorded-media-player",
+    );
+    expect(liveMedia.childElementCount).toBe(0);
+    const recordedMediaType = recordedMedia.querySelector<SegmentedControl>(
+      '[data-setting="recorded-media-player-type"]',
+    );
+    await recordedMediaType?.updateComplete;
+    expect(recordedMediaType?.value).toBe("draggable");
+    expect(recordedMedia.textContent).toContain(
+      "Mobile Phones will Always use the Bottom Drawer.",
+    );
+    expect(
+      recordedMediaType?.shadowRoot?.querySelector('[data-value="future"]'),
+    ).toHaveProperty("disabled", true);
+    const reviews = await openEditorSection(editor, "reviews");
+    expect(recordedMedia.childElementCount).toBe(0);
+    expect(
+      reviews.querySelector(
+        '[data-config-key="view_timelapse_on_thumbnail_hover"]',
+      ),
+    ).not.toBeNull();
+    const status = editor.shadowRoot?.querySelector(
+      "wzc-toast-region",
+    ) as ToastRegion;
+    expect(status.notices[0]).toMatchObject({
+      message: "No pending changes.",
+      severity: "success",
+    });
+
+    await inputTitle(editor, "Changed");
+    await editor.updateComplete;
+    expect(status.notices).toHaveLength(1);
+    expect(status.notices[0]).toMatchObject({
+      severity: "warning",
+    });
+    const general = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="general"]`,
+    );
+    expect(general?.hasAttribute("pending")).toBe(true);
+    await openEditorSection(editor, "reviews");
+    expect(general?.open).toBe(false);
+    expect(general?.hasAttribute("pending")).toBe(true);
+
+    await inputTitle(editor, "Original");
+    await editor.updateComplete;
+    expect(general?.hasAttribute("pending")).toBe(false);
+  });
+
+  it("uses stage type as the gatekeeper for desktop and mobile stage designs", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    editor.setConfig({ type: CARD_TYPE });
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const stageItem = await openEditorSection(editor, "stage-management");
+    expect(stageItem).not.toBeNull();
+
+    const stageTypeInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        'input[name="stage-type"]',
+      ) ?? []),
+    ];
+    expect(stageTypeInputs.map(({ value }) => value)).toEqual([
+      "minimal_camera_only",
+      "camera_only",
+      "full",
+    ]);
+    expect(stageTypeInputs[0]?.disabled).toBe(false);
+    expect(stageTypeInputs[2]?.checked).toBe(true);
+
+    const fullLayoutInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        'input[data-stage-profile="default"]',
+      ) ?? []),
+    ];
+    expect(fullLayoutInputs).toHaveLength(1);
+    expect(fullLayoutInputs[0]).toMatchObject({
+      checked: true,
+      value: "default-stage",
+    });
+    const mobileLayoutInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        'input[data-stage-profile="phone"]',
+      ) ?? []),
+    ];
+    expect(mobileLayoutInputs).toHaveLength(1);
+    expect(mobileLayoutInputs[0]).toMatchObject({
+      checked: true,
+      value: "default-mobile-stage",
+    });
+
+    fullLayoutInputs[0]!.checked = false;
+    fullLayoutInputs[0]!.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(fullLayoutInputs[0]?.checked).toBe(true);
+    expect(changed).not.toHaveBeenCalled();
+
+    stageTypeInputs[1]!.checked = true;
+    stageTypeInputs[1]!.dispatchEvent(new Event("change", { bubbles: true }));
+    await editor.updateComplete;
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config).toMatchObject({
+      stage_type: "camera_only",
+    });
+    expect(changed.mock.calls[0][0].detail.config.stage_flow).toBeUndefined();
+
+    const cameraOnlyInputs = [
+      ...(stageItem?.querySelectorAll<HTMLInputElement>(
+        "input[data-stage-profile]",
+      ) ?? []),
+    ];
+    expect(cameraOnlyInputs).toHaveLength(0);
+    expect(stageItem?.textContent).not.toContain("Stage Layout");
+    expect(stageItem?.textContent).not.toContain("Mobile Stage Layout");
+  });
+
+  it("presents the minimal camera editor flow without stage lineups or unrelated settings", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      callWS: vi.fn(),
+      connection: { subscribeMessage: vi.fn() },
+      hassUrl: (path: string) => path,
+      localize: (key: string) => key,
+      states: {},
+    };
+    editor.setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      type: CARD_TYPE,
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const stageItem = await openEditorSection(editor, "stage-management");
+    const minimal = stageItem?.querySelector<HTMLInputElement>(
+      'input[value="minimal_camera_only"]',
+    );
+    minimal!.checked = true;
+    minimal!.dispatchEvent(new Event("change", { bubbles: true }));
+    await editor.updateComplete;
+
+    expect(stageItem?.hasAttribute("pending")).toBe(true);
+    expect(
+      editor.shadowRoot
+        ?.querySelector<AccordionItem>(
+          `${ACCORDION_ITEM_TAG}[item-key="interactions"]`,
+        )
+        ?.hasAttribute("pending"),
+    ).toBe(false);
+    expect(stageItem?.querySelector("[data-stage-profile]")).toBeNull();
+    expect(stageItem?.textContent).toContain(
+      "This Stage presents one lightweight Camera View for One Camera. Limited Controls.",
+    );
+    expect(
+      [
+        ...(editor.shadowRoot?.querySelectorAll<HTMLElement>(
+          `${ACCORDION_ITEM_TAG}[item-key]`,
+        ) ?? []),
+      ].map((item) => item.getAttribute("item-key")),
+    ).toEqual([
+      "camera",
+      "stage-management",
+      "minimal-camera-configuration",
+      "mobile-and-touch",
+      "interactions",
+      "general",
+    ]);
+    const cameraSettings = await openEditorSection(editor, "camera");
+    expect(cameraSettings.textContent).toContain(
+      "only the first camera listed",
+    );
+    const minimalConfiguration = await openEditorSection(
+      editor,
+      "minimal-camera-configuration",
+    );
+    expect(minimalConfiguration?.heading).toBe("Minimal Camera Configuration");
+    expect(
+      minimalConfiguration
+        ?.querySelector('[data-config-key="minimal_camera_show_pip_button"]')
+        ?.getAttribute("label"),
+    ).toBe("Show PIP Button");
+    expect(
+      minimalConfiguration
+        ?.querySelector('[data-config-key="minimal_camera_show_source_label"]')
+        ?.getAttribute("label"),
+    ).toBe("Show Source Label");
+    expect(
+      minimalConfiguration?.querySelector<TestBooleanSelector>(
+        '[data-config-key="edge_to_edge_phone"]',
+      )?.value,
+    ).toBe(true);
+    expect(
+      editor.shadowRoot?.querySelector(
+        `${ACCORDION_ITEM_TAG}[item-key="layout"]`,
+      ),
+    ).toBeNull();
+    const interactions = await openEditorSection(editor, "interactions");
+    const interactionForm = interactions.querySelector<
+      HTMLElement & {
+        data?: Record<string, unknown>;
+        hass?: LocalizingTestHass;
+        schema?: Array<{
+          selector: { ui_action?: Record<string, unknown> };
+        }>;
+      }
+    >("ha-form.primary-interaction");
+    expect(interactionForm).not.toBeNull();
+    expect(interactionForm?.data).toMatchObject({
+      tap_action: { action: "open-live-view" },
+    });
+    expect(interactionForm?.schema?.[0]?.selector.ui_action).toEqual({
+      actions: [
+        "open-live-view",
+        "toggle",
+        "navigate",
+        "url",
+        "perform-action",
+        "assist",
+        "none",
+      ],
+      default_action: "open-live-view",
+    });
+    expect(
+      interactionForm?.hass?.localize(
+        "ui.panel.lovelace.editor.action-editor.actions.open-live-view",
+      ),
+    ).toBe("Open Live View");
+    interactions
+      ?.querySelector<HTMLElement>(".add-interaction > ha-button")
+      ?.click();
+    await editor.updateComplete;
+    interactions
+      ?.querySelector<HTMLElement>(
+        '.add-interaction-choices [data-interaction="double_tap_action"]',
+      )
+      ?.click();
+    await editor.updateComplete;
+    const optionalForm = interactions.querySelector<
+      HTMLElement & {
+        schema?: Array<{
+          selector: { ui_action?: { actions?: string[] } };
+        }>;
+      }
+    >(".optional-interaction ha-form");
+    expect(optionalForm?.schema?.[0]?.selector.ui_action?.actions).toContain(
+      "open-live-view",
+    );
+    expect(changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({
+          config: expect.objectContaining({
+            double_tap_action: { action: "none" },
+          }),
+        }),
+      }),
+    );
+    optionalForm?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          value: { double_tap_action: { action: "open-live-view" } },
+        },
+      }),
+    );
+    await editor.updateComplete;
+    const removeInteraction = interactions.querySelector<HTMLElement>(
+      '.remove-interaction-action [data-interaction="double_tap_action"]',
+    );
+    expect(removeInteraction?.textContent).toContain("Remove");
+    removeInteraction?.click();
+    await editor.updateComplete;
+    expect(
+      interactions.querySelector(
+        '.remove-interaction-action [data-interaction="double_tap_action"]',
+      ),
+    ).toBeNull();
+  });
+
+  it("uses a compact camera accordion and saves a sanitized camera title", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    const accordion = editor.shadowRoot?.querySelector(
+      ".camera-dialog-accordion",
+    );
+    const items = [
+      ...(accordion?.querySelectorAll<AccordionItem>(ACCORDION_ITEM_TAG) ?? []),
+    ];
+    await Promise.all(items.map((item) => item.updateComplete));
+    expect(items.map((item) => item.heading)).toEqual([
+      "Camera",
+      "Connection Source",
+      "Additional Camera",
+      "Lights",
+      "Options and Controls",
+    ]);
+    expect(
+      items.every((item) => item.getAttribute("density") === "compact"),
+    ).toBe(true);
+    expect(items[0]?.open).toBe(true);
+    expect(items[1]?.summaryText).toBe("Home Assistant");
+    expect(items[2]?.summaryText).toBe("Not configured");
+    expect(
+      editor.shadowRoot?.querySelectorAll("[data-camera-config-key]").length,
+    ).toBe(5);
+    expect(
+      (
+        editor.shadowRoot?.querySelector("ha-icon-button.dialog-close") as
+          (HTMLElement & { path?: string }) | null
+      )?.path,
+    ).toBe(iconPath("close"));
+
+    const input = editor.shadowRoot?.querySelector(
+      ".camera-title-field ha-input",
+    ) as InputElement;
+    expect(input.getAttribute("label")).toBe("Camera Name");
+    expect(input.getAttribute("placeholder")).toBe("Display name (optional)");
+    expect(input.querySelector('.character-count[slot="end"]')).not.toBeNull();
+    input.value = "  Front!  Door @12345678901234567890";
+    input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+    await editor.updateComplete;
+
+    expect(input.value).toBe("Front Door 1234567890123");
+    expect(
+      editor.shadowRoot?.querySelector(".character-count")?.textContent?.trim(),
+    ).toBe("24/24");
+    (
+      editor.shadowRoot?.querySelector(
+        'ha-button[appearance="accent"][variant="brand"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config.cameras[0].title).toBe(
+      "Front Door 1234567890123",
+    );
+    expect(
+      editor.shadowRoot?.querySelector(".camera-tile-copy span")?.textContent,
+    ).toBe("Front Door 1234567890123");
+  });
+
+  it("confirms camera removal and exposes accessible edit and remove names", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }, { entity_id: "camera.back" }],
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+
+    const edit = editor.shadowRoot?.querySelector('[title="Edit Camera"]');
+    const remove = editor.shadowRoot?.querySelector(
+      '[title="Remove camera"]',
+    ) as HTMLElement;
+    expect(edit?.getAttribute("aria-label")).toBe("Edit camera: front");
+    expect(remove.getAttribute("aria-label")).toBe("Remove camera: front");
+
+    remove.click();
+    await editor.updateComplete;
+    const dialog = editor.shadowRoot?.querySelector(
+      ".remove-camera-dialog",
+    ) as HTMLDialogElement;
+    expect(dialog.open).toBe(true);
+    expect(dialog.textContent).toContain(
+      "Are you sure you want to remove “front” from this card?",
+    );
+    (
+      dialog.querySelector('ha-button[variant="neutral"]') as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(dialog.open).toBe(false);
+    expect(changed).not.toHaveBeenCalled();
+
+    remove.click();
+    await editor.updateComplete;
+    (
+      dialog.querySelector('ha-button[variant="danger"]') as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config.cameras).toEqual([
+      { entity_id: "camera.back" },
+    ]);
+  });
+
+  it("adds, cancels, limits, and removes linked Home Assistant lights", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+        "light.porch": {
+          entity_id: "light.porch",
+          state: "off",
+          attributes: { friendly_name: "Porch" },
+        },
+        "light.driveway": {
+          entity_id: "light.driveway",
+          state: "on",
+          attributes: { friendly_name: "Driveway" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async () => undefined,
+      hassUrl: (path: string) => path,
+    };
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: Front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    const selectLight = async (entityId: string): Promise<void> => {
+      (editor.shadowRoot?.querySelector(".add-light") as HTMLElement).click();
+      await editor.updateComplete;
+      editor.shadowRoot
+        ?.querySelector(".pending-light-selector")
+        ?.dispatchEvent(
+          new CustomEvent("value-changed", {
+            bubbles: true,
+            composed: true,
+            detail: { value: entityId },
+          }),
+        );
+      await editor.updateComplete;
+    };
+
+    await selectLight("light.porch");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
+          (HTMLElement & { required?: boolean; value?: string }) | null
+      )?.value,
+    ).toBe("mdi:lightbulb");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
+          (HTMLElement & { required?: boolean }) | null
+      )?.required,
+    ).toBe(false);
+    editor.shadowRoot
+      ?.querySelector(".pending-light-icon-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "" },
+        }),
+      );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".pending-light-icon-selector") as
+          (HTMLElement & { value?: string }) | null
+      )?.value,
+    ).toBe("mdi:lightbulb");
+    editor.shadowRoot
+      ?.querySelector(".pending-light-icon-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "mdi:coach-lamp" },
+        }),
+      );
+    await editor.updateComplete;
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="brand"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelectorAll(".linked-light-row"),
+    ).toHaveLength(1);
+    expect(
+      editor.shadowRoot?.querySelector(".remove-light")?.getAttribute("title"),
+    ).toBe("Remove light");
+    expect(
+      editor.shadowRoot?.querySelector(".remove-light path")?.getAttribute("d"),
+    ).toBe(iconPath("remove"));
+    expect(
+      editor.shadowRoot
+        ?.querySelector(".linked-light-row")
+        ?.contains(editor.shadowRoot.querySelector(".light-icon-selector")!),
+    ).toBe(true);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".light-icon-selector") as
+          (HTMLElement & { required?: boolean }) | null
+      )?.required,
+    ).toBe(false);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".linked-light-row > ha-icon") as
+          (HTMLElement & { icon?: string }) | null
+      )?.icon,
+    ).toBe("mdi:coach-lamp");
+    editor.shadowRoot?.querySelector(".light-icon-selector")?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        bubbles: true,
+        composed: true,
+        detail: { value: "" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(".linked-light-row > ha-icon") as
+          (HTMLElement & { icon?: string }) | null
+      )?.icon,
+    ).toBe("mdi:lightbulb");
+
+    await selectLight("light.porch");
+    expect(
+      editor.shadowRoot?.querySelector(".add-light-feedback")?.textContent,
+    ).toContain("already linked");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '.add-light-form ha-button[variant="brand"]',
+        ) as HTMLElement & { disabled?: boolean }
+      ).disabled,
+    ).toBe(true);
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="neutral"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    await selectLight("light.driveway");
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="neutral"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelectorAll(".linked-light-row"),
+    ).toHaveLength(1);
+
+    await selectLight("light.driveway");
+    (
+      editor.shadowRoot?.querySelector(
+        '.add-light-form ha-button[variant="brand"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelectorAll(".linked-light-row"),
+    ).toHaveLength(2);
+    expect(editor.shadowRoot?.querySelector(".add-light")).toBeNull();
+
+    editor.shadowRoot
+      ?.querySelectorAll(".light-icon-selector")[1]
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { value: "mdi:coach-lamp" },
+        }),
+      );
+    await editor.updateComplete;
+
+    (
+      editor.shadowRoot?.querySelectorAll<HTMLElement>(".remove-light")[0] as
+        HTMLElement | undefined
+    )?.click();
+    await editor.updateComplete;
+    (
+      editor.shadowRoot?.querySelector(
+        '.camera-editor-dialog ha-button[appearance="accent"][variant="brand"][size="m"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config.cameras[0]).toEqual({
+      entity_id: "camera.front",
+      lights: [{ entity_id: "light.driveway", icon: "mdi:coach-lamp" }],
+    });
+  });
+
+  it("uses dirtyState and soft preview without config-changed while typing", async () => {
+    const states: Array<{ config: CardConfig; key: string }> = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      if (request.context === "dirtyState") {
+        request.callback?.({
+          setState: (config, key) => states.push({ config, key }),
+        });
+      }
+    };
+    document.addEventListener("context-request", contextHandler);
+
+    const card = document.createElement("camera-optics-card") as DashboardCard;
+    card.preview = true;
+    card.setConfig({ type: CARD_TYPE, title: "Original" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Original" });
+    const configChanged = vi.fn();
+    editor.addEventListener("config-changed", configChanged);
+    document.body.append(card, editor);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    const originalCard = card.shadowRoot?.querySelector("ha-card");
+
+    await inputTitle(editor, "Draft title");
+    await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
+    await card.updateComplete;
+
+    expect(configChanged).not.toHaveBeenCalled();
+    expect(states.at(-1)).toEqual({
+      config: { type: CARD_TYPE, title: "Draft title" },
+      key: EDITOR_DIRTY_STATE_KEY,
+    });
+    expect(
+      card.shadowRoot?.querySelector(".shell")?.getAttribute("aria-label"),
+    ).toBe("Draft title");
+    expect(card.shadowRoot?.querySelector("ha-card")).toBe(originalCard);
+
+    const writesAfterChange = states.length;
+    await inputTitle(editor, "Draft title");
+    await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
+    expect(states).toHaveLength(writesAfterChange);
+
+    editor.remove();
+    await card.updateComplete;
+    expect(
+      card.shadowRoot?.querySelector(".shell")?.getAttribute("aria-label"),
+    ).toBe("Original");
+    expect(card.shadowRoot?.querySelector("ha-card")).toBe(originalCard);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("uses one committed compatibility event when dirtyState is unavailable", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Original" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    const input = await inputTitle(editor, "Compatible draft");
+    expect(changed).not.toHaveBeenCalled();
+    input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+
+    expect(changed).toHaveBeenCalledOnce();
+    expect(changed.mock.calls[0][0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Compatible draft",
+    });
+  });
+
+  it("exposes and saves Mobile Data Saving", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="mobile_data_saving"]',
+    ) as TestBooleanSelector | null;
+    expect(selector?.value).toBe(false);
+
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="mobile_data_saving"]',
+      true,
+    );
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      mobile_data_saving: true,
+    });
+  });
+
+  it("defaults and saves the Companion rotate action", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="companion-rotate-action"]',
+    );
+    expect(control?.value).toBe("double_column");
+    expect(
+      control?.shadowRoot?.querySelector('[data-value="double_column"]'),
+    ).not.toBeNull();
+
+    control?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="fullscreen_live_video"]')
+      ?.click();
+    await editor.updateComplete;
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      companion_rotate_action: "fullscreen_live_video",
+    });
+  });
+
+  it("defaults and saves the recorded media player type", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "recorded-media-player");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="recorded-media-player-type"]',
+    );
+    expect(control?.value).toBe("draggable");
+
+    control?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="bottom_drawer"]')
+      ?.click();
+    await editor.updateComplete;
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      recorded_media_player_type: "bottom_drawer",
+    });
+  });
+
+  it("removes Double Column from Minimal Camera Stage rotate actions", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      stage_type: "minimal_camera_only",
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="companion-rotate-action"]',
+    );
+    expect(control?.value).toBe("none");
+    expect(
+      control?.shadowRoot?.querySelector('[data-value="double_column"]'),
+    ).toBeNull();
+    expect(
+      control?.shadowRoot?.querySelector('[data-value="none"]'),
+    ).not.toBeNull();
+    expect(
+      control?.shadowRoot?.querySelector(
+        '[data-value="fullscreen_live_video"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("keeps every Companion rotate action available for Camera Only Stage", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      stage_type: "camera_only",
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "mobile-and-touch");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="companion-rotate-action"]',
+    );
+    for (const value of ["none", "double_column", "fullscreen_live_video"]) {
+      expect(
+        control?.shadowRoot?.querySelector(`[data-value="${value}"]`),
+      ).not.toBeNull();
+    }
+  });
+
+  it("shows system versions and the effective Home Assistant time zone", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      config: { time_zone: "UTC", version: "2026.11.2" },
+      states: {},
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async <T>(message: HomeAssistantMessage): Promise<T> => {
+        expect(message.type).toBe("camera_optics/system_info");
+        return {
+          home_assistant_version: "2026.11.2",
+          providers: [
+            {
+              integration_installed: true,
+              integration_version: "5.15.6",
+              product_name: "Frigate",
+              product_versions: ["0.18.1"],
+              provider_id: "frigate_go2rtc",
+            },
+          ],
+          camera_optics_version: "0.0.4-dev.272",
+        } as T;
+      },
+      hassUrl: (path: string) => path,
+      locale: { language: "en-US", time_zone: "America/Chicago" },
+    };
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "general");
+
+    await vi.waitFor(() => {
+      const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
+      const summary = info?.shadowRoot?.querySelector(".system-summary");
+      expect(summary?.textContent).toContain("Home Assistant Version");
+      expect(summary?.textContent).toContain("2026.11.2");
+      expect(summary?.textContent).toContain("0.18.1");
+      expect(summary?.textContent).toContain("Installed · v5.15.6");
+      expect(info?.shadowRoot?.textContent).toContain(
+        "Central Time (America/Chicago)",
+      );
+    });
+    const info = editor.shadowRoot?.querySelector(EDITOR_GENERAL_INFO_TAG);
+    expect(
+      info?.shadowRoot?.querySelector(".timezone-copy a")?.getAttribute("href"),
+    ).toBe("/profile/general");
+  });
+
+  it("defaults camera activity highlighting to both and saves an opt-out", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
+
+    const selector = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="alert-detection-highlight"]',
+    );
+    expect(selector?.value).toBe("both");
+    selector?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="off"]')
+      ?.click();
+    await editor.updateComplete;
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      alert_detection_highlight: "off",
+    });
+  });
+
+  it("saves the Reviews thumbnail outline classification mode", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
+
+    const selector = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="alert-detection-thumbnail-outline"]',
+    );
+    expect(selector?.value).toBe("both");
+    selector?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="alerts"]')
+      ?.click();
+    await editor.updateComplete;
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      alert_detection_thumbnail_outline: "alerts",
+    });
+  });
+
+  it("saves the PTZ overlay presentation from the segmented control", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
+
+    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="ptz-overlay-control"]',
+    );
+    const startClosed = control?.shadowRoot?.querySelector<HTMLButtonElement>(
+      '[data-value="start_closed"]',
+    );
+    startClosed?.click();
+    await editor.updateComplete;
+    await control?.updateComplete;
+
+    expect(control?.value).toBe("start_closed");
+    expect(
+      control?.shadowRoot
+        ?.querySelector('[data-value="start_closed"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      ptz_overlay_control: "start_closed",
+    });
+  });
+
+  it("saves activity takeover eligibility and its initial runtime state", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
+
+    const takeover = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="alert-detection-takeover"]',
+    );
+    takeover?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="alerts"]')
+      ?.click();
+    await editor.updateComplete;
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="start_alert_takeover_on"]',
+      true,
+    );
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      alert_detection_takeover: "alerts",
+      start_alert_takeover_on: true,
+    });
+  });
+
+  it("saves carousel transition and slide advance time from segmented controls", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "live-media-player");
+
+    const transition = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="slide-transition"]',
+    );
+    transition?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="fade"]')
+      ?.click();
+    const advanceTime = editor.shadowRoot?.querySelector<SegmentedControl>(
+      '[data-setting="slide-advance-time"]',
+    );
+    advanceTime?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[data-value="20"]')
+      ?.click();
+    await editor.updateComplete;
+    await transition?.updateComplete;
+    await advanceTime?.updateComplete;
+
+    expect(transition?.value).toBe("fade");
+    expect(advanceTime?.value).toBe("20");
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      slide_transition: "fade",
+      slide_advance_time: 20,
+    });
+  });
+
+  it("defaults thumbnail timelapse previews on and saves an opt-out", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
+
+    const selector = editor.shadowRoot?.querySelector(
+      '[data-config-key="view_timelapse_on_thumbnail_hover"]',
+    ) as TestBooleanSelector | null;
+    expect(selector?.value).toBe(true);
+
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="view_timelapse_on_thumbnail_hover"]',
+      false,
+    );
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      view_timelapse_on_thumbnail_hover: false,
+    });
+  });
+
+  it("groups event badge overrides under Reviews", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
+
+    const objectSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="display_object_badges"]',
+    ) as TestBooleanSelector | null;
+    const eventTypeSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="display_event_type_badges"]',
+    ) as TestBooleanSelector | null;
+    const zoneSelector = editor.shadowRoot?.querySelector(
+      '[data-config-key="display_zone"]',
+    ) as TestBooleanSelector | null;
+    expect(objectSelector?.value).toBe(true);
+    expect(eventTypeSelector?.value).toBe(true);
+    expect(zoneSelector?.value).toBe(true);
+
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="display_object_badges"]',
+      false,
+    );
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="display_event_type_badges"]',
+      false,
+    );
+    await setBooleanSelector(editor, '[data-config-key="display_zone"]', false);
+    expect(
+      objectSelector?.closest(ACCORDION_ITEM_TAG)?.getAttribute("item-key"),
+    ).toBe("reviews");
+    expect(
+      editor.shadowRoot?.querySelector(
+        `${ACCORDION_ITEM_TAG}[item-key="display"]`,
+      ),
+    ).toBeNull();
+    const reviews = editor.shadowRoot?.querySelector<AccordionItem>(
+      `${ACCORDION_ITEM_TAG}[item-key="reviews"]`,
+    );
+    expect(reviews?.hasAttribute("pending")).toBe(true);
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      display_event_type_badges: false,
+      display_object_badges: false,
+      display_zone: false,
+    });
+  });
+
+  it("exposes the shared activity history range under Reviews and saves it", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "reviews");
+
+    const selector = editor.shadowRoot?.querySelector<
+      HTMLElement & {
+        selector: { number: { mode: string; slider_ticks: boolean } };
+        value: number;
+      }
+    >('ha-selector[label="Days of Reviews to Display"]');
+    expect(selector?.value).toBe(5);
+    expect(selector?.selector.number.mode).toBe("slider");
+    expect(selector?.selector.number.slider_ticks).toBe(true);
+    expect(
+      selector?.closest(ACCORDION_ITEM_TAG)?.getAttribute("item-key"),
+    ).toBe("reviews");
+    expect(
+      editor.shadowRoot?.querySelector(
+        'wzc-accordion-item[item-key="general"] ha-selector[label="Days of Reviews to Display"]',
+      ),
+    ).toBeNull();
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: 12 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      event_history_days: 12,
+    });
+  });
+
+  it("previews, saves, and restores a selected camera", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({
+        setState: (config) => states.push(config),
+      });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const card = document.createElement("camera-optics-card") as DashboardCard;
+    card.preview = true;
+    card.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [],
+    });
+    dialog._updateDirtyState = vi.fn();
+    const dialogRoot = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    let configSeenBySave: CardConfig | undefined;
+    save.addEventListener("click", () => {
+      configSeenBySave = dialog._cardConfig;
+    });
+    dialogRoot.append(editor, save);
+    document.body.append(card, dialog);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+    await openEditorSection(editor, "camera");
+    (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
+    await editor.updateComplete;
+    const selector = editor.shadowRoot?.querySelector(
+      ".camera-editor-dialog ha-selector",
+    );
+
+    selector?.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "camera.front" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
+    await card.updateComplete;
+
+    expect(changed).not.toHaveBeenCalled();
+    expect(card.shadowRoot?.textContent).not.toContain(
+      "Select a camera in the card editor.",
+    );
+    expect(states.at(-1)).toMatchObject({
+      cameras: [{ entity_id: "camera.front" }],
+    });
+
+    save.click();
+    expect(configSeenBySave).toMatchObject({
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    expect(dialog._updateDirtyState).toHaveBeenCalledWith(configSeenBySave);
+
+    const reopened = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    reopened.setConfig(configSeenBySave);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    await openEditorSection(reopened, "camera");
+    expect(
+      reopened.shadowRoot?.querySelectorAll("wzc-sortable-tile"),
+    ).toHaveLength(1);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("preserves a nested stack and its sibling when the child editor saves", async () => {
+    const dirtyStates: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({
+        setState: (config) => dirtyStates.push(config),
+      });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    const wrapper = {
+      type: "vertical-stack",
+      cards: [
+        { type: CARD_TYPE, title: "Original" },
+        { type: "markdown", content: "Sibling" },
+      ],
+    };
+    dialog._cardConfig = wrapper as unknown as CardConfig;
+    dialog._updateDirtyState = vi.fn();
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig(wrapper.cards[0]);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    dialog.addEventListener("config-changed", (event) => {
+      const child = (event as CustomEvent<{ config: CardConfig }>).detail
+        .config;
+      wrapper.cards[0] = child;
+    });
+    root.append(editor, save);
+    document.body.append(dialog);
+    await editor.updateComplete;
+
+    await inputTitle(editor, "Nested update");
+    await vi.advanceTimersByTimeAsync(EDITOR_TEXT_PREVIEW_DELAY_MS);
+    save.click();
+
+    expect(dialog._cardConfig).toBe(wrapper);
+    expect(wrapper.cards).toEqual([
+      { type: CARD_TYPE, title: "Nested update" },
+      { type: "markdown", content: "Sibling" },
+    ]);
+    expect(dialog._updateDirtyState).not.toHaveBeenCalled();
+    expect(dirtyStates).toEqual([]);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("previews, saves, and restores default-on toggles", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const card = document.createElement("camera-optics-card") as DashboardCard;
+    card.preview = true;
+    card.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [],
+    });
+    dialog._updateDirtyState = vi.fn();
+    const dialogRoot = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    dialogRoot.append(editor, save);
+    document.body.append(card, dialog);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+
+    for (const key of [
+      "rounded_outer_corners",
+      "outer_shadows",
+      "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
+      "camera_bar_rounded_corners",
+      "camera_bar_shadows",
+      "event_shadows",
+    ]) {
+      await setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
+      await card.updateComplete;
+    }
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="edge_to_edge_phone"]',
+      false,
+    );
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="rounded_outer_corners_phone"]',
+      true,
+    );
+    await card.updateComplete;
+
+    expect(states.at(-1)).toMatchObject({
+      rounded_outer_corners: false,
+      outer_shadows: false,
+      outer_padding: false,
+      camera_rounded_corners: false,
+      camera_shadows: false,
+      camera_bar_rounded_corners: false,
+      camera_bar_shadows: false,
+      event_shadows: false,
+      edge_to_edge_phone: false,
+      rounded_outer_corners_phone: true,
+    });
+    const previewShell = card.shadowRoot?.querySelector("ha-card");
+    expect(previewShell?.classList.contains("square-outer-corners")).toBe(true);
+    expect(previewShell?.classList.contains("no-outer-shadow")).toBe(true);
+    expect(previewShell?.classList.contains("no-outer-padding")).toBe(true);
+
+    save.click();
+    expect(dialog._cardConfig).toMatchObject({
+      rounded_outer_corners: false,
+      outer_shadows: false,
+      outer_padding: false,
+      camera_rounded_corners: false,
+      camera_shadows: false,
+      camera_bar_rounded_corners: false,
+      camera_bar_shadows: false,
+      event_shadows: false,
+      edge_to_edge_phone: false,
+      rounded_outer_corners_phone: true,
+    });
+    const reopened = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    await openEditorSection(reopened, "layout");
+    for (const key of [
+      "rounded_outer_corners",
+      "outer_shadows",
+      "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
+      "camera_bar_rounded_corners",
+      "camera_bar_shadows",
+      "event_shadows",
+    ]) {
+      expect(
+        (
+          queryBooleanSelector(
+            reopened,
+            `[data-config-key="${key}"]`,
+          ) as TestBooleanSelector
+        ).value,
+      ).toBe(false);
+    }
+    expect(
+      (
+        queryBooleanSelector(
+          reopened,
+          '[data-config-key="edge_to_edge_phone"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
+    expect(
+      (
+        queryBooleanSelector(
+          reopened,
+          '[data-config-key="rounded_outer_corners_phone"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(true);
+
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("presents standard and physical-phone layout columns with device help", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    document.body.append(editor);
+    await editor.updateComplete;
+    const layout = await openEditorSection(editor, "layout");
+    const settings = layout.querySelector("wzc-editor-height-selector");
+    await settings?.updateComplete;
+    const root = settings?.shadowRoot;
+
+    expect(root?.querySelectorAll(".device-info")).toHaveLength(2);
+    expect(
+      [...(root?.querySelectorAll(".device-tooltip") ?? [])].map((element) =>
+        element.textContent?.trim(),
+      ),
+    ).toEqual([
+      "Applies to desktop computers and tablets, including narrow browser windows.",
+      "Applies only to physical mobile phones, not to a narrow desktop browser or card.",
+    ]);
+    expect(root?.querySelector(".appearance-row .device-info")).toBeNull();
+    expect(
+      [...(root?.querySelectorAll(".device-heading") ?? [])].map((element) =>
+        element.textContent?.replaceAll(/\s+/g, " ").trim(),
+      ),
+    ).toEqual([
+      "Standard Applies to desktop computers and tablets, including narrow browser windows.",
+      "Mobile Applies only to physical mobile phones, not to a narrow desktop browser or card.",
+    ]);
+
+    const heightControls = [
+      ...(root?.querySelectorAll<SegmentedControl>(".height-mode-control") ??
+        []),
+    ];
+    expect(heightControls.map(({ value }) => value)).toEqual(["auto", "auto"]);
+    expect(
+      heightControls.map(({ options }) =>
+        options.map(({ label, value }) => ({ label, value })),
+      ),
+    ).toEqual([
+      [
+        { label: "Auto", value: "auto" },
+        { label: "Fit to viewport", value: "fit_viewport" },
+        { label: "Fill container", value: "fill_container" },
+      ],
+      [
+        { label: "Auto", value: "auto" },
+        { label: "Fit to viewport", value: "fit_viewport" },
+        { label: "Fill container", value: "fill_container" },
+      ],
+    ]);
+
+    const values = Object.fromEntries(
+      [
+        ...(root?.querySelectorAll<TestBooleanSelector>(".boolean-option") ??
+          []),
+      ].map((control) => [control.dataset.configKey, control.value]),
+    );
+    expect(values).toMatchObject({
+      edge_to_edge_phone: true,
+      rounded_outer_corners: true,
+      rounded_outer_corners_phone: false,
+      outer_shadows: true,
+      outer_shadows_phone: false,
+      outer_padding: true,
+      outer_padding_phone: false,
+      camera_rounded_corners: true,
+      camera_rounded_corners_phone: false,
+      camera_shadows: true,
+      camera_shadows_phone: false,
+      camera_bar_rounded_corners: true,
+      camera_bar_rounded_corners_phone: true,
+      camera_bar_shadows: true,
+      camera_bar_shadows_phone: true,
+      event_rounded_corners: true,
+      event_rounded_corners_phone: true,
+      event_shadows: true,
+      event_shadows_phone: true,
+    });
+  });
+
+  it("round-trips default-on toggles back to their defaults before Save", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+
+    const baseline = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [],
+    });
+    const card = document.createElement("camera-optics-card") as DashboardCard;
+    card.preview = true;
+    card.setConfig(baseline);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = baseline;
+    dialog._updateDirtyState = vi.fn();
+    const dialogRoot = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig(baseline);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    dialogRoot.append(editor, save);
+    document.body.append(card, dialog);
+    await Promise.all([card.updateComplete, editor.updateComplete]);
+
+    for (const key of [
+      "rounded_outer_corners",
+      "outer_shadows",
+      "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
+      "camera_bar_rounded_corners",
+      "camera_bar_shadows",
+      "event_shadows",
+    ] as const) {
+      await setBooleanSelector(editor, `[data-config-key="${key}"]`, false);
+      await card.updateComplete;
+      const outerClass =
+        key === "rounded_outer_corners"
+          ? "square-outer-corners"
+          : key === "outer_shadows"
+            ? "no-outer-shadow"
+            : key === "outer_padding"
+              ? "no-outer-padding"
+              : undefined;
+      if (outerClass) {
+        expect(card.shadowRoot?.querySelector("ha-card")?.className).toContain(
+          outerClass,
+        );
+      }
+      if (key === "rounded_outer_corners") {
+        await openEditorSection(editor, "reviews");
+        expect(
+          editor.shadowRoot?.querySelector(
+            '[data-config-key="rounded_outer_corners"]',
+          ),
+        ).toBeNull();
+        await openEditorSection(editor, "layout");
+        expect(
+          (
+            queryBooleanSelector(
+              editor,
+              '[data-config-key="rounded_outer_corners"]',
+            ) as TestBooleanSelector
+          ).value,
+        ).toBe(false);
+      }
+
+      await setBooleanSelector(editor, `[data-config-key="${key}"]`, true);
+      await card.updateComplete;
+      if (outerClass) {
+        expect(
+          card.shadowRoot?.querySelector("ha-card")?.className,
+        ).not.toContain(outerClass);
+      }
+      expect(states.at(-1)?.[key]).toBeUndefined();
+    }
+
+    save.click();
+    expect(dialog._cardConfig).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+    });
+    expect(dialog._updateDirtyState).toHaveBeenCalledWith(dialog._cardConfig);
+
+    const reopened = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    await openEditorSection(reopened, "layout");
+    for (const key of [
+      "rounded_outer_corners",
+      "outer_shadows",
+      "outer_padding",
+      "camera_rounded_corners",
+      "camera_shadows",
+      "camera_bar_rounded_corners",
+      "camera_bar_shadows",
+      "event_shadows",
+    ]) {
+      expect(
+        (
+          queryBooleanSelector(
+            reopened,
+            `[data-config-key="${key}"]`,
+          ) as TestBooleanSelector
+        ).value,
+      ).toBe(true);
+    }
+
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("edits per-camera audio defaults inside the camera dialog", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Camera",
+      cameras: [
+        {
+          entity_id: "camera.front",
+          low_latency_hls: true,
+          ptz_enabled: false,
+          start_live_unmuted_pc_tablet: false,
+          start_live_unmuted_phone: false,
+          two_way_talk_enabled: false,
+        },
+      ],
+    });
+    dialog._updateDirtyState = vi.fn();
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig(dialog._cardConfig);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+
+    for (const key of [
+      "start_live_unmuted_pc_tablet",
+      "start_live_unmuted_phone",
+    ] as const) {
+      const selector = editor.shadowRoot?.querySelector(
+        `[data-camera-config-key="${key}"]`,
+      ) as TestBooleanSelector;
+      expect(selector.value).toBe(false);
+      await setBooleanSelector(
+        editor,
+        `[data-camera-config-key="${key}"]`,
+        true,
+      );
+    }
+
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
+    expect(states.at(-1)).toMatchObject({
+      cameras: [
+        {
+          entity_id: "camera.front",
+          start_live_unmuted_pc_tablet: true,
+          start_live_unmuted_phone: true,
+        },
+      ],
+    });
+
+    save.click();
+    expect(dialog._cardConfig).toMatchObject({
+      cameras: [
+        {
+          start_live_unmuted_pc_tablet: true,
+          start_live_unmuted_phone: true,
+        },
+      ],
+    });
+
+    const reopened = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    reopened.setConfig(dialog._cardConfig);
+    document.body.append(reopened);
+    await reopened.updateComplete;
+    await openEditorSection(reopened, "camera");
+    (
+      reopened.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: front"]',
+      ) as HTMLElement
+    ).click();
+    await reopened.updateComplete;
+    for (const key of [
+      "start_live_unmuted_pc_tablet",
+      "start_live_unmuted_phone",
+    ] as const) {
+      const selector = reopened.shadowRoot?.querySelector(
+        `[data-camera-config-key="${key}"]`,
+      ) as TestBooleanSelector;
+      expect(selector.value).toBe(true);
+    }
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("enables Update only for a valid changed camera draft", async () => {
+    const states: CardConfig[] = [];
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: (config) => states.push(config) });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [{ entity_id: "camera.front" }],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: front"]',
+      ) as HTMLElement
+    ).click();
+    await editor.updateComplete;
+    const update = editor.shadowRoot?.querySelector(
+      'ha-button[appearance="accent"][variant="brand"]',
+    ) as HTMLElement & { disabled: boolean };
+    expect(update.disabled).toBe(true);
+
+    await setBooleanSelector(
+      editor,
+      '[data-camera-config-key="low_latency_hls"]',
+      false,
+    );
+    await editor.updateComplete;
+    expect(update.disabled).toBe(false);
+
+    await setBooleanSelector(
+      editor,
+      '[data-camera-config-key="low_latency_hls"]',
+      true,
+    );
+    await editor.updateComplete;
+    expect(update.disabled).toBe(true);
+
+    await setBooleanSelector(
+      editor,
+      '[data-camera-config-key="low_latency_hls"]',
+      false,
+    );
+    await editor.updateComplete;
+    update.click();
+    await editor.updateComplete;
+    expect(states.at(-1)).toMatchObject({
+      cameras: [{ entity_id: "camera.front", low_latency_hls: false }],
+    });
+    expect(
+      editor.shadowRoot
+        ?.querySelector(".camera-editor-dialog")
+        ?.hasAttribute("open"),
+    ).toBe(false);
+
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("retains HA and capability choices while switching connection types", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "streaming",
+          attributes: { friendly_name: "Front" },
+        },
+      },
+      connection: { subscribeMessage: async () => () => undefined },
+      callService: async () => undefined,
+      callWS: async <T>(message: HomeAssistantMessage): Promise<T> => {
+        if (message.type.endsWith("/live/source")) {
+          return {
+            id: "frigate_go2rtc:entry-front:front",
+            type: "frigate_go2rtc",
+            frigate_instance_id: "frigate",
+            stream_name: "front",
+          } as T;
+        }
+        if (message.type.endsWith("/talk/capability")) {
+          return { supported: true } as T;
+        }
+        return {
+          supported: true,
+          pan: true,
+          tilt: true,
+          zoom: false,
+          focus: false,
+          presets: [],
+        } as T;
+      },
+      hassUrl: (path: string) => path,
+    };
+    editor.setConfig({
+      type: CARD_TYPE,
+      cameras: [
+        {
+          entity_id: "camera.front",
+          low_latency_hls: false,
+          ptz_enabled: true,
+          two_way_talk_enabled: true,
+        },
+      ],
+    });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+    (
+      editor.shadowRoot?.querySelector(
+        '[aria-label="Edit camera: Front"]',
+      ) as HTMLElement
+    ).click();
+    await vi.waitFor(() =>
+      expect(
+        editor.shadowRoot?.querySelector('ha-selector[label="Connection"]'),
+      ).not.toBeNull(),
+    );
+
+    const connection = editor.shadowRoot?.querySelector(
+      'ha-selector[label="Connection"]',
+    ) as TestBooleanSelector;
+    connection.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "frigate_go2rtc" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      editor.shadowRoot?.querySelector(
+        '[data-camera-config-key="low_latency_hls"]',
+      ),
+    ).toBeNull();
+    const fallback = editor.shadowRoot?.querySelector(
+      '[data-camera-config-key="frigate_fallback"]',
+    ) as TestBooleanSelector;
+    expect(fallback.value).toBe("mse");
+    fallback.dispatchEvent(
+      new CustomEvent("value-changed", { detail: { value: "hls" } }),
+    );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="low_latency_hls"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="two_way_talk_enabled"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(true);
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="ptz_enabled"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(true);
+
+    connection.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "home_assistant" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="low_latency_hls"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
+
+    connection.dispatchEvent(
+      new CustomEvent("value-changed", {
+        detail: { value: "frigate_go2rtc" },
+      }),
+    );
+    await editor.updateComplete;
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="frigate_fallback"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe("hls");
+    expect(
+      (
+        editor.shadowRoot?.querySelector(
+          '[data-camera-config-key="low_latency_hls"]',
+        ) as TestBooleanSelector
+      ).value,
+    ).toBe(false);
+  });
+
+  it("uses a one-time dirty-state writer without subscribing", async () => {
+    let publishContext: ContextRequest["callback"];
+    let subscribed = false;
+    let stateWrites = 0;
+    const setState = (): void => {
+      stateWrites += 1;
+      if (subscribed) {
+        publishContext?.({ setState });
+      }
+    };
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      subscribed = request.subscribe === true;
+      publishContext = request.callback;
+      request.callback?.({ setState });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    document.body.append(editor);
+    await editor.updateComplete;
+    await openEditorSection(editor, "camera");
+
+    (editor.shadowRoot?.querySelector(".add-camera") as HTMLElement).click();
+    await editor.updateComplete;
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog ha-selector")
+      ?.dispatchEvent(
+        new CustomEvent("value-changed", {
+          detail: { value: "camera.front" },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    await editor.updateComplete;
+    editor.shadowRoot
+      ?.querySelector(".camera-editor-dialog form")
+      ?.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
+
+    expect(stateWrites).toBe(2);
+    expect(subscribed).toBe(false);
+    document.removeEventListener("context-request", contextHandler);
+  });
+
+  it("widens and applies the editor shell surface until the dialog closes", async () => {
+    const dialog = document.createElement("hui-dialog-edit-card");
+    dialog.style.setProperty(
+      "--ha-view-sections-column-max-width",
+      "480px",
+      "important",
+    );
+    dialog.style.setProperty(
+      "--ha-dialog-surface-background",
+      "rgba(255, 255, 255, 0.14)",
+    );
+    dialog.style.setProperty(
+      "--ha-dialog-surface-backdrop-filter",
+      "blur(7px)",
+    );
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.style.setProperty(
+      "--wzc-editor-dialog-background",
+      "rgb(160, 161, 170)",
+    );
+    editor.style.setProperty("--wzc-editor-dialog-backdrop-filter", "none");
+    root.append(editor);
+    document.body.append(dialog);
+    await editor.updateComplete;
+
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-view-sections-column-max-width")
+        .trim(),
+    ).toBe("100%");
+    expect(
+      dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
+    ).toBe("important");
+    expect(
+      dialog.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+    ).toBe("rgb(160, 161, 170)");
+    expect(
+      dialog.style.getPropertyPriority("--ha-dialog-surface-background"),
+    ).toBe("important");
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-dialog-surface-backdrop-filter")
+        .trim(),
+    ).toBe("none");
+
+    editor.remove();
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-view-sections-column-max-width")
+        .trim(),
+    ).toBe("100%");
+    expect(
+      dialog.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+    ).toBe("rgb(160, 161, 170)");
+    expect(
+      dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
+    ).toBe("important");
+
+    root.append(editor);
+    await editor.updateComplete;
+    editor.remove();
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-view-sections-column-max-width")
+        .trim(),
+    ).toBe("100%");
+
+    root.append(editor);
+    await editor.updateComplete;
+    dialog.dispatchEvent(new CustomEvent("dialog-closed"));
+    editor.requestUpdate();
+    await editor.updateComplete;
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-view-sections-column-max-width")
+        .trim(),
+    ).toBe("480px");
+    expect(
+      dialog.style.getPropertyPriority("--ha-view-sections-column-max-width"),
+    ).toBe("important");
+    expect(
+      dialog.style.getPropertyValue("--ha-dialog-surface-background").trim(),
+    ).toBe("rgba(255, 255, 255, 0.14)");
+    expect(
+      dialog.style
+        .getPropertyValue("--ha-dialog-surface-backdrop-filter")
+        .trim(),
+    ).toBe("blur(7px)");
+  });
+
+  it("commits the complete draft to Home Assistant immediately before Save", async () => {
+    const contextHandler = (event: Event) => {
+      const request = event as ContextRequest;
+      request.callback?.({ setState: vi.fn() });
+    };
+    document.addEventListener("context-request", contextHandler);
+    const dialog = document.createElement(
+      "hui-dialog-edit-card",
+    ) as TestEditCardDialog;
+    dialog._cardConfig = normalizeCardConfig({
+      type: CARD_TYPE,
+      title: "Original",
+      cameras: [],
+      grid_options: { columns: 8 },
+    });
+    dialog._updateDirtyState = vi.fn();
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({
+      type: CARD_TYPE,
+      title: "Original",
+      cameras: [],
+      grid_options: { columns: 8 },
+    });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    const save = document.createElement("button");
+    save.slot = "primaryAction";
+    root.append(editor, save);
+    document.body.append(dialog);
+    await editor.updateComplete;
+
+    const input = await inputTitle(editor, "Saved draft");
+    input.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+    save.click();
+
+    expect(changed).not.toHaveBeenCalled();
+    expect(dialog._cardConfig).toEqual({
+      type: CARD_TYPE,
+      title: "Saved draft",
+      grid_options: { columns: 8 },
+    });
+    expect(dialog._updateDirtyState).toHaveBeenCalledWith(dialog._cardConfig);
+    document.removeEventListener("context-request", contextHandler);
+  });
+});
