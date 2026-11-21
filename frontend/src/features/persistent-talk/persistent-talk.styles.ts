@@ -4,8 +4,6 @@ import { responsiveWidths } from "../../styles/responsive-widths";
 
 export const persistentTalkStyles = css`
   :host {
-    --wzc-control-size: 2.75rem;
-    --wzc-control-icon-size: 1.65rem;
     display: contents;
     font-family: var(--wzc-font-family);
   }
@@ -78,10 +76,6 @@ export const persistentTalkStyles = css`
   }
 
   @media (max-width: ${responsiveWidths.compact}) {
-    :host {
-      --wzc-control-size: 2.5rem;
-    }
-
     .persistent-talk {
       left: 50%;
       inset-block-end: 0.5rem;

@@ -7992,15 +7992,30 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       panelProbe.style.background = "var(--wzc-talk-panel-background)";
       colorProbe.style.color = "var(--wzc-talk-panel-color)";
       controls.append(panelProbe, colorProbe);
+      const controlsBounds = controls.getBoundingClientRect();
+      const buttonGeometry = [...controls.querySelectorAll("button")].map(
+        (button) => {
+          const bounds = button.getBoundingClientRect();
+          return {
+            height: bounds.height,
+            relativeCenter: bounds.x + bounds.width / 2 - controlsBounds.x,
+            width: bounds.width,
+          };
+        },
+      );
       const result = {
+        buttonGeometry,
         canvasDisplay: canvas ? getComputedStyle(canvas).display : "",
+        height: controlsBounds.height,
         panel: getComputedStyle(controls).backgroundColor,
         panelExpected: getComputedStyle(panelProbe).backgroundColor,
+        radius: getComputedStyle(controls).borderRadius,
         sideButton: sideButton
           ? getComputedStyle(sideButton).backgroundColor
           : "",
         sideButtonColor: sideButton ? getComputedStyle(sideButton).color : "",
         sideButtonColorExpected: getComputedStyle(colorProbe).color,
+        width: controlsBounds.width,
       };
       panelProbe.remove();
       colorProbe.remove();
@@ -8145,6 +8160,9 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       .querySelector<HTMLElement>(".controls")
       ?.getBoundingClientRect();
     const sharedControls = element.querySelector<HTMLElement>(".controls");
+    const talkControls =
+      sharedControls?.shadowRoot?.querySelector<HTMLElement>(".talk-controls");
+    const talkControlsBounds = talkControls?.getBoundingClientRect();
     const sideButtons = [
       ...(sharedControls?.shadowRoot?.querySelectorAll<HTMLButtonElement>(
         ".talk-controls button:not(.center)",
@@ -8152,7 +8170,23 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     ];
     return {
       background: getComputedStyle(element).backgroundColor,
+      buttonGeometry: [...(talkControls?.querySelectorAll("button") ?? [])].map(
+        (button) => {
+          const bounds = button.getBoundingClientRect();
+          return {
+            height: bounds.height,
+            relativeCenter:
+              bounds.x + bounds.width / 2 - (talkControlsBounds?.x ?? 0),
+            width: bounds.width,
+          };
+        },
+      ),
       controlsCenter: controls ? controls.x + controls.width / 2 : 0,
+      controlsHeight: talkControlsBounds?.height ?? 0,
+      controlsRadius: talkControls
+        ? getComputedStyle(talkControls).borderRadius
+        : "",
+      controlsWidth: talkControlsBounds?.width ?? 0,
       panelCenter: panel.x + panel.width / 2,
       sideButtons: sideButtons.map((button) => ({
         color: getComputedStyle(button).color,
@@ -8172,11 +8206,32 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     0,
   );
   expect(persistentGeometry.sideButtons).toHaveLength(2);
+  expect(persistentGeometry.controlsWidth).toBeCloseTo(
+    activeTalkPresentation.width,
+    0,
+  );
+  expect(persistentGeometry.controlsHeight).toBeCloseTo(
+    activeTalkPresentation.height,
+    0,
+  );
+  expect(persistentGeometry.controlsRadius).toBe(activeTalkPresentation.radius);
+  for (const [index, geometry] of persistentGeometry.buttonGeometry.entries()) {
+    const expected = activeTalkPresentation.buttonGeometry[index];
+    expect(expected).toBeDefined();
+    expect(geometry.width).toBeCloseTo(expected?.width ?? 0, 3);
+    expect(geometry.height).toBeCloseTo(expected?.height ?? 0, 3);
+    expect(geometry.relativeCenter).toBeCloseTo(
+      expected?.relativeCenter ?? 0,
+      3,
+    );
+  }
   expect(
-    persistentGeometry.sideButtons.every(
-      ({ color, iconVisible }) => iconVisible && color !== "rgba(0, 0, 0, 0)",
-    ),
-  ).toBe(true);
+    persistentGeometry.sideButtons.map(({ iconVisible }) => iconVisible),
+  ).toEqual([true, true]);
+  expect(persistentGeometry.sideButtons.map(({ color }) => color)).toEqual([
+    activeTalkPresentation.sideButtonColor,
+    activeTalkPresentation.sideButtonColor,
+  ]);
   const persistentSharedControls = persistentTalk.locator(
     "wzc-two-way-talk-controls",
   );

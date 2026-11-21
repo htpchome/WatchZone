@@ -14,11 +14,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 ## Baseline
 
 - Branch: `main`.
-- HEAD before this work: `6d4ddc6` —
-  `v0.0.4-dev.492 - fix(talk): harden persistent navigation and audio`.
-- Version being prepared: `0.0.4-dev.497`.
-- Proposed subject:
+- HEAD before this work: `175f80b` —
   `v0.0.4-dev.497 - fix(talk): enforce standard controls outside overlays`.
+- Version being prepared: `0.0.4-dev.498`.
+- Proposed subject:
+  `v0.0.4-dev.498 - fix(talk): make shared controls context-independent`.
 
 ## Persistent two-way talk
 
@@ -34,6 +34,11 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared controls have only `standard` and `overlay` presentations. The
   persistent tile uses `standard`; only camera overlay placement uses the
   alternate `overlay` presentation.
+- The shared element is the sole owner of TWT button geometry, icon sizing,
+  panel styling, and state colors. The Stage placement and persistent tile only
+  position it. Standard controls therefore retain identical computed layout
+  and styling when moved between those surfaces; overlay changes only its
+  explicit surface and color tokens.
 - The shared controls always reserve the full active three-button width. Ready
   state renders one centered muted-microphone button inside that stable
   footprint, so connection state changes cannot move adjacent layout.
@@ -97,7 +102,7 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
 - Shared zoom/pan and shared media-stage resize remain the sole owners of those
   behaviors for live and recorded media.
 
-## Validation for `dev.497`
+## Validation for `dev.498`
 
 - Formatting, lint, typecheck, architecture/style/license checks, production
   build, and version synchronization pass.
@@ -105,7 +110,10 @@ repository. Preserve unrelated changes. The user owns commits and syncs.
   camera selection and mute-preference refresh on camera reactivation.
 - Browser tests: 174/174 across Chromium, Firefox, and WebKit. The TWT flow
   additionally asserts one ready button versus three connected buttons and a
-  stable shared-control bounding box across connection state changes.
+  stable shared-control bounding box across connection state changes. The
+  focused TWT browser flow additionally compares standard camera and persistent
+  instances for identical dimensions, relative button placement, panel radius,
+  and side-icon color.
 - Browser assertions cover the normal-control/global-tile handoff, connected
   call retention across direct route departure and camera changes, retained
   restart behavior, navigation back to the session camera, top-layer stacking,

@@ -90,6 +90,12 @@ does not contain signaling-path conditions.
 - The controls expose exactly two presentations: `standard`, used everywhere
   including the persistent tile, and `overlay`, used only in camera overlay
   placement. Persistent presentation is not a third visual variant.
+- The shared controls own their complete internal geometry and styling. Parent
+  surfaces may position the control but must not redefine its button sizing,
+  spacing, icon sizing, panel surface, or state colors. Moving a `standard`
+  control between the camera surface and persistent tile must not change its
+  computed layout or appearance. `overlay` keeps the same markup and geometry
+  and substitutes only its documented overlay surface and color tokens.
 - The shared controls always reserve the connected three-button width. Ready
   state shows only the single muted-microphone button centered inside that
   footprint, preventing layout movement when talk starts or stops.

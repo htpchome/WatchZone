@@ -9,24 +9,6 @@ export const twoWayTalkStyles = css`
     pointer-events: none;
   }
 
-  :host {
-    --wzc-round-button-color: var(--wzc-capability-control-color);
-    --wzc-round-button-background: var(--wzc-capability-control-background);
-    --wzc-round-button-border-color: var(--wzc-capability-control-border-color);
-    --wzc-round-button-hover-background: var(
-      --wzc-capability-control-hover-background
-    );
-  }
-
-  :host([presentation="overlay"]) {
-    --wzc-round-button-color: var(--wzc-media-overlay-color);
-    --wzc-round-button-background: var(--wzc-media-overlay-background);
-    --wzc-round-button-border-color: var(--wzc-media-overlay-border-color);
-    --wzc-round-button-hover-background: var(
-      --wzc-neutral-control-hover-background
-    );
-  }
-
   .talk-layer {
     position: relative;
     pointer-events: none;

@@ -2,20 +2,22 @@ import { css } from "lit";
 
 export const twoWayTalkControlsStyles = css`
   :host {
+    --wzc-two-way-talk-control-size: var(--wzc-camera-control-size, 2.75rem);
     display: grid;
     position: relative;
-    inline-size: calc(3 * var(--wzc-control-size));
-    min-block-size: var(--wzc-control-size);
+    inline-size: calc(3 * var(--wzc-two-way-talk-control-size));
+    min-block-size: var(--wzc-two-way-talk-control-size);
     place-items: center;
     pointer-events: none;
   }
 
   .talk-controls {
+    --wzc-two-way-talk-side-color: var(--wzc-talk-panel-color);
     display: grid;
     position: relative;
-    grid-template-columns: repeat(3, var(--wzc-control-size));
+    grid-template-columns: repeat(3, var(--wzc-two-way-talk-control-size));
     align-items: center;
-    min-block-size: var(--wzc-control-size);
+    min-block-size: var(--wzc-two-way-talk-control-size);
     color: var(--wzc-talk-panel-color);
     background: var(--wzc-talk-panel-background);
     border: 1px solid var(--wzc-talk-panel-border-color);
@@ -34,7 +36,10 @@ export const twoWayTalkControlsStyles = css`
   }
 
   .talk-button {
-    --wzc-round-button-color: inherit;
+    --wzc-round-button-size: var(--wzc-two-way-talk-control-size);
+    --wzc-overlay-control-min-size: var(--wzc-two-way-talk-control-size);
+    --wzc-round-button-icon-size: 60%;
+    --wzc-round-button-color: var(--wzc-two-way-talk-side-color);
     --wzc-round-button-background: transparent;
     --wzc-round-button-border-color: transparent;
     --wzc-round-button-hover-background: transparent;
@@ -56,6 +61,7 @@ export const twoWayTalkControlsStyles = css`
   }
 
   :host([presentation="overlay"]) .talk-controls {
+    --wzc-two-way-talk-side-color: var(--wzc-media-overlay-color);
     color: var(--wzc-media-overlay-color);
     background: var(--wzc-talk-overlay-panel-background);
     border-color: var(--wzc-talk-overlay-panel-border-color);
