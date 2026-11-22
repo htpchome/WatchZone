@@ -387,8 +387,10 @@ Visibility changes affect presentation and forced mute, not user preference.
   HLS.js, and native-HLS transports unchanged for two minutes. At two minutes
   the manager completely tears down those transports, their players, buffers,
   media sources, managed sessions, and presentation leases without reconnecting
-  in the background. Returning acquires a new session through the ordinary
-  foreground startup path and never presents or reconnects inside the expired
+  in the background. Returning waits for the first visible browser frame, then
+  acquires a new session through the ordinary foreground startup path. This
+  lets the browser finish disposing the expired MediaSource before its
+  replacement is created and never presents or reconnects inside the expired
   session. Frigate MSE may discard media payload delivered while the
   hidden browser prevents SourceBuffer progress, but it retains the same
   WebSocket and SourceBuffer identity inside the window and accepts fresh

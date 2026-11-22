@@ -260,7 +260,7 @@ describe("MediaSessionManager", () => {
       expect(closes[0]).toHaveBeenCalledOnce();
       expect(resumes[0]).not.toHaveBeenCalled();
       expect(factory).toHaveBeenCalledOnce();
-      expect(lease.getSnapshot()).toEqual({ state: "failed" });
+      expect(lease.getSnapshot()).toEqual({ state: "closed" });
 
       Object.defineProperty(document, "visibilityState", {
         configurable: true,

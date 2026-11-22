@@ -987,7 +987,9 @@ describe("camera presentation retention", () => {
 
     visibility.mockReturnValue("visible");
     document.dispatchEvent(new Event("visibilitychange"));
-    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+    expect(hlsFactory).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(16);
+    expect(hlsFactory).toHaveBeenCalledTimes(2);
     await vi.waitFor(() =>
       expect(presentation(view)?.fallbackVideo).toBe(videos[1]),
     );
