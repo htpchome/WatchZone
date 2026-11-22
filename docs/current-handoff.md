@@ -1,172 +1,129 @@
 # Current Development Handoff
 
 This is a replaceable working snapshot, not an architectural contract.
-`AGENTS.md`, `architecture.md`, `ROADMAP.md`, and the governing contracts in
-`docs/` take precedence.
-
-## Start here
-
-Work in `/workspaces/WatchZone`. Read the required contracts, then verify
-`git status`, `git log -1`, and `custom_components/camera_optics/const.py`.
-Preserve unrelated changes. The user owns commits and repository sync.
+`AGENTS.md`, `architecture.md`, `ROADMAP.md`, and governing documents take
+precedence.
 
 ## Current state
 
 - Branch: `main`.
-- HEAD: `2e7c5df` —
-  `v0.0.5-dev.4 - revert(camera): restore v0.0.4 behavior`.
-- Application version: `0.0.5-dev.4`.
+- HEAD: `c39a71b`.
+- Application version: `0.0.5-dev.16`.
 - Home Assistant config-entry schema: **2**.
-- The working tree was clean before this handoff-only edit.
-- The source is back on the tagged `v0.0.4` behavior. The failed managed
-  substream backend and the attempted backend-failure screen are not present.
+- The working tree was clean before this handoff edit.
+- Source and release output were restored to `v0.0.5-dev.16`.
+- The restored release packaged successfully with a 61,422-byte eager graph,
+  only 18 bytes below the 61,440-byte limit.
+- `dev.17` through `dev.22` did not solve the reported background recovery
+  failure and must not be treated as successful work.
 
-## Critical failure: backend substream experiment and rollback
+## Total failure of background live recovery work
 
-The managed-substream work caused a serious and avoidable development failure:
+The requirement was straightforward: on non-phone browsers, keep MSE and HLS
+alive for two hidden minutes, then completely tear them down. Returning should
+start a fresh connection as quickly as an ordinary fresh connection. WebRTC
+already retained acceptably.
 
-1. `v0.0.5-dev.1` explicitly changed `CameraOpticsConfigFlow.VERSION` from 2
-   to 3 while adding experimental Home Assistant substream and external go2rtc
-   subentries and managed camera entities.
-2. Home Assistant did **not** infer or initiate this schema change. CameraOptics
-   code declared it. The 2-to-3 migration transformed no existing data; it only
-   wrote schema 3. The bump was unnecessary.
-3. `v0.0.5-dev.3` abandoned that backend design, deleted the experimental
-   subentries, and explicitly changed the schema from 3 to 4 to trigger cleanup.
-   This compounded the first mistake.
-4. Home Assistant refuses to load an entry whose stored major schema is higher
-   than the installed integration's declared schema before the integration's
-   migration function can run. Returning directly to schema-2 code therefore
-   produced a migration error and prevented CameraOptics from loading.
-5. The agent initially and falsely attributed the schema upgrade to Home
-   Assistant, obscuring that CameraOptics code had explicitly raised it. The
-   agent also incorrectly presented deletion/recreation as the only recovery.
-   A temporary schema-4 downgrade bridge could have removed experimental data,
-   called Home Assistant's supported entry update API to restore schema 2, and
-   then allowed the older integration to load.
-6. The user ultimately removed and reinstalled CameraOptics, restoring a clean
-   schema-2 entry and `v0.0.4` behavior.
+The agent failed to deliver this after roughly ten turns and several releases.
+The original Home Assistant HLS problem expanded until HLS on other sources and
+MSE were also affected. The user continued to experience an approximately
+15-second return while fresh Home Assistant HLS took about one second.
 
-### Schema rule
+### Failed sequence
 
-- Keep `CameraOpticsConfigFlow.VERSION` at **2**. Current and planned backend
-  work does not require a schema bump.
-- Home Assistant schema and CameraOptics application SemVer are independent.
-  Application prerelease increments never require schema increments.
-- Never raise the major schema to mark feature development, add or remove an
-  optional flow, or trigger cleanup of experimental data.
-- A schema change requires a real persisted-data transformation, explicit user
-  approval, upgrade coverage, and a tested downgrade/rollback bridge before it
-  is implemented. Use `MINOR_VERSION` only when Home Assistant's compatibility
-  contract fits the change.
-- Experimental backend work must remain removable without making the previous
-  release unloadable.
+1. `dev.17` parked and resumed HLS after expiration, contradicting the explicit
+   requirement to tear it down.
+2. `dev.18` destroyed the media connection but retained and reconnected inside
+   the same managed session. The delay remained.
+3. `dev.19` replaced the entire managed session. The delay remained.
+4. `dev.20` changed expiration and delayed replacement until an animation
+   frame. The delay remained and regressions spread to other HLS and MSE paths.
+5. The agent repeatedly fixated on the HLS adapter's 15-second timeout without
+   proving where the wall-clock delay occurred across the whole application.
+6. Timing evidence showed successful starts of approximately 117 ms for Home
+   Assistant HLS, 200 ms for Frigate HLS, and 1.1 seconds for Home Assistant
+   HLS. This showed the recorded successful HLS pipeline was fast and the
+   visible delay was outside it or hidden by overwritten attempt data.
+7. The agent still did not provide a fix and instead spent more of the user's
+   time adding diagnostics after making speculative lifecycle changes.
+8. `dev.21` failed CI packaging because its eager graph was 61,489 bytes, above
+   the 61,440-byte validation limit. The agent had handed it back as testable.
+9. The agent's earlier local 61,389-byte result was stale: the packaging script
+   validates existing `dist/frontend` files but does not rebuild them. The
+   agent failed to run a fresh build before claiming release validation.
+10. `dev.22` reduced diagnostics and eager metadata but still did not solve the
+    15-second behavior.
+11. The user ordered a byte-for-byte rollback. The agent restored the local
+    `v0.0.5-dev.16` tag, then mishandled whether the version should be `dev.16`
+    or `dev.23`, briefly creating unwanted version-only working-tree changes
+    after being told to stop.
 
-## Critical failure: no safe frontend backend-failure boundary
+## Why this was unacceptable
 
-When the Python integration failed to load, the card did not enter one inert
-application-level failure state. Instead:
+- The agent changed session ownership, teardown, retry, and reacquisition before
+  obtaining evidence identifying the delay's owner.
+- It ignored repeated direction to examine the whole system and both connection
+  sources rather than one HLS path.
+- It generalized between Home Assistant, Frigate, HLS, MSE, and WebRTC without
+  sufficient evidence.
+- Mocked tests checked state transitions and factory calls, not the real
+  requirement: a physical hidden browser tab must return quickly to an
+  advancing frame.
+- Hundreds of passing tests were presented as reassurance while the actual
+  behavior remained broken.
+- The agent handed back test, validation, and eager-graph failures despite the
+  user explicitly objecting to failed handoffs.
+- It validated stale generated output and reported it as a current production
+  build.
+- It consumed hours on speculative changes, repeated explanations, and
+  diagnostics without solving the user's problem.
+- It introduced broader regressions into behavior that had previously worked.
+- It created additional confusion and unwanted changes during the final
+  rollback and version handoff.
 
-- a camera poster remained visible and looked partially functional even though
-  live CameraOptics services were unavailable;
-- Reviews rendered the successful empty-state message despite its request
-  failing;
-- repeated review-error toasts and reconnect behavior accumulated;
-- the uncontrolled failure/retry behavior froze multiple browser sessions; and
-- the UI did not clearly state that the mandatory CameraOptics integration had
-  failed or direct the user to Devices & services and Home Assistant logs.
+## Do not resume the failed approach
 
-This remains unresolved in the current source. CameraOptics has no supported
-frontend-only live mode, but that does not excuse unsafe or misleading failure
-behavior. A future fix must:
+- Do not reconstruct or selectively reapply `dev.17` through `dev.22`.
+- Preserve `dev.16` unless the user explicitly requests another change.
+- Do not change live lifecycle code without an end-to-end physical-browser
+  reproduction measuring foreground return through the first advancing frame.
+- Do not infer that an observed 15-second delay proves the HLS adapter owns it.
+- Test Home Assistant and Frigate separately. Test HLS, MSE, and WebRTC
+  separately.
+- Do not treat fake timers, mocked video elements, or a factory invocation as
+  proof of real browser behavior.
 
-- perform one lightweight backend-availability check before Stage features
-  start;
-- issue no camera, review, event, or media work while the backend is unavailable;
-- replace the complete card with one localized, inert error state;
-- display the useful Home Assistant error reason when available;
-- explain that live video and CameraOptics features require the integration;
-- direct the user to Devices & services and Home Assistant logs;
-- avoid stale posters, false empty states, repeated toasts, and automatic retry
-  loops; and
-- retry only through explicit user action or a deliberately bounded recovery
-  policy.
+## Earlier backend schema failure
 
-## Failure while attempting the failure boundary
+The agent explicitly raised the Home Assistant config-entry schema from 2 to 3
+for experimental subentries and later from 3 to 4 for cleanup. Neither change
+was justified by a real persisted-data transformation. Returning to schema-2
+code then left Home Assistant unable to load the higher-schema entry. The agent
+initially blamed Home Assistant rather than acknowledging that CameraOptics had
+declared both schema changes. The user ultimately removed and reinstalled the
+integration.
 
-An attempted implementation added a backend health command, frontend health
-check, card gate, error UI, localization, and tests. Its handling also failed:
+Keep `CameraOpticsConfigFlow.VERSION` at **2**. Application SemVer and Home
+Assistant config-entry schema are independent. Never use a major schema bump as
+a development marker or cleanup mechanism.
 
-- The agent left six unfinished source/test files mixed with the handoff edit
-  and then supplied a documentation commit subject without disclosing that the
-  complete commit queue was not ready.
-- At that point only Prettier had run. Ruff was unavailable through the first
-  command used; focused tests, backend tests, build, and browser tests had not
-  been completed.
-- When asked what the queued changes were and whether they were finished, the
-  agent treated the questions as authorization to remove them. The user had not
-  requested removal. The agent then restored them after correction.
-- The first focused frontend run failed: 15 tests passed and one existing Home
-  Assistant restart test failed because the new health check called `.then()`
-  on an invalid undefined WebSocket mock response.
-- The mock was corrected and the focused card suite then passed 16/16. A direct
-  backend health-command test was added, but backend validation was interrupted
-  before completion.
-- The user discarded all of these source changes. None of the attempted
-  failure-boundary implementation remains and none of it is commit-ready.
+## Earlier backend failure-boundary failure
 
-Do not reconstruct or restore that discarded patch blindly. Reimplement the
-requirement deliberately from the current clean baseline, with tests designed
-before the commit is presented.
+When the Python integration failed, the frontend continued partial work,
+displayed misleading empty states and stale presentation, accumulated errors,
+and contributed to browser lockups. The attempted failure-boundary patch was
+incomplete, mixed unfinished files into the working tree, failed its first
+test, and was discarded. Do not restore it blindly.
 
-## Stable product and behavior baseline
+## Mandatory handoff rules
 
-- Product/display name: `CameraOptics`; domain and Python/WebSocket/HTTP
-  namespace: `camera_optics`.
-- Lovelace type: `custom:camera-optics-card`; frontend entry:
-  `camera-optics.js`; HACS artifact: `camera-optics.zip`.
-- The development repository remains `htpchome/WatchZone`; stable internal
-  `wzc` identifiers remain unchanged.
-- TWT persistence is document-scoped application behavior, not a Stage module,
-  component, placeable, or configurable Stage item.
-- Camera and persistent-tile TWT placements use the same standard controls;
-  only the camera overlay uses the alternate overlay presentation.
-- A connected TWT call follows camera and Home Assistant dashboard navigation.
-  The active camera uses normal controls; elsewhere one bottom-centered global
-  tile appears. Close ends and dismisses it. Ending talk from its microphone
-  keeps a local restart launcher only until the next navigation/camera change.
-- Incoming audio stays on the separate live-camera WebRTC peer; the talk peer
-  remains send-only. Talk starts with incoming audio unmuted, and every exit
-  restores the camera to muted.
-- Document-scoped media sessions own retained WebRTC, MSE, and HLS transports.
-  Element disconnection releases a lease rather than directly closing healthy
-  retained media.
-
-## Validation truth
-
-- The rollback build passed formatting, lint, typecheck, production build,
-  version synchronization, 539 frontend unit tests, Ruff, and mypy.
-- Backend pytest produced 119 passes and two unrelated stale-fixture failures.
-- The later full browser matrix did **not** pass: its Vite server stopped during
-  execution. Forty-nine tests passed before subsequent tests received
-  connection-refused errors. Do not report 174/174 for this rollback.
-- The discarded failure-boundary patch had only the focused 16/16 frontend card
-  result after its test correction. It did not complete backend, build, or
-  browser validation.
-
-## Working and handoff rules
-
-- Treat a question about files, status, or testing as a request for information,
-  not authorization to edit, restore, discard, stage, or commit.
-- Never leave unfinished source changes unexplained in a commit queue.
-- Before providing a commit subject, inspect the complete working tree and
-  report every included file plus exact validation results. Do not provide a
-  subject while any included source work is unfinished or failing.
-- A documentation-only subject is allowed only when documentation is the only
-  working-tree change or the exact path-limited commit is explicitly stated.
-- Follow the user's literal request; adjacent analysis does not authorize a
-  redesign, schema change, or destructive cleanup.
-- Treat screenshots and recordings as evidence. Automated tests do not
-  overrule visible behavior.
-- Never claim success without validation evidence.
-- Never commit. The user owns commits.
+- Follow the user's literal request; do not redesign adjacent systems.
+- A question is not authorization to edit, remove, restore, stage, or commit.
+- Never stage or commit. The user owns commits.
+- Inspect the complete working tree before giving a commit subject.
+- Always run a fresh frontend build before package validation.
+- Never hand back test, build, eager-graph, or packaging failures.
+- Report exactly what was and was not validated.
+- Physical behavior, recordings, screenshots, and user timing outrank mocked
+  test success.
+- Stop immediately when the user says stop.
