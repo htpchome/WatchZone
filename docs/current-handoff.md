@@ -8,12 +8,12 @@ precedence.
 
 - Branch: `main`.
 - HEAD: `f967478`.
-- Application version: `0.0.5-dev.24` (uncommitted compatibility fix).
+- Application version: `0.0.5-dev.25` (uncommitted compatibility fix).
 - Home Assistant config-entry schema: **2**.
 - The working tree contains the follow-up Android/WebView runtime compatibility
   fix described below; no live-session lifecycle policy changed.
-- The fresh `dev.24` release package is 886,653 bytes with a 58,710-byte eager
-  graph and a 19,532-byte lazy editor entry.
+- The fresh `dev.25` release package is 889,805 bytes with a 59,462-byte eager
+  graph and a 19,568-byte lazy editor entry.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
 
@@ -45,22 +45,50 @@ bundle in archived Chromium 86 reproduced an unhandled `e.at is not a function`
 error. The build target had corrected syntax but could not polyfill the three
 application calls to `Array.prototype.at()`, an API introduced after WebView 86.
 
-The uncommitted `dev.24` follow-up replaces all three application calls with
-baseline-compatible indexing in live-session retention selection, activity
-pagination, and activity grouping. Its browser regression removes
-`Array.prototype.at` before loading the card, then exercises camera setup and
-recorded-media drawer opening. Physical WebView 86 must still verify the final
-packaged release; current-engine emulation and archived Chromium are strong
-compatibility evidence but do not replace that device result.
+`dev.24` replaced all three application calls with baseline-compatible indexing
+in live-session retention selection, activity pagination, and activity
+grouping. Physical WebView 86 then proved that release was still broadly
+broken: Events rendered, but Review tiles did not open media, Live appeared
+empty, recorded media collapsed, and positioning was scattered. It must not be
+treated as a successful Android compatibility release.
 
-Validation passes formatting, lint, type checking, all 562 unit tests, a fresh
-production build, build and version validation, release packaging, and all 183
-Playwright tests across Chromium, Firefox, and WebKit. The fresh production
-bundle also loads in archived Chromium `86.0.4240.0` with `Array.prototype.at`
-absent: the camera module and recorded-media bottom drawer both render with no
-page error. A separate production-bundle check confirms the recorded-video
-viewer, bottom drawer, open dialog, and video player all construct visibly in
-that engine with no page error.
+The underlying second failure was CSS compatibility. Chromium 86 does not
+support the `inset` shorthand, logical inset properties, or CSS
+`aspect-ratio`. CameraOptics had 69 affected declarations in colocated Lit style
+modules. Vite's JavaScript target does not transform CSS embedded in TypeScript
+template literals, and the current-engine browser matrix could not expose that
+gap. Direct Chromium 86 measurement showed the Review tile's transparent click
+layer at zero width and recorded/live media stages at zero height.
+
+The uncommitted `dev.25` follow-up:
+
+- Expands logical and shorthand inset declarations in colocated style modules
+  with physical positioning fallbacks at build time while retaining modern CSS.
+- Gives the Review tile player an explicit full-size hit area.
+- Supplies shared `ResizeObserver`-owned pixel heights for camera and recorded
+  media stages when CSS `aspect-ratio` is unavailable.
+- Runs a compatibility bootstrap before Lit and application imports, providing
+  only the runtime and DOM features absent at the Chromium 67 floor that the
+  application actually uses.
+- Exercises the compatibility bootstrap and nonzero recorded-media geometry in
+  browser regression coverage.
+
+The actual production bundle now passes direct engine checks in both archived
+Chromium `86.0.4240.0` and Chromium `67.0.3396.0`. In Chromium 86, a real Review
+tile click succeeds; the hit area is `388×115.1875`, the recorded viewport is
+`372×209.25`, and the live camera viewport is `395.96875×222.71875`. In
+Chromium 67, the card registers, the camera stage is `783.9375×440.9375`, the
+recorded dialog is `784×625.484375`, and its media viewport is `728×409.5`.
+These checks prove registration, interaction dispatch, and layout in the old
+engines. Actual Android media playback still requires final physical Companion
+verification; the local transport fixture does not prove a device decoder or
+network path.
+
+Validation passes formatting, lint, type checking, all 567 unit tests, a fresh
+production build, build and version validation, and release packaging.
+Chromium and Firefox passed their full browser projects in the 183-test matrix;
+WebKit's single rotation timing assertion failed once, passed on focused retry,
+and then all 61 WebKit tests passed in a clean project rerun.
 
 The supplied Android logcat excerpt contains no frontend JavaScript exception
 or failed CameraOptics asset request. It does show AVC decoders created for

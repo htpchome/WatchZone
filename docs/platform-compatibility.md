@@ -20,6 +20,16 @@ Application code must also avoid unpolyfilled runtime built-ins introduced
 above that floor. A production syntax target does not transform calls such as
 `Array.prototype.at()` for browsers that do not implement them.
 
+The production entry installs the narrowly required baseline runtime features
+before it imports Lit or application code. This ordering is part of the
+compatibility boundary: build syntax targeting does not supply browser globals,
+prototype methods, or DOM methods. Colocated Lit styles are TypeScript modules,
+so ordinary CSS post-processing does not see their template contents. The
+production transform therefore adds physical `top`, `right`, `bottom`, and
+`left` fallbacks before logical `inset` declarations. Media stages additionally
+use a shared `ResizeObserver` fallback when native CSS `aspect-ratio` is absent.
+Modern declarations remain present and authoritative in capable browsers.
+
 The interface supports phone, tablet, laptop, desktop, dashboard panel, and
 full-size layouts. A platform is not removed from this matrix merely because a
 new browser API makes another platform easier or faster.

@@ -19,6 +19,12 @@ const hlsAdapter = manifest["src/providers/home-assistant/live/hls.ts"];
 if (!entry?.isEntry || entry.file !== "camera-optics.js") {
   throw new Error("Vite manifest is missing the stable CameraOptics entry");
 }
+const firstEntryImport = manifest[entry.imports?.[0]];
+if (!firstEntryImport?.file?.includes("/browser-compatibility-")) {
+  throw new Error(
+    "CameraOptics browser compatibility must execute before the application graph",
+  );
+}
 for (const [name, asset] of Object.entries({
   editor,
   cameraCapability,

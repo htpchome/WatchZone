@@ -128,8 +128,10 @@ export const activityListStyles = css`
   .tile-player {
     appearance: none;
     background: transparent;
+    block-size: 100%;
     border: 0;
     cursor: pointer;
+    inline-size: 100%;
     inset: 0;
     padding: 0;
     position: absolute;

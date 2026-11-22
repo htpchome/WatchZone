@@ -11,6 +11,7 @@ import {
 } from "../../core/localization";
 import type { RecordedMediaDimensions } from "../../core/recorded-media";
 import { ZoomController } from "../../ui/zoom";
+import { LegacyAspectRatioController } from "../../ui/media-overlay/legacy-aspect-ratio.controller";
 import { recordedSnapshotPlayerStyles } from "./recorded-snapshot-player.styles";
 
 /** Shared zoomable snapshot presentation for every recorded-media shell. */
@@ -49,6 +50,7 @@ export class RecordedSnapshotPlayer extends LitElement {
   }
 
   private readonly _zoom = new ZoomController(this);
+  private readonly _legacyAspectRatio = new LegacyAspectRatioController(this);
 
   protected render() {
     return html`<div
@@ -86,6 +88,7 @@ export class RecordedSnapshotPlayer extends LitElement {
 
   protected updated(): void {
     this._observeMediaPresentation();
+    this._legacyAspectRatio.observe(this._viewport());
   }
 
   private _image(): HTMLImageElement | undefined {

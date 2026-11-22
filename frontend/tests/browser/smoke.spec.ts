@@ -118,15 +118,25 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
   ).toBe("function");
 });
 
-test("loads camera and recorded media without post-WebView-86 Array.at", async ({
+test("loads camera and recorded media with the Chrome 67 runtime floor", async ({
   page,
 }) => {
   await page.addInitScript(() => {
-    Object.defineProperty(Array.prototype, "at", {
-      configurable: true,
-      value: undefined,
-      writable: true,
-    });
+    for (const [target, property] of [
+      [Array.prototype, "at"],
+      [Array.prototype, "flat"],
+      [Array.prototype, "flatMap"],
+      [Element.prototype, "toggleAttribute"],
+      [Object, "fromEntries"],
+      [Promise, "allSettled"],
+      [String.prototype, "replaceAll"],
+    ] as const) {
+      Object.defineProperty(target, property, {
+        configurable: true,
+        value: undefined,
+        writable: true,
+      });
+    }
   });
   await page.route("**/legacy-snapshot.svg", (route) =>
     route.fulfill({
@@ -136,6 +146,25 @@ test("loads camera and recorded media without post-WebView-86 Array.at", async (
   );
   await page.goto("/");
   await waitForCameraOpticsDefinition(page);
+  expect(
+    await page.evaluate(() => ({
+      allSettled: typeof Promise.allSettled,
+      flat: typeof Array.prototype.flat,
+      flatMap: typeof Array.prototype.flatMap,
+      fromEntries: typeof Object.fromEntries,
+      queueMicrotask: typeof window.queueMicrotask,
+      replaceAll: typeof String.prototype.replaceAll,
+      toggleAttribute: typeof Element.prototype.toggleAttribute,
+    })),
+  ).toEqual({
+    allSettled: "function",
+    flat: "function",
+    flatMap: "function",
+    fromEntries: "function",
+    queueMicrotask: "function",
+    replaceAll: "function",
+    toggleAttribute: "function",
+  });
   await page.locator("camera-optics-card").evaluate((element) => {
     const card = element as HTMLElement & {
       hass: unknown;
@@ -194,6 +223,16 @@ test("loads camera and recorded media without post-WebView-86 Array.at", async (
   await expect(
     page.locator("wzc-recorded-media-bottom-drawer dialog"),
   ).toBeVisible();
+  const dialogBox = await page
+    .locator("wzc-recorded-media-bottom-drawer dialog")
+    .boundingBox();
+  const mediaBox = await page
+    .locator("wzc-recorded-snapshot-player .viewport")
+    .boundingBox();
+  expect(dialogBox?.height).toBeGreaterThan(0);
+  expect(dialogBox?.width).toBeGreaterThan(0);
+  expect(mediaBox?.height).toBeGreaterThan(0);
+  expect(mediaBox?.width).toBeGreaterThan(0);
 });
 
 test("does not infer missing setup from a transient components list", async ({
@@ -10342,7 +10381,9 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
       }
     ).__rotateClassTimes;
     if (times?.fullscreen === undefined || times.landscape === undefined) {
-      throw new Error("Companion rotate class timing was not captured");
+      throw new Error(
+        `Companion rotate class timing was not captured: ${JSON.stringify(times)}`,
+      );
     }
     return times.fullscreen - times.landscape;
   });

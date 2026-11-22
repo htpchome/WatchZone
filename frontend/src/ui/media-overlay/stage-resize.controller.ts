@@ -1,5 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
+import { LegacyAspectRatioController } from "./legacy-aspect-ratio.controller";
+
 export const DEFAULT_MEDIA_STAGE_HEIGHT_RATIO = 9 / 16;
 
 const DOUBLE_ACTIVATION_DELAY_MS = 350;
@@ -69,6 +71,7 @@ export class MediaStageResizeController implements ReactiveController {
   private _handle?: HTMLButtonElement;
   private _heightRatio: number;
   private _interactionLifecycleListening = false;
+  private readonly _legacyAspectRatio: LegacyAspectRatioController;
   private _key?: string;
   private _mediaHeightRatio?: number;
   private _mediaPresentationScale = 1;
@@ -83,6 +86,7 @@ export class MediaStageResizeController implements ReactiveController {
     private readonly _options: MediaStageResizeOptions,
   ) {
     _host.addController(this);
+    this._legacyAspectRatio = new LegacyAspectRatioController(_host);
     this._heightRatio = this._defaultHeightRatio;
     this._returnAnchorHeightRatio = this._defaultHeightRatio;
   }
@@ -308,6 +312,7 @@ export class MediaStageResizeController implements ReactiveController {
 
   private _applyPresentation(): void {
     if (!this._stage) return;
+    this._legacyAspectRatio.observe(this._stage, this._heightRatio);
     if (this._options.resizedClass) {
       this._stage.classList.toggle(this._options.resizedClass, this._resized);
     }
@@ -439,6 +444,7 @@ export class MediaStageResizeController implements ReactiveController {
   }
 
   private _clearStage(stage: HTMLElement | undefined): void {
+    this._legacyAspectRatio.observe(undefined);
     stage?.classList.remove("stage-resizing");
     if (this._options.resizedClass) {
       stage?.classList.remove(this._options.resizedClass);

@@ -54,6 +54,7 @@ import { releaseTouchFocus } from "../../ui/controls/control-interaction";
 import "../../ui/media-overlay/controls";
 import { RecordedMediaPlaybackController } from "./recorded-media-playback.controller";
 import { recordedVideoPlayerStyles } from "./recorded-video-player.styles";
+import { LegacyAspectRatioController } from "../../ui/media-overlay/legacy-aspect-ratio.controller";
 import {
   RecordingSegmentController,
   type RecordingSegmentSelection,
@@ -95,6 +96,8 @@ export class RecordedVideoPlayer extends LitElement {
   public api?: HomeAssistantApi;
   public localize: LocalizeFunction = englishLocalize;
   public request?: RecordedMediaRequest;
+
+  private readonly _legacyAspectRatio = new LegacyAspectRatioController(this);
 
   /** The stable viewport whose height is controlled by a presentation shell. */
   public get presentationSurface(): HTMLElement | undefined {
@@ -403,6 +406,7 @@ export class RecordedVideoPlayer extends LitElement {
       void this._loadRequest();
     }
     this._observeMediaPresentation();
+    this._legacyAspectRatio.observe(this._viewport());
     refreshNativePictureInPictureSuppression(this._video());
   }
 
