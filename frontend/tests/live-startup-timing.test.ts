@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  beginLiveRecoveryTiming,
   beginLiveStartupTiming,
   getLiveStartupTimings,
+  markLiveRecoveriesVisible,
+  markLiveRecoveryReplacement,
 } from "../src/core/live-startup-timing";
 
 describe("live startup diagnostics", () => {
@@ -27,5 +30,28 @@ describe("live startup diagnostics", () => {
     expect(snapshots).toHaveLength(20);
     expect(snapshots.some(({ key }) => key === "bounded-camera-0")).toBe(false);
     expect(snapshots.at(-1)?.key).toBe("bounded-camera-24");
+  });
+
+  it("keeps repeated attempts and carries recovery lifecycle phases forward", () => {
+    const key = "recovery-camera";
+    const failed = beginLiveStartupTiming(key);
+    failed.setFailure("connection_timeout");
+    beginLiveRecoveryTiming(key);
+    markLiveRecoveriesVisible();
+    markLiveRecoveryReplacement(key);
+    const replacement = beginLiveStartupTiming(key);
+    replacement.mark("adapter_import_started");
+
+    const attempts = getLiveStartupTimings().filter(
+      (snapshot) => snapshot.key === key,
+    );
+    expect(attempts).toHaveLength(2);
+    expect(attempts[0].failureCode).toBe("connection_timeout");
+    expect(attempts[1].phases).toMatchObject({
+      adapter_import_started: expect.any(Number),
+      foreground_visible: expect.any(Number),
+      hidden_session_expired: expect.any(Number),
+      replacement_requested: expect.any(Number),
+    });
   });
 });
