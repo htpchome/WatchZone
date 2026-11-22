@@ -42,6 +42,11 @@ for (const asset of Object.values(manifest)) {
         `Browser bundle contains an unresolved Node process global: ${asset.file}`,
       );
     }
+    if (/\bstatic\s*\{/u.test(source)) {
+      throw new Error(
+        `Browser bundle contains a class static block outside the supported legacy browser baseline: ${asset.file}`,
+      );
+    }
   }
 }
 

@@ -7,15 +7,41 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD: `c39a71b`.
-- Application version: `0.0.5-dev.16`.
+- HEAD: `cd96f87`.
+- Application version: `0.0.5-dev.23` (uncommitted compatibility fix).
 - Home Assistant config-entry schema: **2**.
-- The working tree was clean before this handoff edit.
-- Source and release output were restored to `v0.0.5-dev.16`.
-- The restored release packaged successfully with a 61,422-byte eager graph,
-  only 18 bytes below the 61,440-byte limit.
+- The working tree contains only the Android/WebView compatibility fix described
+  below; no live-session lifecycle code changed.
+- The fresh release packages successfully at 886,726 bytes with a 58,712-byte
+  eager graph and a 19,531-byte lazy editor entry.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
+
+## Android and legacy browser compatibility fix
+
+An Android Companion client using Android System WebView 86 could not register
+`camera-optics-card`; Home Assistant displayed "Custom element doesn't exist."
+The repository had not declared a browser build target, so Vite 8 silently used
+its Chrome 111 default and emitted class static blocks that WebView 86 cannot
+parse.
+
+The uncommitted `dev.23` fix:
+
+- Pins the production build to Home Assistant's legacy frontend floors:
+  Chromium/Android WebView 67, Edge 79, Firefox 98, and Safari/iOS 15.4.
+- Adds a target regression test and rejects emitted class static blocks during
+  release validation.
+- Lazily loads the toast presentation and optional Stage Management and
+  Interaction editor sections to keep the compatibility build within existing
+  eager and editor budgets; their behavior remains covered by tests.
+- Updates the platform contract and synchronized release metadata.
+- Passes formatting, lint, type checking, all 562 unit tests, a fresh production
+  build, build validation, version validation, release packaging, and all 180
+  Playwright tests across Chromium, Firefox, and WebKit.
+
+The physical Android WebView 86 client still needs to verify the packaged
+release after publication; automated current-engine tests cannot replace that
+device result.
 
 ## Total failure of background live recovery work
 

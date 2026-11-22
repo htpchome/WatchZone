@@ -1,0 +1,3 @@
+{
+  "targets": ["chrome67", "edge79", "firefox98", "safari15.4"]
+}

@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 const packageJson = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8"),
 ) as { version: string };
+const browserBuildTargets = JSON.parse(
+  readFileSync(new URL("./build-targets.json", import.meta.url), "utf8"),
+) as { targets: string[] };
 
 export default defineConfig(({ mode }) => ({
   define: {
@@ -21,6 +24,7 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true,
     manifest: true,
     minify: "terser",
+    target: browserBuildTargets.targets,
     terserOptions: { compress: { passes: 2 } },
     outDir: resolve(import.meta.dirname, "../dist/frontend"),
     lib: {

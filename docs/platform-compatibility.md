@@ -10,6 +10,13 @@ CameraOptics is designed for the current stable versions of:
 - Home Assistant Companion on Android and iOS.
 - Home Assistant clients running through macOS Catalyst.
 
+The packaged frontend also remains syntax-compatible with Home Assistant's
+pinned legacy frontend floors: Chromium and Android WebView 67, Chromium Edge
+79, Firefox 98, and Safari/iOS 15.4. These explicit targets protect older
+tablets, wall displays, and update-frozen WebViews from silently losing custom
+element registration when the build tool's defaults change. Browser APIs above
+this baseline remain capability-detected at their owning boundary.
+
 The interface supports phone, tablet, laptop, desktop, dashboard panel, and
 full-size layouts. A platform is not removed from this matrix merely because a
 new browser API makes another platform easier or faster.
