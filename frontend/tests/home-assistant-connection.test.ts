@@ -80,6 +80,10 @@ describe("Home Assistant WebRTC connection", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
     globalThis.MediaStream = originalMediaStream;
     globalThis.RTCPeerConnection = originalPeerConnection;
   });
@@ -252,7 +256,23 @@ describe("Home Assistant WebRTC connection", () => {
       }),
     );
     onFailure.mockClear();
-    vi.useRealTimers();
+    vi.useFakeTimers();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    peer.connectionState = "disconnected";
+    peer.onconnectionstatechange?.();
+    await vi.advanceTimersByTimeAsync(5_050);
+    expect(onFailure).not.toHaveBeenCalled();
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    peer.connectionState = "connected";
+    peer.onconnectionstatechange?.();
 
     offerCallback({ type: "error", message: "camera connection lost" });
     await vi.waitFor(() =>

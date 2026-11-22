@@ -153,7 +153,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("parks desktop media while hidden and resumes the same transport", async () => {
+  it("keeps desktop media running unchanged while hidden", async () => {
     const close = vi.fn();
     const park = vi.fn();
     const resume = vi.fn();
@@ -174,7 +174,7 @@ describe("MediaSessionManager", () => {
       value: "hidden",
     });
     document.dispatchEvent(new Event("visibilitychange"));
-    expect(park).toHaveBeenCalledOnce();
+    expect(park).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
 
     Object.defineProperty(document, "visibilityState", {
@@ -182,7 +182,7 @@ describe("MediaSessionManager", () => {
       value: "visible",
     });
     document.dispatchEvent(new Event("visibilitychange"));
-    expect(resume).toHaveBeenCalledOnce();
+    expect(resume).not.toHaveBeenCalled();
     expect(factory).toHaveBeenCalledOnce();
     expect(lease.getSnapshot().state).toBe("live");
 
@@ -207,14 +207,17 @@ describe("MediaSessionManager", () => {
     const manager = new MediaSessionManager(factory, factory, {
       clientDeviceClass: "desktop",
     });
-    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    const api = createApi();
+    const lease = manager.acquireHomeAssistant(api, "camera.front");
     await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    lease.release();
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "hidden",
     });
     document.dispatchEvent(new Event("visibilitychange"));
+    const returned = manager.acquireHomeAssistant(api, "camera.front");
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
@@ -222,11 +225,11 @@ describe("MediaSessionManager", () => {
     document.dispatchEvent(new Event("visibilitychange"));
 
     await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
     expect(firstResume).toHaveBeenCalledOnce();
     expect(firstClose).toHaveBeenCalledOnce();
 
-    lease.release();
+    returned.release();
     manager.closeAll();
   });
 

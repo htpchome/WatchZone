@@ -127,6 +127,7 @@ class ManagedMediaSession {
   private _leaseCount = 0;
   private _options: MediaConnectionOptions = { initialMuted: true };
   private _documentHidden = false;
+  private _resumeOnVisible = false;
   private _retryCause?: ReconnectCause;
   private _retryCount = 0;
   private _retryTimer?: ReturnType<typeof setTimeout>;
@@ -178,7 +179,8 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
-      if (!this._documentHidden) this._resumeConnection();
+      if (this._documentHidden) this._resumeOnVisible = true;
+      else this._resumeConnection();
       this._setSnapshot({ ...this._snapshot, state: "live" });
     }
     if (
@@ -313,16 +315,16 @@ class ManagedMediaSession {
           error: "Media suspended while the mobile client is backgrounded",
         });
       }
-      return;
     }
-    this._connection?.park?.();
   }
 
   public handleDocumentVisible(): void {
-    const wasDocumentParked = this._documentHidden;
     this._documentHidden = false;
     if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
-    if (wasDocumentParked && this._connection) this._resumeConnection();
+    if (this._resumeOnVisible && this._connection) {
+      this._resumeOnVisible = false;
+      this._resumeConnection();
+    }
     if (this._haInterrupted) {
       if (this._api.identity.connected === false) return;
       this._haInterrupted = false;
@@ -376,7 +378,7 @@ class ManagedMediaSession {
         return;
       }
       this._connection = connection;
-      if (this._leaseCount === 0 || this._documentHidden) connection.park?.();
+      if (this._leaseCount === 0) connection.park?.();
       if (this._retryCount > 0) {
         this._stableTimer = setTimeout(() => {
           this._stableTimer = undefined;
@@ -572,6 +574,7 @@ class ManagedMediaSession {
     }
     this._abort?.abort();
     this._abort = undefined;
+    this._resumeOnVisible = false;
     this._connection?.close();
     this._connection = undefined;
   }

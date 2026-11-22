@@ -383,16 +383,17 @@ session restores its desired state subject to autoplay rules.
 Visibility changes affect presentation and forced mute, not user preference.
 
 - A hidden or parked session is forced muted immediately.
-- On desktop and tablet clients, a hidden document parks decoder and loading
-  work without closing healthy WebRTC, MSE, HLS.js, or native-HLS transport
-  identity. Loss of window focus alone has no transport effect. The retained
-  transport remains subject to the ordinary session budget and eviction
-  policy.
+- On desktop and tablet clients, a hidden document keeps an actively leased
+  WebRTC, MSE, HLS.js, or native-HLS transport running unchanged. It does not
+  detach media, stop loading, discard incoming data, or invoke adapter parking.
+  Loss of window focus alone has no transport effect. The retained transport
+  remains subject to the ordinary session budget and eviction policy.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.
-- The manager may reduce quality or pause decoders when an adapter can do so
-  without losing the retained connection.
+- Only an unleased session may park decoder or loading work on desktop and
+  tablet clients. Document visibility alone is not permission to park an
+  actively leased session.
 - `document.visibilityState`, route state, module visibility, and intersection
   state are inputs to centralized policy, not independent competing handlers.
 - Returning to visibility removes only the forced reasons that no longer

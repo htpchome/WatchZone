@@ -160,6 +160,7 @@ export async function createWebRtcPeerConnection(
     if (closed) return;
     closed = true;
     signal.removeEventListener("abort", handleAbort);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
     unsubscribe?.();
     unsubscribe = undefined;
     if (disconnectedTimer) clearTimeout(disconnectedTimer);
@@ -211,7 +212,12 @@ export async function createWebRtcPeerConnection(
       ),
     );
   };
-  peer.onconnectionstatechange = () => {
+  const handleConnectionStateChange = (): void => {
+    if (document.visibilityState !== "visible") {
+      if (disconnectedTimer) clearTimeout(disconnectedTimer);
+      disconnectedTimer = undefined;
+      return;
+    }
     if (peer.connectionState === "failed") {
       if (disconnectedTimer) clearTimeout(disconnectedTimer);
       disconnectedTimer = undefined;
@@ -233,6 +239,11 @@ export async function createWebRtcPeerConnection(
       disconnectedTimer = undefined;
     }
   };
+  const handleVisibilityChange = (): void => {
+    if (document.visibilityState === "visible") handleConnectionStateChange();
+  };
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  peer.onconnectionstatechange = handleConnectionStateChange;
 
   const ready = new Promise<MediaConnection>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
