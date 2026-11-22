@@ -78,9 +78,17 @@ describe("Frigate MSE connection", () => {
     vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(
       () => undefined,
     );
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
   });
 
   afterEach(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -200,6 +208,57 @@ describe("Frigate MSE connection", () => {
     connection.close();
     expect(socket.close).toHaveBeenCalledOnce();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:frigate-mse");
+  });
+
+  it("drops hidden-tab media backlog without closing the retained socket", async () => {
+    const onFailure = vi.fn();
+    let video: HTMLVideoElement | undefined;
+    const connectionPromise = createFrigateMseConnection(
+      api(),
+      "camera.front",
+      new AbortController().signal,
+      onFailure,
+      new LiveStartupTiming("frigate-mse-hidden-retention"),
+      {
+        initialMuted: true,
+        onVideo: (element) => {
+          video = element;
+        },
+      },
+      source,
+    );
+    await nextMicrotask();
+
+    const mediaSource = FakeMediaSource.instances[0]!;
+    const socket = FakeWebSocket.instances[0]!;
+    mediaSource.dispatchEvent(new Event("sourceopen"));
+    socket.dispatchEvent(new Event("open"));
+    socket.message('{"type":"mse","value":"video/mp4"}');
+    video!.dispatchEvent(new Event("loadeddata"));
+    const connection = await connectionPromise;
+
+    mediaSource.buffer.updating = true;
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    const oneMegabyte = new ArrayBuffer(1024 * 1024);
+    for (let index = 0; index < 20; index += 1) {
+      socket.message(oneMegabyte);
+    }
+    expect(onFailure).not.toHaveBeenCalled();
+    expect(socket.close).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    mediaSource.buffer.updating = false;
+    const freshChunk = new ArrayBuffer(8);
+    socket.message(freshChunk);
+    expect(mediaSource.buffer.appendBuffer).toHaveBeenCalledWith(freshChunk);
+
+    connection.close();
   });
 
   it("rejects a retained player that does not advance after resume", async () => {

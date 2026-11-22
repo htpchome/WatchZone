@@ -384,10 +384,13 @@ Visibility changes affect presentation and forced mute, not user preference.
 
 - A hidden or parked session is forced muted immediately.
 - On desktop and tablet clients, a hidden document keeps an actively leased
-  WebRTC, MSE, HLS.js, or native-HLS transport running unchanged. It does not
-  detach media, stop loading, discard incoming data, or invoke adapter parking.
-  Loss of window focus alone has no transport effect. The retained transport
-  remains subject to the ordinary session budget and eviction policy.
+  WebRTC, MSE, HLS.js, or native-HLS transport running without invoking adapter
+  parking. It does not detach media or stop loading. Frigate MSE may discard
+  media payload delivered while the hidden browser prevents SourceBuffer
+  progress, but it must retain the same WebSocket and SourceBuffer identity and
+  accept fresh payload immediately when visible. Loss of window focus alone has
+  no transport effect. The retained transport remains subject to the ordinary
+  session budget and eviction policy.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.
@@ -404,6 +407,8 @@ Visibility changes affect presentation and forced mute, not user preference.
   starts its replacement immediately. A healthy retained transport is reused
   and does not renegotiate.
 - Returning to a visible browser document resumes the active media element.
+  A media failure detected while hidden does not start a replacement transport;
+  the foreground transition starts that replacement immediately.
   An active failed retry keeps its provider cooldown so repeated lifecycle
   events cannot overlap upstream consumers. A connection attempt that remained
   pending while hidden is cancelled and restarted once in the foreground so

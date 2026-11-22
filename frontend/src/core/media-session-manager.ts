@@ -306,6 +306,10 @@ class ManagedMediaSession {
   public handleDocumentHidden(closeConnection: boolean): void {
     if (this._snapshot.state === "closed" || this._documentHidden) return;
     this._documentHidden = true;
+    if (this._retryTimer) {
+      clearTimeout(this._retryTimer);
+      this._retryTimer = undefined;
+    }
     if (closeConnection) {
       if (this._connection || this._snapshot.state === "connecting") {
         this._resetRetry();
@@ -410,9 +414,9 @@ class ManagedMediaSession {
         this._retryCause = "home_assistant";
         return;
       }
-      if (this._retryCause) {
+      if (this._retryCause && !this._documentHidden) {
         this._scheduleRetry();
-      } else if (this._retryInitialFailure) {
+      } else if (this._retryInitialFailure && !this._documentHidden) {
         this._retryCause = "media";
         this._scheduleRetry();
       }
@@ -441,7 +445,7 @@ class ManagedMediaSession {
       return;
     }
     this._retryCause ??= "media";
-    this._scheduleRetry();
+    if (!this._documentHidden) this._scheduleRetry();
   }
 
   private _retry(): void {
@@ -470,6 +474,7 @@ class ManagedMediaSession {
   }
 
   private _scheduleRetry(): void {
+    if (this._documentHidden) return;
     const policy =
       this._retryCause === "media"
         ? this._mediaRetryPolicy

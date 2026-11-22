@@ -190,6 +190,41 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("defers a hidden desktop replacement until the document is visible", async () => {
+    const failures: Array<(error: Error) => void> = [];
+    const factory = vi.fn<ConnectionFactory>(
+      async (_api, _entity, _signal, onFailure) => {
+        failures.push(onFailure);
+        return { close: vi.fn(), stream: createStream() };
+      },
+    );
+    const manager = new MediaSessionManager(factory, factory, {
+      clientDeviceClass: "desktop",
+    });
+    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    failures[0](new Error("hidden transport failed"));
+    expect(lease.getSnapshot().state).toBe("failed");
+    expect(factory).toHaveBeenCalledOnce();
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+
+    lease.release();
+    manager.closeAll();
+  });
+
   it("replaces only a retained desktop transport that fails foreground validation", async () => {
     const firstClose = vi.fn();
     const firstResume = vi.fn(() =>

@@ -185,6 +185,11 @@ export async function createFrigateMseConnection(
       return;
     }
     if (!(event.data instanceof ArrayBuffer) || parked) return;
+    if (document.visibilityState !== "visible") {
+      pending.length = 0;
+      pendingBytes = 0;
+      return;
+    }
     if (pendingBytes + event.data.byteLength > MAX_PENDING_MEDIA_BYTES) {
       fail("Frigate MSE decoder fell behind the live stream");
       return;
