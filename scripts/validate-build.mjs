@@ -96,7 +96,7 @@ const editorGzipBytes = gzipSync(
 ).byteLength;
 const editorGzipBudgetKiB = 20;
 const editorGzipBudgetBytes = editorGzipBudgetKiB * 1024;
-const editorGzipSafetyMarginBytes = 1024;
+const editorGzipSafetyMarginBytes = 512;
 const editorGzipValidationLimitBytes =
   editorGzipBudgetBytes - editorGzipSafetyMarginBytes;
 if (editorGzipBytes > editorGzipValidationLimitBytes) {

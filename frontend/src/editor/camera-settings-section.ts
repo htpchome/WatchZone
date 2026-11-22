@@ -95,35 +95,32 @@ export function renderCameraSettings(options: CameraSettingsOptions) {
     </${sortableListTag}>
     ${
       secondaryCameras.length > 0
-        ? html`<section class="secondary-camera-section">
+        ? html`<div class="secondary-camera-list">
             <strong class="secondary-camera-heading">
-              ${localize("editor.additional_cameras")}
+              ${localize("editor.additional_camera")}
             </strong>
-            <div class="secondary-camera-list">
-              ${secondaryCameras.map(({ camera, owner }) => {
-                const name =
-                  camera.title || options.cameraName(camera.entity_id);
-                const group =
-                  owner.group_name || options.cameraName(owner.entity_id);
-                const ownerIndex = cameras.indexOf(owner);
-                return html`<div class="secondary-camera-tile">
-                  <span class="secondary-camera-copy">
-                    ${name} · ${localize("editor.grouped_with", { group })}
-                  </span>
-                  <button
-                    class="tile-action"
-                    type="button"
-                    title=${localize("editor.edit_camera")}
-                    aria-label=${localize("editor.edit_camera_named", { name })}
-                    data-camera-index=${String(ownerIndex)}
-                    @click=${options.onEditAdditionalCamera}
-                  >
-                    ${renderIcon("edit")}
-                  </button>
-                </div>`;
-              })}
-            </div>
-          </section>`
+            ${secondaryCameras.map(({ camera, owner }) => {
+              const name = camera.title || options.cameraName(camera.entity_id);
+              const group =
+                owner.group_name || options.cameraName(owner.entity_id);
+              const ownerIndex = cameras.indexOf(owner);
+              return html`<div class="secondary-camera-tile">
+                <span class="secondary-camera-copy">
+                  ${name} · ${localize("editor.grouped_with", { group })}
+                </span>
+                <button
+                  class="tile-action"
+                  type="button"
+                  title=${localize("editor.edit_camera")}
+                  aria-label=${localize("editor.edit_camera_named", { name })}
+                  data-camera-index=${String(ownerIndex)}
+                  @click=${options.onEditAdditionalCamera}
+                >
+                  ${renderIcon("edit")}
+                </button>
+              </div>`;
+            })}
+          </div>`
         : null
     }
     <button

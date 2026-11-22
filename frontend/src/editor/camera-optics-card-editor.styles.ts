@@ -283,13 +283,6 @@ export const cardEditorStyles = css`
     white-space: nowrap;
   }
 
-  .secondary-camera-section {
-    display: grid;
-    gap: 0.4rem;
-    margin-block-start: 0.5rem;
-    margin-inline-start: 0.75rem;
-  }
-
   .secondary-camera-heading {
     color: var(--wzc-color-text-1);
     font-size: var(--wzc-font-size-small);
@@ -299,6 +292,8 @@ export const cardEditorStyles = css`
   .secondary-camera-list {
     display: grid;
     gap: var(--wzc-sortable-gap);
+    margin-block-start: 0.5rem;
+    margin-inline-start: 0.75rem;
   }
 
   .secondary-camera-tile {

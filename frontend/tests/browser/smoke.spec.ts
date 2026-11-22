@@ -8,7 +8,7 @@ import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../../src/ui/media-overlay/visibili
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ) as { version: string };
-const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local";
+const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local00";
 const expectedVersion = packageJson.version;
 const THUMBNAIL_LONG_PRESS_WAIT_MS = 500;
 const pageErrors = new WeakMap<Page, string[]>();
@@ -105,8 +105,7 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
     consoleMessages.some(
       (message) =>
         message.includes("CameraOptics") &&
-        message.includes("CURRENT") &&
-        message.includes(`v${expectedVersion} (${expectedBuild})`),
+        message.includes(`v${expectedVersion}`),
     ),
   ).toBe(true);
   expect(await page.evaluate(() => window.wzc)).toMatchObject({
@@ -12826,7 +12825,7 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   const secondaryTile = editor.locator(".secondary-camera-tile");
   await expect(secondaryTile).toHaveCount(1);
   await expect(editor.locator(".secondary-camera-heading")).toHaveText(
-    "Additional Cameras",
+    "Additional Camera",
   );
   await expect(secondaryTile.locator(".secondary-camera-copy")).toHaveText(
     "Street View · Grouped with Entry Pair",

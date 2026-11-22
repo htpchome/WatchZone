@@ -22,16 +22,10 @@ runtime[RUNTIME_DIAGNOSTICS_KEY] = Object.freeze({
   version: APP_VERSION,
 });
 
-console.info(
-  `%c ${APP_NAME} CURRENT %c v${APP_VERSION} (${APP_BUILD}) `,
-  "background:#03a9f4;color:#fff;font-weight:700;border-radius:3px 0 0 3px",
-  "background:#263238;color:#fff;font-weight:700;border-radius:0 3px 3px 0",
-);
+console.info(`${APP_NAME} v${APP_VERSION}`);
 if (activeCardVersion !== APP_VERSION) {
   console.error(
-    `${APP_NAME} loaded v${APP_VERSION}, but the active card is ${
-      activeCardVersion ? `v${activeCardVersion}` : "an unversioned stale copy"
-    }. Fully reload this Home Assistant client or clear its site cache.`,
+    `${APP_NAME} v${APP_VERSION} does not match the loaded card ${activeCardVersion ? `v${activeCardVersion}` : "version"}. Reload Home Assistant or clear its site cache.`,
   );
 }
 

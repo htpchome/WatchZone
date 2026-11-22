@@ -10,7 +10,7 @@ const packageJson = JSON.parse(
 export default defineConfig(({ mode }) => ({
   define: {
     __APP_BUILD__: JSON.stringify(
-      process.env.GITHUB_SHA?.slice(0, 7) ?? "local",
+      process.env.GITHUB_SHA?.slice(0, 7) ?? "local00",
     ),
     __APP_VERSION__: JSON.stringify(packageJson.version),
     "process.env.NODE_ENV": JSON.stringify(
