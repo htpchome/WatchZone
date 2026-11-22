@@ -7,8 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before this uncommitted rollback: `29d60c5` (`v0.0.5-dev.25`).
-- Application version: `0.0.5-dev.26`.
+- HEAD before the current uncommitted change: `a88b590`
+  (`v0.0.5-dev.26`).
+- Application version: `0.0.5-dev.27`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -18,6 +19,25 @@ precedence.
   61,420-byte eager graph, 20 bytes below the 61,440-byte release limit.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
+
+## Current HLS foreground-resume correction
+
+Physical Firefox diagnostics proved that Frigate HLS itself acquired its URL
+in 16.7 ms, loaded its manifest in 66.7 ms, and decoded and selected its first
+frame in 266.7 ms. The remaining delay was therefore not HLS source
+acquisition. The retained-session path kept actively leased HLS alive for two
+hidden minutes but did not invoke its adapter resume and advancing-frame
+validation when the document became visible inside that window. Chromium could
+suspend that retained player and leave it to recover on its own.
+
+`dev.27` resumes and validates actively leased HLS.js and native-HLS players on
+foreground return. A player that advances remains the same retained session; a
+player that fails the bounded validation is closed and replaced through the
+ordinary fresh connection path. The existing two-minute full teardown remains
+unchanged, as do MSE and WebRTC visibility behavior.
+
+The fresh `dev.27` production build validates with a 61,437-byte eager graph,
+three bytes below the repository's 61,440-byte validation limit.
 
 ## Browser-compatibility rollback
 

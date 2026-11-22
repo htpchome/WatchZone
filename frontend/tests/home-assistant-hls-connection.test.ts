@@ -12,6 +12,7 @@ const hlsMock = vi.hoisted(() => ({
   isSupported: vi.fn(),
   loadSource: vi.fn(),
   on: vi.fn(),
+  startLoad: vi.fn(),
 }));
 
 vi.mock("hls.js/dist/hls.light.mjs", () => ({
@@ -29,6 +30,7 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
     public readonly destroy = hlsMock.destroy;
     public readonly loadSource = hlsMock.loadSource;
     public readonly on = hlsMock.on;
+    public readonly startLoad = hlsMock.startLoad;
   },
 }));
 
@@ -205,6 +207,52 @@ describe("Home Assistant HLS connection", () => {
     const connection = await connecting;
     expect(frameCallbacks.size).toBe(0);
     expect(connection.video).toBe(video);
+    connection.close();
+  });
+
+  it("restarts HLS.js loading and proves advancing media on resume", async () => {
+    const frameCallbacks = installVideoFrameCallbacks();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("#EXTM3U\n#EXT-X-TARGETDURATION:2\n"),
+    );
+    const api: HomeAssistantApi = {
+      identity: {} as HomeAssistantApi["identity"],
+      callWS: vi.fn(async () => ({
+        url: "/api/hls/front.m3u8",
+      })) as HomeAssistantApi["callWS"],
+      resolveUrl: (path) => `https://ha.example${path}`,
+      subscribeMessage: vi.fn(),
+    };
+    const connecting = createHomeAssistantHlsConnection(
+      api,
+      "camera.front",
+      new AbortController().signal,
+      vi.fn(),
+      new LiveStartupTiming("home_assistant_hls:camera.front"),
+    );
+
+    await vi.waitFor(() => expect(hlsMock.attachMedia).toHaveBeenCalledOnce());
+    const video = hlsMock.attachMedia.mock.calls[0]?.[0] as HTMLVideoElement;
+    video.dispatchEvent(new Event("loadeddata"));
+    const [initialFrameId, initialFrame] =
+      [...frameCallbacks.entries()][0] ?? [];
+    if (initialFrameId !== undefined) frameCallbacks.delete(initialFrameId);
+    initialFrame?.(performance.now(), {
+      mediaTime: 10,
+    } as VideoFrameCallbackMetadata);
+    const connection = await connecting;
+    video.currentTime = 10;
+
+    const resumed = connection.resume?.();
+    expect(hlsMock.startLoad).toHaveBeenCalledWith(-1);
+    const [resumedFrameId, resumedFrame] =
+      [...frameCallbacks.entries()][0] ?? [];
+    if (resumedFrameId !== undefined) frameCallbacks.delete(resumedFrameId);
+    resumedFrame?.(performance.now(), {
+      mediaTime: 10.5,
+    } as VideoFrameCallbackMetadata);
+    await expect(resumed).resolves.toBeUndefined();
+
     connection.close();
   });
 

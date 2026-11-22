@@ -335,7 +335,10 @@ class ManagedMediaSession {
     this._clearHiddenTeardown();
     this._documentHidden = false;
     if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
-    if (this._resumeOnVisible && this._connection) {
+    // Actively leased HLS is not parked while hidden, but Chromium may still
+    // suspend its loader or decoder. Its adapter resume proves media advances;
+    // failure closes only that stale transport and queues a fresh connection.
+    if (this._resumeOnVisible || this._snapshot.transport?.[0] === "h") {
       this._resumeOnVisible = false;
       this._resumeConnection();
     }
