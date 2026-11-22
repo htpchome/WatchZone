@@ -127,6 +127,8 @@ class ManagedMediaSession {
   private _leaseCount = 0;
   private _options: MediaConnectionOptions = { initialMuted: true };
   private _documentHidden = false;
+  private _hiddenUntil = 0;
+  private _hiddenTeardownTimer?: ReturnType<typeof setTimeout>;
   private _resumeOnVisible = false;
   private _retryCause?: ReconnectCause;
   private _retryCount = 0;
@@ -306,6 +308,7 @@ class ManagedMediaSession {
   public handleDocumentHidden(closeConnection: boolean): void {
     if (this._snapshot.state === "closed" || this._documentHidden) return;
     this._documentHidden = true;
+    this._hiddenUntil = Date.now() + 120_000;
     if (this._retryTimer) {
       clearTimeout(this._retryTimer);
       this._retryTimer = undefined;
@@ -319,10 +322,17 @@ class ManagedMediaSession {
           error: "Media suspended while the mobile client is backgrounded",
         });
       }
+      return;
     }
+    this._scheduleHiddenTeardown();
   }
 
   public handleDocumentVisible(): void {
+    if (Date.now() >= this._hiddenUntil) {
+      this._expireHiddenStream();
+    }
+    this._hiddenUntil = 0;
+    this._clearHiddenTeardown();
     this._documentHidden = false;
     if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
     if (this._resumeOnVisible && this._connection) {
@@ -398,6 +408,7 @@ class ManagedMediaSession {
         transport: connection.transport,
         video: connection.video,
       });
+      this._scheduleHiddenTeardown();
     } catch (error) {
       if (generation !== this._generation || abort.signal.aborted) {
         return;
@@ -571,6 +582,40 @@ class ManagedMediaSession {
     }
   }
 
+  private _scheduleHiddenTeardown(): void {
+    this._clearHiddenTeardown();
+    if (
+      !this._documentHidden ||
+      this._leaseCount === 0 ||
+      !this._connection ||
+      !this._snapshot.transport ||
+      this._snapshot.transport === "webrtc"
+    )
+      return;
+    this._hiddenTeardownTimer = setTimeout(() => {
+      this._expireHiddenStream();
+    }, this._hiddenUntil - Date.now());
+  }
+
+  private _expireHiddenStream(): void {
+    if (
+      !this._documentHidden ||
+      this._leaseCount === 0 ||
+      !this._connection ||
+      !this._snapshot.transport ||
+      this._snapshot.transport === "webrtc"
+    )
+      return;
+    this._resetRetry("media");
+    this._closeConnection();
+    this._setSnapshot({ state: "failed" });
+  }
+
+  private _clearHiddenTeardown(): void {
+    clearTimeout(this._hiddenTeardownTimer);
+    this._hiddenTeardownTimer = undefined;
+  }
+
   private _closeConnection(): void {
     this._generation += 1;
     if (this._stableTimer) {
@@ -579,6 +624,7 @@ class ManagedMediaSession {
     }
     this._abort?.abort();
     this._abort = undefined;
+    this._clearHiddenTeardown();
     this._resumeOnVisible = false;
     this._connection?.close();
     this._connection = undefined;

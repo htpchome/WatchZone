@@ -23,10 +23,5 @@ runtime[RUNTIME_DIAGNOSTICS_KEY] = Object.freeze({
 });
 
 console.info(`${APP_NAME} v${APP_VERSION}`);
-if (activeCardVersion !== APP_VERSION) {
-  console.error(
-    `${APP_NAME} v${APP_VERSION} does not match the loaded card ${activeCardVersion ? `v${activeCardVersion}` : "version"}. Reload Home Assistant or clear its site cache.`,
-  );
-}
 
 export { DashboardCard } from "./card/camera-optics-card";
