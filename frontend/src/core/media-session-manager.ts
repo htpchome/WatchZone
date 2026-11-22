@@ -588,6 +588,7 @@ class ManagedMediaSession {
       !this._documentHidden ||
       this._leaseCount === 0 ||
       !this._connection ||
+      !this._snapshot.transport ||
       this._snapshot.transport === "webrtc"
     )
       return;
@@ -601,10 +602,13 @@ class ManagedMediaSession {
       !this._documentHidden ||
       this._leaseCount === 0 ||
       !this._connection ||
+      !this._snapshot.transport ||
       this._snapshot.transport === "webrtc"
     )
       return;
-    this.close();
+    this._resetRetry("media");
+    this._closeConnection();
+    this._setSnapshot({ state: "failed" });
   }
 
   private _clearHiddenTeardown(): void {

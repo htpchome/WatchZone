@@ -38,7 +38,6 @@ export class CameraLiveSessionController implements ReactiveController {
   private _sourceGeneration = 0;
   private _fallbackLease?: MediaSessionLease;
   private _fallbackPendingKey?: string;
-  private _fallbackRecoveryPending = false;
   private _fallbackSnapshot: MediaSessionSnapshot = { state: "new" };
   private _fallbackUnsubscribe?: () => void;
   private _lowLatencyHls = true;
@@ -403,7 +402,6 @@ export class CameraLiveSessionController implements ReactiveController {
 
   private _syncFallback(): void {
     if (
-      this._fallbackRecoveryPending ||
       this._selected === "webrtc" ||
       !this._api ||
       !this._entityId ||
@@ -542,18 +540,6 @@ export class CameraLiveSessionController implements ReactiveController {
   private _adoptFallbackLease(lease: MediaSessionLease): void {
     this._fallbackLease = lease;
     this._fallbackUnsubscribe = lease.subscribe((snapshot) => {
-      if (snapshot.state === "closed") {
-        this._fallbackUnsubscribe?.();
-        this._fallbackUnsubscribe = undefined;
-        this._fallbackLease = undefined;
-        this._fallbackSnapshot = { state: "new" };
-        this._fallbackRecoveryPending = true;
-        requestAnimationFrame(() => {
-          this._fallbackRecoveryPending = false;
-          this._sync();
-        });
-        return;
-      }
       this._fallbackSnapshot = snapshot;
       this._revision += 1;
       if (snapshot.state === "live") {

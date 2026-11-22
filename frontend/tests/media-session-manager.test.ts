@@ -231,16 +231,13 @@ describe("MediaSessionManager", () => {
   );
 
   it.each(["mse", "hls_mse", "hls_native"] as const)(
-    "expires the complete desktop %s session after two hidden minutes",
+    "retains desktop %s for two hidden minutes, then reconnects on return",
     async (transport) => {
       const closes: Array<ReturnType<typeof vi.fn>> = [];
-      const resumes: Array<ReturnType<typeof vi.fn>> = [];
       const factory = vi.fn<ConnectionFactory>(async () => {
         const close = vi.fn();
-        const resume = vi.fn();
         closes.push(close);
-        resumes.push(resume);
-        return { close, resume, stream: createStream(), transport };
+        return { close, stream: createStream(), transport };
       });
       const manager = new MediaSessionManager(factory, factory, {
         clientDeviceClass: "desktop",
@@ -258,18 +255,15 @@ describe("MediaSessionManager", () => {
       expect(closes[0]).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1);
       expect(closes[0]).toHaveBeenCalledOnce();
-      expect(resumes[0]).not.toHaveBeenCalled();
       expect(factory).toHaveBeenCalledOnce();
-      expect(lease.getSnapshot()).toEqual({ state: "closed" });
 
       Object.defineProperty(document, "visibilityState", {
         configurable: true,
         value: "visible",
       });
       document.dispatchEvent(new Event("visibilitychange"));
-      expect(factory).toHaveBeenCalledOnce();
-      expect(resumes[0]).not.toHaveBeenCalled();
-      expect(lease.getSnapshot()).toEqual({ state: "closed" });
+      await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
 
       lease.release();
       manager.closeAll();

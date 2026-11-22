@@ -89,14 +89,20 @@ export class LiveStartupTiming {
   }
 }
 
-const latestTimings: LiveStartupTiming[] = [];
+const MAX_RECORDED_STARTUPS = 20;
+const latestTimings = new Map<string, LiveStartupTiming>();
 
 export function beginLiveStartupTiming(key: string): LiveStartupTiming {
   const timing = new LiveStartupTiming(key);
-  if (latestTimings.push(timing) > 20) latestTimings.shift();
+  if (!latestTimings.has(key) && latestTimings.size >= MAX_RECORDED_STARTUPS) {
+    const oldestKey = latestTimings.keys().next().value;
+    if (oldestKey !== undefined) latestTimings.delete(oldestKey);
+  }
+  latestTimings.delete(key);
+  latestTimings.set(key, timing);
   return timing;
 }
 
 export function getLiveStartupTimings(): LiveStartupTimingSnapshot[] {
-  return latestTimings.map((timing) => timing.snapshot());
+  return [...latestTimings.values()].map((timing) => timing.snapshot());
 }

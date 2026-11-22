@@ -3,6 +3,7 @@ export const APP_ID = "wzc";
 export const INTEGRATION_ID = "camera_optics";
 export const CARD_ID = "camera-optics";
 export const APP_VERSION = __APP_VERSION__;
+export const APP_BUILD = __APP_BUILD__;
 
 export const CARD_TAG = `${CARD_ID}-card`;
 export const CARD_TYPE = `custom:${CARD_TAG}`;
@@ -166,4 +167,5 @@ export const TOAST_VISIBLE_DURATION_MS = 3_500;
 export const TOAST_TRANSITION_DURATION_MS = 180;
 export const TALK_SUCCESS_TOAST_DURATION_MS = 2_200;
 export const TALK_ERROR_TOAST_DURATION_MS = 3_600;
+export const RUNTIME_DIAGNOSTICS_KEY = APP_ID;
 export const MEDIA_SESSION_RUNTIME_KEY = `${APP_ID}:media-session-manager`;

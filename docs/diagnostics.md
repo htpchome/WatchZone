@@ -18,7 +18,7 @@ The startup recorder:
 - records relative timestamps with `performance.now()`;
 - performs no network requests, console writes, polling, or persistent storage;
 - stores no URLs, offers, answers, ICE candidates, tokens, or provider data;
-- keeps only the newest 20 connection-attempt records; and
+- keeps only the newest 20 transport-key records; and
 - creates snapshots only when explicitly requested.
 
 Leaving the recorder enabled adds a small bounded map and timestamp writes at
@@ -76,8 +76,6 @@ Interpretation:
 - `hlsMode: "standard"` means LL-HLS was disabled or not advertised.
 - `answerMs` measures WebRTC answer arrival, not decoded video.
 - `firstFrameMs` measures the first decodable frame for that transport.
-- Repeated attempts for one transport key remain separate, so a timed-out
-  attempt is not overwritten by its successful replacement.
 - `selectedMs` measures when that transport first owned presentation.
 - `failureCode` is a credential-free category recorded at the owning media
   boundary. Current values distinguish cancellation, unsupported clients,
