@@ -66,7 +66,7 @@ const minimalCameraComponentStyles = css`
   img {
     display: block;
     object-fit: contain;
-    background: var(--wzc-camera-stage);
+    background: transparent;
   }
 
   .video-host.webrtc {
@@ -375,7 +375,7 @@ const minimalCameraComponentStyles = css`
 
   .dialog-video-host video {
     object-fit: contain;
-    background: var(--wzc-camera-stage);
+    background: transparent;
   }
 
   .dialog-video-host.webrtc {

@@ -28,7 +28,7 @@ export const cameraViewStyles = css`
       --wzc-camera-stage-runtime-aspect-ratio,
       var(--wzc-camera-stage-aspect-ratio)
     );
-    background: var(--wzc-camera-stage);
+    background: transparent;
     border-radius: var(--wzc-live-radius);
     box-shadow: none;
   }
@@ -44,7 +44,6 @@ export const cameraViewStyles = css`
     contain: size;
     overflow: hidden;
     --wzc-live-background: var(--wzc-camera-stage);
-    --wzc-placeholder-background: var(--wzc-camera-stage);
     --wzc-placeholder-color: var(--wzc-media-placeholder-color);
     --wzc-live-shadow: none;
   }

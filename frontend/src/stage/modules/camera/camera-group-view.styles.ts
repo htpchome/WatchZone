@@ -42,7 +42,7 @@ export const cameraGroupViewStyles = css`
       var(--wzc-camera-stage-aspect-ratio)
     );
     overflow: hidden;
-    background: var(--wzc-camera-stage);
+    background: transparent;
   }
 
   .feeds {

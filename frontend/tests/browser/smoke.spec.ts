@@ -1501,6 +1501,57 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   await expect(buttons.nth(0)).toHaveCSS("box-shadow", "none");
 });
 
+test("paints a translucent camera stage on one owning surface", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
+  await card.evaluate((element) => {
+    const target = element as HTMLElement & {
+      setConfig(config: unknown): void;
+    };
+    target.style.setProperty("--wzc-camera-stage", "rgba(40, 80, 120, 0.25)");
+    target.setConfig({
+      type: "custom:camera-optics-card",
+      cameras: [
+        {
+          additional_camera: {
+            entity_id: "camera.driveway",
+            layout: "side_by_side",
+          },
+          entity_id: "camera.porch",
+          title: "Group A/B",
+        },
+        { entity_id: "camera.driveway", title: "Driveway" },
+      ],
+    });
+  });
+
+  const carousel = card.locator("wzc-camera .camera-carousel");
+  const group = card.locator("wzc-camera-group-view .group");
+  const cameras = card.locator("wzc-camera-group-view wzc-camera-view .camera");
+  const viewports = card.locator(
+    "wzc-camera-group-view wzc-camera-live .viewport",
+  );
+  await expect(carousel).toHaveCSS(
+    "background-color",
+    "rgba(40, 80, 120, 0.25)",
+  );
+  await expect(group).toHaveCount(1);
+  await expect(cameras).toHaveCount(2);
+  await expect(viewports).toHaveCount(2);
+  for (const layers of [group, cameras, viewports]) {
+    expect(
+      await layers.evaluateAll((elements) =>
+        elements.map((element) => getComputedStyle(element).backgroundColor),
+      ),
+    ).toEqual(
+      Array.from({ length: await layers.count() }, () => "rgba(0, 0, 0, 0)"),
+    );
+  }
+});
+
 test("cycles a grouped camera from combined to each member and back", async ({
   page,
 }) => {
@@ -3119,7 +3170,16 @@ test("keeps minimal camera actions and media controls independent", async ({
   await expect(minimal).toBeVisible();
   await minimal.evaluate((element) => {
     element.style.setProperty("--wzc-camera-control-size", "1.875rem");
+    element.style.setProperty("--wzc-camera-stage", "rgba(40, 80, 120, 0.25)");
   });
+  await expect(minimal.locator(".viewport")).toHaveCSS(
+    "background-color",
+    "rgba(40, 80, 120, 0.25)",
+  );
+  await expect(minimal.locator(".media")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   const inlineControlSize = await minimal
     .getByRole("button", { name: "Camera controls" })
     .evaluate((element) => element.getBoundingClientRect().width);
@@ -5034,7 +5094,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       };
     });
   expect(thumbnailPresentation).toEqual({
-    background: "rgb(36, 36, 36)",
+    background: "rgb(255, 255, 255)",
     objectFit: "cover",
   });
 
@@ -5750,7 +5810,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(snapshot).toBeVisible();
   await expect(snapshot).toHaveAttribute("src", "/thumbnail.svg");
-  await expect(snapshot).toHaveCSS("background-color", "rgb(36, 36, 36)");
+  await expect(snapshot).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
   await expect(
     mediaDialog.getByRole("button", { name: "View Review" }),
@@ -6076,8 +6136,11 @@ test("switches activity and recordings through the shared media calendar", async
   );
   await expect(reviewDayHeaders.nth(1)).toContainText("Sun, Nov 8 — Reviews");
   const loadingSurface = page.locator("wzc-reviews .thumbnail-wrap").first();
-  await expect(loadingSurface).toHaveCSS("background-color", "rgb(36, 36, 36)");
-  await expect(loadingSurface).toHaveCSS("color", "rgb(98, 98, 98)");
+  await expect(loadingSurface).toHaveCSS(
+    "background-color",
+    "rgb(120, 121, 122)",
+  );
+  await expect(loadingSurface).toHaveCSS("color", "rgb(0, 0, 0)");
   await expect(trigger).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(trigger).toHaveCSS("border-top-width", "0px");
   const alignment = await navigation.evaluate((node) => {
@@ -13894,16 +13957,23 @@ test("restores controls after pre-editor and retains a replaced live connection"
   const cameraSurface = page.locator("wzc-camera .camera");
   await expect
     .poll(() =>
-      cameraSurface.evaluate(
+      cameraStage.evaluate(
         (element) => getComputedStyle(element).backgroundColor,
       ),
     )
     .toBe("rgb(12, 13, 14)");
   await expect
     .poll(() =>
+      cameraSurface.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    )
+    .toBe("rgba(0, 0, 0, 0)");
+  await expect
+    .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).backgroundColor),
     )
-    .toBe("rgb(12, 13, 14)");
+    .toBe("rgba(0, 0, 0, 0)");
   await expect
     .poll(() =>
       viewport.evaluate((element) => getComputedStyle(element).borderRadius),

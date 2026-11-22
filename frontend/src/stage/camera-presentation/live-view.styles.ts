@@ -33,7 +33,7 @@ export const cameraLiveViewStyles = css`
     block-size: auto;
     min-block-size: 0;
     overflow: hidden;
-    background: var(--wzc-live-background);
+    background: transparent;
     border-radius: var(--wzc-live-radius, var(--wzc-radius-large, 8px));
     box-shadow: var(--wzc-live-shadow, none);
   }
@@ -45,6 +45,7 @@ export const cameraLiveViewStyles = css`
     inline-size: 100vw;
     block-size: 100vh;
     aspect-ratio: auto;
+    background: var(--wzc-live-background);
     border-radius: 0;
   }
 
@@ -86,10 +87,7 @@ export const cameraLiveViewStyles = css`
     display: grid;
     place-items: center;
     color: var(--wzc-placeholder-color, var(--wzc-color-text-2));
-    background: var(
-      --wzc-placeholder-background,
-      var(--wzc-color-surface-secondary)
-    );
+    background: transparent;
   }
 
   .generic-fallback svg {
@@ -107,7 +105,7 @@ export const cameraLiveViewStyles = css`
     color: var(--wzc-placeholder-color, var(--wzc-media-placeholder-color));
     display: block;
     object-fit: var(--wzc-live-fit, contain);
-    background: var(--wzc-live-background);
+    background: transparent;
     -webkit-user-drag: none;
   }
 
@@ -138,7 +136,7 @@ export const cameraLiveViewStyles = css`
   .fallback-host video,
   video {
     object-fit: var(--wzc-live-fit, contain);
-    background: inherit;
+    background: transparent;
     pointer-events: none;
   }
 
