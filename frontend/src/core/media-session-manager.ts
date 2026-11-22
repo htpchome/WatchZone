@@ -361,7 +361,7 @@ class ManagedMediaSession {
     if (this._snapshot.state !== "failed") return;
     if (this._retryTimer || !this._canRetry()) return;
     this._retryCause ??= "media";
-    this._queueRetry(this);
+    void this.retryFailed();
   }
 
   private async _connect(connectionOptions = this._options): Promise<void> {
@@ -604,11 +604,6 @@ class ManagedMediaSession {
       this._snapshot.transport === "webrtc"
     )
       return;
-    if (this._snapshot.transport === "hls_mse") {
-      this._connection.park?.();
-      this._resumeOnVisible = true;
-      return;
-    }
     this._resetRetry("media");
     this._closeConnection();
     this._setSnapshot({ state: "failed" });

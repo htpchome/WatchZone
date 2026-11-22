@@ -230,14 +230,17 @@ describe("MediaSessionManager", () => {
     },
   );
 
-  it.each(["mse", "hls_native"] as const)(
-    "retains desktop %s for two hidden minutes, then reconnects on return",
+  it.each(["mse", "hls_mse", "hls_native"] as const)(
+    "tears down desktop %s after two hidden minutes and reconnects immediately on return",
     async (transport) => {
       const closes: Array<ReturnType<typeof vi.fn>> = [];
+      const resumes: Array<ReturnType<typeof vi.fn>> = [];
       const factory = vi.fn<ConnectionFactory>(async () => {
         const close = vi.fn();
+        const resume = vi.fn();
         closes.push(close);
-        return { close, stream: createStream(), transport };
+        resumes.push(resume);
+        return { close, resume, stream: createStream(), transport };
       });
       const manager = new MediaSessionManager(factory, factory, {
         clientDeviceClass: "desktop",
@@ -255,62 +258,23 @@ describe("MediaSessionManager", () => {
       expect(closes[0]).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1);
       expect(closes[0]).toHaveBeenCalledOnce();
+      expect(resumes[0]).not.toHaveBeenCalled();
       expect(factory).toHaveBeenCalledOnce();
+      expect(lease.getSnapshot()).toEqual({ state: "failed" });
 
       Object.defineProperty(document, "visibilityState", {
         configurable: true,
         value: "visible",
       });
       document.dispatchEvent(new Event("visibilitychange"));
-      await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+      expect(factory).toHaveBeenCalledTimes(2);
+      expect(resumes[0]).not.toHaveBeenCalled();
       await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
 
       lease.release();
       manager.closeAll();
     },
   );
-
-  it("suspends desktop HLS.js after two hidden minutes and resumes the same player", async () => {
-    const close = vi.fn();
-    const park = vi.fn();
-    const resume = vi.fn();
-    const factory = vi.fn<ConnectionFactory>(async () => ({
-      close,
-      park,
-      resume,
-      stream: createStream(),
-      transport: "hls_mse",
-    }));
-    const manager = new MediaSessionManager(factory, factory, {
-      clientDeviceClass: "desktop",
-    });
-    const lease = manager.acquireHomeAssistant(createApi(), "camera.front");
-    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
-    vi.useFakeTimers();
-
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      value: "hidden",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(119_999);
-    expect(park).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1);
-    expect(park).toHaveBeenCalledOnce();
-    expect(close).not.toHaveBeenCalled();
-
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      value: "visible",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-    expect(resume).toHaveBeenCalledOnce();
-    expect(factory).toHaveBeenCalledOnce();
-    expect(lease.getSnapshot().state).toBe("live");
-
-    lease.release();
-    manager.closeAll();
-  });
 
   it("defers a hidden desktop replacement until the document is visible", async () => {
     const failures: Array<(error: Error) => void> = [];

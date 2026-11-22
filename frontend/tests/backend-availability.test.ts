@@ -41,7 +41,7 @@ describe("backend availability", () => {
       async <T>(message: HomeAssistantMessage): Promise<T> => {
         if (message.type === "camera_optics/bootstrap/status") {
           return {
-            backend_version: "0.0.5-dev.17",
+            backend_version: "0.0.5-dev.18",
             saved_settings_version: ready ? 2 : null,
             state: ready ? "ready" : "not_configured",
             supported_settings_version: 2,
