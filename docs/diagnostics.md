@@ -76,10 +76,8 @@ Interpretation:
 - `hlsMode: "standard"` means LL-HLS was disabled or not advertised.
 - `answerMs` measures WebRTC answer arrival, not decoded video.
 - `firstFrameMs` measures the first decodable frame for that transport.
-- Hidden-session recovery records `hidden_session_expired`,
-  `foreground_visible`, and `replacement_requested` before the ordinary
-  adapter phases. Repeated attempts for one transport key remain separate, so
-  a timed-out attempt is not overwritten by its successful replacement.
+- Repeated attempts for one transport key remain separate, so a timed-out
+  attempt is not overwritten by its successful replacement.
 - `selectedMs` measures when that transport first owned presentation.
 - `failureCode` is a credential-free category recorded at the owning media
   boundary. Current values distinguish cancellation, unsupported clients,

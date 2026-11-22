@@ -1,9 +1,6 @@
 import type { MediaConnectionErrorCode } from "./media-connection-error";
 
 export type LiveStartupPhase =
-  | "hidden_session_expired"
-  | "foreground_visible"
-  | "replacement_requested"
   | "adapter_import_started"
   | "adapter_imported"
   | "client_config_requested"
@@ -92,45 +89,11 @@ export class LiveStartupTiming {
   }
 }
 
-const MAX_RECORDED_STARTUPS = 20;
 const latestTimings: LiveStartupTiming[] = [];
-const pendingRecoveries = new Map<string, LiveStartupTiming>();
-
-function recordTiming(timing: LiveStartupTiming): void {
-  latestTimings.push(timing);
-  if (latestTimings.length <= MAX_RECORDED_STARTUPS) return;
-  const removed = latestTimings.shift();
-  if (removed && pendingRecoveries.get(removed.key) === removed) {
-    pendingRecoveries.delete(removed.key);
-  }
-}
-
-export function beginLiveRecoveryTiming(key: string): void {
-  if (pendingRecoveries.has(key)) return;
-  const timing = new LiveStartupTiming(key);
-  timing.mark("hidden_session_expired");
-  pendingRecoveries.set(key, timing);
-  recordTiming(timing);
-}
-
-export function markLiveRecoveriesVisible(): void {
-  for (const timing of pendingRecoveries.values()) {
-    timing.mark("foreground_visible");
-  }
-}
-
-export function markLiveRecoveryReplacement(key: string): void {
-  pendingRecoveries.get(key)?.mark("replacement_requested");
-}
 
 export function beginLiveStartupTiming(key: string): LiveStartupTiming {
-  const recovered = pendingRecoveries.get(key);
-  if (recovered) {
-    pendingRecoveries.delete(key);
-    return recovered;
-  }
   const timing = new LiveStartupTiming(key);
-  recordTiming(timing);
+  if (latestTimings.push(timing) > 20) latestTimings.shift();
   return timing;
 }
 

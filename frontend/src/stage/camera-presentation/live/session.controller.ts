@@ -1,7 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import type { HomeAssistantApi } from "../../../core/home-assistant";
-import { markLiveRecoveryReplacement } from "../../../core/live-startup-timing";
 import type {
   FrigateFallbackTransport,
   LiveConnectionType,
@@ -551,7 +550,6 @@ export class CameraLiveSessionController implements ReactiveController {
         this._fallbackRecoveryPending = true;
         requestAnimationFrame(() => {
           this._fallbackRecoveryPending = false;
-          markLiveRecoveryReplacement(lease.key);
           this._sync();
         });
         return;

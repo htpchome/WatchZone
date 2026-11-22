@@ -9,9 +9,7 @@ import {
   MEDIA_SESSION_RUNTIME_KEY,
 } from "./constants";
 import {
-  beginLiveRecoveryTiming,
   beginLiveStartupTiming,
-  markLiveRecoveriesVisible,
   type LiveStartupTiming,
 } from "./live-startup-timing";
 import {
@@ -606,7 +604,6 @@ class ManagedMediaSession {
       this._snapshot.transport === "webrtc"
     )
       return;
-    beginLiveRecoveryTiming(this.key);
     this.close();
   }
 
@@ -892,7 +889,6 @@ export class MediaSessionManager {
     for (const session of this._sessions.values()) {
       session.handleDocumentVisible();
     }
-    markLiveRecoveriesVisible();
   };
 
   private _publishForcedMute(active: boolean): void {

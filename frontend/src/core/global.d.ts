@@ -1,13 +1,11 @@
 declare const __APP_VERSION__: string;
-declare const __APP_BUILD__: string;
 
 interface Window {
   wzc?: Readonly<{
-    activeCardVersion: string | null;
-    build: string;
     getLiveStartupTimings(): Array<{
       readonly failureCode?:
         | "cancelled"
+        | "capacity_exceeded"
         | "configuration_timeout"
         | "connection_timeout"
         | "peer_failed"
@@ -52,7 +50,6 @@ interface Window {
       readonly signalingPath?: string;
       readonly startedAt: string;
     }>;
-    version: string;
   }>;
   customCards?: Array<{
     type: string;

@@ -8,7 +8,6 @@ import { MEDIA_OVERLAY_HIDE_DELAY_MS } from "../../src/ui/media-overlay/visibili
 const packageJson = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ) as { version: string };
-const expectedBuild = process.env.GITHUB_SHA?.slice(0, 7) ?? "local00";
 const expectedVersion = packageJson.version;
 const THUMBNAIL_LONG_PRESS_WAIT_MS = 500;
 const pageErrors = new WeakMap<Page, string[]>();
@@ -108,11 +107,6 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
         message.includes(`v${expectedVersion}`),
     ),
   ).toBe(true);
-  expect(await page.evaluate(() => window.wzc)).toMatchObject({
-    activeCardVersion: expectedVersion,
-    build: expectedBuild,
-    version: expectedVersion,
-  });
   expect(
     await page.evaluate(() => typeof window.wzc?.getLiveStartupTimings),
   ).toBe("function");
