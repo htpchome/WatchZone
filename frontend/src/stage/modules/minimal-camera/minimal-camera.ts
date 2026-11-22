@@ -33,7 +33,6 @@ import {
   setMediaElementMuted,
 } from "../../../core/media-playback";
 import { renderIcon } from "../../../ui/icons";
-import { LegacyAspectRatioController } from "../../../ui/media-overlay/legacy-aspect-ratio.controller";
 import "../../../ui/badge";
 import {
   englishLocalize,
@@ -93,13 +92,6 @@ export class MinimalCameraModule extends LitElement {
     _snapshotError: { state: true },
     _snapshotPending: { state: true },
   };
-
-  private readonly _legacyDialogAspectRatio = new LegacyAspectRatioController(
-    this,
-  );
-  private readonly _legacyStageAspectRatio = new LegacyAspectRatioController(
-    this,
-  );
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
@@ -405,13 +397,6 @@ export class MinimalCameraModule extends LitElement {
   }
 
   protected updated(): void {
-    this._legacyStageAspectRatio.observe(
-      this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
-    );
-    this._legacyDialogAspectRatio.observe(
-      this.renderRoot.querySelector<HTMLElement>(".live-dialog-media") ??
-        undefined,
-    );
     this._dialog.sync();
     this._attachMedia();
     this._audio.syncMediaState();

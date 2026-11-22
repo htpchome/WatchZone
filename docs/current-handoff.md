@@ -7,95 +7,30 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD: `f967478`.
-- Application version: `0.0.5-dev.25` (uncommitted compatibility fix).
+- HEAD before this uncommitted rollback: `29d60c5` (`v0.0.5-dev.25`).
+- Application version: `0.0.5-dev.26`.
 - Home Assistant config-entry schema: **2**.
-- The working tree contains the follow-up Android/WebView runtime compatibility
-  fix described below; no live-session lifecycle policy changed.
-- The fresh `dev.25` release package is 889,805 bytes with a 59,462-byte eager
-  graph and a 19,568-byte lazy editor entry.
+- The implementation has been restored to commit `cd96f87`, the last state
+  before the `dev.23` through `dev.25` browser-compatibility changes.
+- `dev.26` is the release identity for that restored implementation; history
+  was not rewritten and no commit was created by the agent.
+- The restored release was rebuilt and packaged successfully with a
+  61,420-byte eager graph, 20 bytes below the 61,440-byte release limit.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
 
-## Android and legacy browser compatibility fix
+## Browser-compatibility rollback
 
-An Android Companion client using Android System WebView 86 could not register
-`camera-optics-card`; Home Assistant displayed "Custom element doesn't exist."
-The repository had not declared a browser build target, so Vite 8 silently used
-its Chrome 111 default and emitted class static blocks that WebView 86 cannot
-parse.
+The `dev.23` through `dev.25` attempt to support Chromium/WebView 67 and the
+physical Android WebView 86 installation was unsuccessful and destabilized
+layout, controls, live video, and recorded-media behavior. That complete
+compatibility series has been removed rather than selectively retained.
 
-The published `dev.23` fix:
-
-- Pins the production build to Home Assistant's legacy frontend floors:
-  Chromium/Android WebView 67, Edge 79, Firefox 98, and Safari/iOS 15.4.
-- Adds a target regression test and rejects emitted class static blocks during
-  release validation.
-- Lazily loads the toast presentation and optional Stage Management and
-  Interaction editor sections to keep the compatibility build within existing
-  eager and editor budgets; their behavior remains covered by tests.
-- Updates the platform contract and synchronized release metadata.
-- Passed formatting, lint, type checking, all 562 unit tests, a fresh production
-  build, build validation, version validation, release packaging, and all 180
-  Playwright tests across Chromium, Firefox, and WebKit.
-
-Physical Android testing then proved that registration and Events loaded, but
-Live failed and recorded-media opening was unreliable. Running the production
-bundle in archived Chromium 86 reproduced an unhandled `e.at is not a function`
-error. The build target had corrected syntax but could not polyfill the three
-application calls to `Array.prototype.at()`, an API introduced after WebView 86.
-
-`dev.24` replaced all three application calls with baseline-compatible indexing
-in live-session retention selection, activity pagination, and activity
-grouping. Physical WebView 86 then proved that release was still broadly
-broken: Events rendered, but Review tiles did not open media, Live appeared
-empty, recorded media collapsed, and positioning was scattered. It must not be
-treated as a successful Android compatibility release.
-
-The underlying second failure was CSS compatibility. Chromium 86 does not
-support the `inset` shorthand, logical inset properties, or CSS
-`aspect-ratio`. CameraOptics had 69 affected declarations in colocated Lit style
-modules. Vite's JavaScript target does not transform CSS embedded in TypeScript
-template literals, and the current-engine browser matrix could not expose that
-gap. Direct Chromium 86 measurement showed the Review tile's transparent click
-layer at zero width and recorded/live media stages at zero height.
-
-The uncommitted `dev.25` follow-up:
-
-- Expands logical and shorthand inset declarations in colocated style modules
-  with physical positioning fallbacks at build time while retaining modern CSS.
-- Gives the Review tile player an explicit full-size hit area.
-- Supplies shared `ResizeObserver`-owned pixel heights for camera and recorded
-  media stages when CSS `aspect-ratio` is unavailable.
-- Runs a compatibility bootstrap before Lit and application imports, providing
-  only the runtime and DOM features absent at the Chromium 67 floor that the
-  application actually uses.
-- Exercises the compatibility bootstrap and nonzero recorded-media geometry in
-  browser regression coverage.
-
-The actual production bundle now passes direct engine checks in both archived
-Chromium `86.0.4240.0` and Chromium `67.0.3396.0`. In Chromium 86, a real Review
-tile click succeeds; the hit area is `388×115.1875`, the recorded viewport is
-`372×209.25`, and the live camera viewport is `395.96875×222.71875`. In
-Chromium 67, the card registers, the camera stage is `783.9375×440.9375`, the
-recorded dialog is `784×625.484375`, and its media viewport is `728×409.5`.
-These checks prove registration, interaction dispatch, and layout in the old
-engines. Actual Android media playback still requires final physical Companion
-verification; the local transport fixture does not prove a device decoder or
-network path.
-
-Validation passes formatting, lint, type checking, all 567 unit tests, a fresh
-production build, build and version validation, and release packaging.
-Chromium and Firefox passed their full browser projects in the 183-test matrix;
-WebKit's single rotation timing assertion failed once, passed on focused retry,
-and then all 61 WebKit tests passed in a clean project rerun.
-
-The supplied Android logcat excerpt contains no frontend JavaScript exception
-or failed CameraOptics asset request. It does show AVC decoders created for
-`640×480` and `1920×1080` media and one decoder released. The surrounding
-BufferQueue and codec-release messages are native media teardown evidence, not
-a demonstrated CameraOptics failure, so they did not justify a speculative
-transport change.
+The restored Vite configuration again uses Vite 8.3.5's implicit
+`baseline-widely-available` production target: Chrome 111+, Edge 111+,
+Firefox 114+, and Safari 16.4+. This is a syntax-transformation floor, not a
+runtime polyfill guarantee. CameraOptics does not claim support for Android
+WebView 86 or 108 in this restored state.
 
 ## Total failure of background live recovery work
 
@@ -164,7 +99,8 @@ MSE were also affected. The user continued to experience an approximately
 ## Do not resume the failed approach
 
 - Do not reconstruct or selectively reapply `dev.17` through `dev.22`.
-- Preserve `dev.16` unless the user explicitly requests another change.
+- Preserve the restored `cd96f87` implementation unless the user explicitly
+  requests another change.
 - Do not change live lifecycle code without an end-to-end physical-browser
   reproduction measuring foreground return through the first advancing frame.
 - Do not infer that an observed 15-second delay proves the HLS adapter owns it.

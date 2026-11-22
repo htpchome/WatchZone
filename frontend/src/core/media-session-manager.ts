@@ -936,7 +936,7 @@ export class MediaSessionManager {
       const reduced = contexts.find(
         ({ preference }) => preference === "reduced_bandwidth",
       );
-      const selected = reduced ?? contexts[contexts.length - 1];
+      const selected = reduced ?? contexts.at(-1);
       if (!selected) continue;
       this._retentionMetadata.set(cameraKey, {
         preference: selected.preference,

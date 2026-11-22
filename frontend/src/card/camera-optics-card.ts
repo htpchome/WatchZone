@@ -52,6 +52,7 @@ import { ThemeProfileController } from "../core/theme-profile";
 import { stageRuntimeStyles } from "../stage/layout-runtime.styles";
 import { roundButtonStyles } from "../ui/controls/overlay-control.styles";
 import { ToastManager } from "../ui/toast/manager";
+import "../ui/toast/region";
 import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
 import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./camera-optics-card.styles";
@@ -75,12 +76,6 @@ const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
 const exportNameDialogTag = unsafeStatic(EXPORT_NAME_DIALOG_TAG);
 let statusModule: Promise<typeof import("../api/status")> | undefined;
-let toastRegionModule: Promise<void> | undefined;
-
-function loadToastRegion(): Promise<void> {
-  toastRegionModule ??= import("../ui/toast/region").then(() => undefined);
-  return toastRegionModule;
-}
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -191,11 +186,6 @@ export class DashboardCard extends LitElement {
     this._cardPickerPreview = isHomeAssistantCardPickerPreview(this);
     this.classList.toggle("card-picker-preview-host", this._cardPickerPreview);
     super.connectedCallback();
-    void loadToastRegion()
-      .then(() => this.requestUpdate())
-      .catch((error: unknown) =>
-        console.error("Failed to load the toast region", error),
-      );
     if (this._cardPickerPreview) {
       this._cardPickerPreviewLoad ??= loadCardPickerPreview();
       this.requestUpdate();

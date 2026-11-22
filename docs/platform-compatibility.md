@@ -10,26 +10,6 @@ CameraOptics is designed for the current stable versions of:
 - Home Assistant Companion on Android and iOS.
 - Home Assistant clients running through macOS Catalyst.
 
-The packaged frontend also remains syntax-compatible with Home Assistant's
-pinned legacy frontend floors: Chromium and Android WebView 67, Chromium Edge
-79, Firefox 98, and Safari/iOS 15.4. These explicit targets protect older
-tablets, wall displays, and update-frozen WebViews from silently losing custom
-element registration when the build tool's defaults change. Browser APIs above
-this baseline remain capability-detected at their owning boundary.
-Application code must also avoid unpolyfilled runtime built-ins introduced
-above that floor. A production syntax target does not transform calls such as
-`Array.prototype.at()` for browsers that do not implement them.
-
-The production entry installs the narrowly required baseline runtime features
-before it imports Lit or application code. This ordering is part of the
-compatibility boundary: build syntax targeting does not supply browser globals,
-prototype methods, or DOM methods. Colocated Lit styles are TypeScript modules,
-so ordinary CSS post-processing does not see their template contents. The
-production transform therefore adds physical `top`, `right`, `bottom`, and
-`left` fallbacks before logical `inset` declarations. Media stages additionally
-use a shared `ResizeObserver` fallback when native CSS `aspect-ratio` is absent.
-Modern declarations remain present and authoritative in capable browsers.
-
 The interface supports phone, tablet, laptop, desktop, dashboard panel, and
 full-size layouts. A platform is not removed from this matrix merely because a
 new browser API makes another platform easier or faster.
@@ -242,7 +222,7 @@ Use this matrix when selecting tokens for a new overlay surface:
 | ----------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | HA glass          | AI analysis, recorded-media viewers, minimal live viewer, informational dialogs    | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for ordinary modal dialogs; none for either recorded-media viewer |
 | Solid task        | Filter, calendar, Suspend Camera, recorded-media information, forms, confirmations | `--wzc-task-dialog-background`   | `--wzc-task-dialog-backdrop-filter` (`none`)   | `--wzc-task-dialog-radius`, `--wzc-task-dialog-shadow` | `--wzc-dialog-scrim-*` for modal tasks; none for popovers                                |
-| Editor shell      | Home Assistant card editor, CameraOptics editor content                            | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                                 |
+| Editor shell      | Home Assistant card editor, CameraOptics editor content                               | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                                 |
 
 `--wzc-popover-*` is a compatibility alias of the solid-task family, not a
 fourth presentation. Filter and calendar components may consume that alias for

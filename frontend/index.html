@@ -8,8 +8,7 @@
   <body>
     <camera-optics-card></camera-optics-card>
     <script type="module">
-      await import("/src/core/browser-compatibility.ts");
-      await import("@webcomponents/scoped-custom-element-registry/scoped-custom-element-registry.min");
+      import "@webcomponents/scoped-custom-element-registry/scoped-custom-element-registry.min";
       await import("/src/main.ts");
     </script>
   </body>

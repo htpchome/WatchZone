@@ -48,7 +48,7 @@ export async function listActivityWindow<T extends ActivityWindowItem>(
     ...(type === "camera_optics/reviews/list" ? { summary_only: false } : {}),
   });
   const items = sortedItems(response.items);
-  const oldestStart = items[items.length - 1]?.start_time;
+  const oldestStart = items.at(-1)?.start_time;
   const hasMore =
     items.length === limit &&
     oldestStart !== undefined &&

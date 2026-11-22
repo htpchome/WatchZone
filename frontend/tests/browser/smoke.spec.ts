@@ -118,123 +118,6 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
   ).toBe("function");
 });
 
-test("loads camera and recorded media with the Chrome 67 runtime floor", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    for (const [target, property] of [
-      [Array.prototype, "at"],
-      [Array.prototype, "flat"],
-      [Array.prototype, "flatMap"],
-      [Element.prototype, "toggleAttribute"],
-      [Object, "fromEntries"],
-      [Promise, "allSettled"],
-      [String.prototype, "replaceAll"],
-    ] as const) {
-      Object.defineProperty(target, property, {
-        configurable: true,
-        value: undefined,
-        writable: true,
-      });
-    }
-  });
-  await page.route("**/legacy-snapshot.svg", (route) =>
-    route.fulfill({
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120"/>',
-      contentType: "image/svg+xml",
-    }),
-  );
-  await page.goto("/");
-  await waitForCameraOpticsDefinition(page);
-  expect(
-    await page.evaluate(() => ({
-      allSettled: typeof Promise.allSettled,
-      flat: typeof Array.prototype.flat,
-      flatMap: typeof Array.prototype.flatMap,
-      fromEntries: typeof Object.fromEntries,
-      queueMicrotask: typeof window.queueMicrotask,
-      replaceAll: typeof String.prototype.replaceAll,
-      toggleAttribute: typeof Element.prototype.toggleAttribute,
-    })),
-  ).toEqual({
-    allSettled: "function",
-    flat: "function",
-    flatMap: "function",
-    fromEntries: "function",
-    queueMicrotask: "function",
-    replaceAll: "function",
-    toggleAttribute: "function",
-  });
-  await page.locator("camera-optics-card").evaluate((element) => {
-    const card = element as HTMLElement & {
-      hass: unknown;
-      setConfig(config: unknown): void;
-    };
-    card.setConfig({
-      camera_entity: "camera.front",
-      recorded_media_player_type: "bottom_drawer",
-      stage_type: "camera_only",
-      type: "custom:camera-optics-card",
-    });
-    card.hass = {
-      config: { components: ["camera_optics", "frontend", "lovelace"] },
-      states: {
-        "camera.front": {
-          entity_id: "camera.front",
-          state: "idle",
-          attributes: { friendly_name: "Front Door" },
-        },
-      },
-      connection: {
-        connected: true,
-        subscribeMessage: async () => () => undefined,
-      },
-      callService: async () => undefined,
-      callWS: async () => {
-        throw new Error("Camera request failed");
-      },
-      hassUrl: (path: string) => path,
-    };
-  });
-
-  await expect(page.locator("camera-optics-card wzc-camera")).toHaveCount(1);
-  await page.locator("camera-optics-card").evaluate((element) => {
-    element.dispatchEvent(
-      new CustomEvent("wzc-recorded-media-open", {
-        bubbles: true,
-        composed: true,
-        detail: {
-          id: "event:legacy-webview",
-          kind: "snapshot",
-          presentation: "event",
-          preferredTransport: "file",
-          sources: [
-            {
-              content_type: "image/svg+xml",
-              transport: "file",
-              url: "/legacy-snapshot.svg",
-            },
-          ],
-          title: "Legacy WebView event",
-        },
-      }),
-    );
-  });
-  await expect(
-    page.locator("wzc-recorded-media-bottom-drawer dialog"),
-  ).toBeVisible();
-  const dialogBox = await page
-    .locator("wzc-recorded-media-bottom-drawer dialog")
-    .boundingBox();
-  const mediaBox = await page
-    .locator("wzc-recorded-snapshot-player .viewport")
-    .boundingBox();
-  expect(dialogBox?.height).toBeGreaterThan(0);
-  expect(dialogBox?.width).toBeGreaterThan(0);
-  expect(mediaBox?.height).toBeGreaterThan(0);
-  expect(mediaBox?.width).toBeGreaterThan(0);
-});
-
 test("does not infer missing setup from a transient components list", async ({
   page,
 }) => {
@@ -10381,9 +10264,7 @@ test("applies configured Companion rotate actions to the retained Full Stage", a
       }
     ).__rotateClassTimes;
     if (times?.fullscreen === undefined || times.landscape === undefined) {
-      throw new Error(
-        `Companion rotate class timing was not captured: ${JSON.stringify(times)}`,
-      );
+      throw new Error("Companion rotate class timing was not captured");
     }
     return times.fullscreen - times.landscape;
   });

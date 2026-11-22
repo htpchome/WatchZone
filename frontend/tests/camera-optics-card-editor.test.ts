@@ -284,12 +284,6 @@ describe("camera-optics-card-editor", () => {
     const stageItem = await openEditorSection(editor, "stage-management");
     expect(stageItem).not.toBeNull();
 
-    await vi.waitFor(() =>
-      expect(
-        stageItem?.querySelectorAll('input[name="stage-type"]'),
-      ).toHaveLength(3),
-    );
-
     const stageTypeInputs = [
       ...(stageItem?.querySelectorAll<HTMLInputElement>(
         'input[name="stage-type"]',
@@ -370,11 +364,6 @@ describe("camera-optics-card-editor", () => {
     await editor.updateComplete;
 
     const stageItem = await openEditorSection(editor, "stage-management");
-    await vi.waitFor(() =>
-      expect(
-        stageItem?.querySelector('input[value="minimal_camera_only"]'),
-      ).not.toBeNull(),
-    );
     const minimal = stageItem?.querySelector<HTMLInputElement>(
       'input[value="minimal_camera_only"]',
     );
@@ -438,11 +427,6 @@ describe("camera-optics-card-editor", () => {
       ),
     ).toBeNull();
     const interactions = await openEditorSection(editor, "interactions");
-    await vi.waitFor(() =>
-      expect(
-        interactions.querySelector("ha-form.primary-interaction"),
-      ).not.toBeNull(),
-    );
     const interactionForm = interactions.querySelector<
       HTMLElement & {
         data?: Record<string, unknown>;

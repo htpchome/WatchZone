@@ -74,7 +74,10 @@ import {
 import { HomeAssistantEditorBridge } from "./home-assistant-editor-bridge";
 import type { CameraCapabilityController } from "./camera-capability.controller";
 import { renderCameraSettings } from "./camera-settings-section";
-import type { OptionalInteractionName } from "./interaction-settings-section";
+import {
+  renderInteractionSettings,
+  type OptionalInteractionName,
+} from "./interaction-settings-section";
 import {
   renderGeneralSettings,
   renderLayoutSettings,
@@ -84,6 +87,7 @@ import {
   renderRecordedMediaPlayerSettings,
   renderReviewSettings,
 } from "./settings-sections";
+import { renderStageManagement } from "./stage-management-section";
 import { cardEditorStyles } from "./camera-optics-card-editor.styles";
 
 interface InputElement extends HTMLElement {
@@ -129,10 +133,6 @@ type EditorSectionKey =
   | "recorded-media-player"
   | "reviews"
   | "stage-management";
-type StageManagementRenderer =
-  typeof import("./stage-management-section").renderStageManagement;
-type InteractionSettingsRenderer =
-  typeof import("./interaction-settings-section").renderInteractionSettings;
 
 const CAMERA_SELECTOR = {
   entity: { filter: { domain: "camera" } },
@@ -189,10 +189,6 @@ export class CardEditor extends LitElement {
   private _openSection?: EditorSectionKey;
   private _sectionKeys = new Map<string, EditorSectionKey>();
   private _pendingSections = new Set<EditorSectionKey>();
-  private _interactionSettingsRenderer?: InteractionSettingsRenderer;
-  private _interactionSettingsLoad?: Promise<void>;
-  private _stageManagementRenderer?: StageManagementRenderer;
-  private _stageManagementLoad?: Promise<void>;
   private _addingLight = false;
   private _pendingLightEntityId = "";
   private _pendingLightIcon = DEFAULT_LIGHT_ICON;
@@ -395,7 +391,7 @@ export class CardEditor extends LitElement {
           .icon=${"layout"}
         >
           ${this._renderSection("stage-management", () =>
-            this._stageManagementRenderer?.({
+            renderStageManagement({
               config: this._config,
               localize: this._localization.localize,
               onStageLayoutChange: this._handleStageLayoutChange,
@@ -443,7 +439,7 @@ export class CardEditor extends LitElement {
           .icon=${"tune"}
         >
           ${this._renderSection("interactions", () =>
-            this._interactionSettingsRenderer?.({
+            renderInteractionSettings({
               choosingOptionalInteraction: this._choosingOptionalInteraction,
               config: this._config,
               hass: this._interactionActionHass(),
@@ -553,37 +549,8 @@ export class CardEditor extends LitElement {
         : this._openSection;
     if (next === this._openSection) return;
     this._openSection = next;
-    if (next === "interactions") this._loadInteractionSettings();
-    if (next === "stage-management") this._loadStageManagement();
     this.requestUpdate();
   };
-
-  private _loadInteractionSettings(): void {
-    if (this._interactionSettingsRenderer || this._interactionSettingsLoad)
-      return;
-    this._interactionSettingsLoad = import("./interaction-settings-section")
-      .then(({ renderInteractionSettings }) => {
-        this._interactionSettingsRenderer = renderInteractionSettings;
-        if (this._openSection === "interactions") this.requestUpdate();
-      })
-      .catch((error: unknown) => {
-        this._interactionSettingsLoad = undefined;
-        console.error("Failed to load Interaction settings", error);
-      });
-  }
-
-  private _loadStageManagement(): void {
-    if (this._stageManagementRenderer || this._stageManagementLoad) return;
-    this._stageManagementLoad = import("./stage-management-section")
-      .then(({ renderStageManagement }) => {
-        this._stageManagementRenderer = renderStageManagement;
-        if (this._openSection === "stage-management") this.requestUpdate();
-      })
-      .catch((error: unknown) => {
-        this._stageManagementLoad = undefined;
-        console.error("Failed to load Stage Management settings", error);
-      });
-  }
 
   private _interactionActionHass(): HomeAssistant | undefined {
     const source = this._hass;

@@ -994,7 +994,7 @@ export class ActivityList extends LitElement {
     for (const [index, item] of this.items.entries()) {
       const date = new Date(item.startTime * 1000);
       const dateKey = homeAssistantDateKey(item.startTime, this.locale);
-      const current = groups[groups.length - 1];
+      const current = groups.at(-1);
       if (current?.dateKey === dateKey) {
         current.items.push(item);
         continue;

@@ -19,12 +19,6 @@ const hlsAdapter = manifest["src/providers/home-assistant/live/hls.ts"];
 if (!entry?.isEntry || entry.file !== "camera-optics.js") {
   throw new Error("Vite manifest is missing the stable CameraOptics entry");
 }
-const firstEntryImport = manifest[entry.imports?.[0]];
-if (!firstEntryImport?.file?.includes("/browser-compatibility-")) {
-  throw new Error(
-    "CameraOptics browser compatibility must execute before the application graph",
-  );
-}
 for (const [name, asset] of Object.entries({
   editor,
   cameraCapability,
@@ -46,11 +40,6 @@ for (const asset of Object.values(manifest)) {
     if (/\bprocess(?:\.|\[)/u.test(source)) {
       throw new Error(
         `Browser bundle contains an unresolved Node process global: ${asset.file}`,
-      );
-    }
-    if (/\bstatic\s*\{/u.test(source)) {
-      throw new Error(
-        `Browser bundle contains a class static block outside the supported legacy browser baseline: ${asset.file}`,
       );
     }
   }
