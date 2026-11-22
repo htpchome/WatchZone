@@ -7,13 +7,13 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD: `cd96f87`.
-- Application version: `0.0.5-dev.23` (uncommitted compatibility fix).
+- HEAD: `f967478`.
+- Application version: `0.0.5-dev.24` (uncommitted compatibility fix).
 - Home Assistant config-entry schema: **2**.
-- The working tree contains only the Android/WebView compatibility fix described
-  below; no live-session lifecycle code changed.
-- The fresh release packages successfully at 886,726 bytes with a 58,712-byte
-  eager graph and a 19,531-byte lazy editor entry.
+- The working tree contains the follow-up Android/WebView runtime compatibility
+  fix described below; no live-session lifecycle policy changed.
+- The fresh `dev.24` release package is 886,653 bytes with a 58,710-byte eager
+  graph and a 19,532-byte lazy editor entry.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
 
@@ -25,7 +25,7 @@ The repository had not declared a browser build target, so Vite 8 silently used
 its Chrome 111 default and emitted class static blocks that WebView 86 cannot
 parse.
 
-The uncommitted `dev.23` fix:
+The published `dev.23` fix:
 
 - Pins the production build to Home Assistant's legacy frontend floors:
   Chromium/Android WebView 67, Edge 79, Firefox 98, and Safari/iOS 15.4.
@@ -35,13 +35,39 @@ The uncommitted `dev.23` fix:
   Interaction editor sections to keep the compatibility build within existing
   eager and editor budgets; their behavior remains covered by tests.
 - Updates the platform contract and synchronized release metadata.
-- Passes formatting, lint, type checking, all 562 unit tests, a fresh production
+- Passed formatting, lint, type checking, all 562 unit tests, a fresh production
   build, build validation, version validation, release packaging, and all 180
   Playwright tests across Chromium, Firefox, and WebKit.
 
-The physical Android WebView 86 client still needs to verify the packaged
-release after publication; automated current-engine tests cannot replace that
-device result.
+Physical Android testing then proved that registration and Events loaded, but
+Live failed and recorded-media opening was unreliable. Running the production
+bundle in archived Chromium 86 reproduced an unhandled `e.at is not a function`
+error. The build target had corrected syntax but could not polyfill the three
+application calls to `Array.prototype.at()`, an API introduced after WebView 86.
+
+The uncommitted `dev.24` follow-up replaces all three application calls with
+baseline-compatible indexing in live-session retention selection, activity
+pagination, and activity grouping. Its browser regression removes
+`Array.prototype.at` before loading the card, then exercises camera setup and
+recorded-media drawer opening. Physical WebView 86 must still verify the final
+packaged release; current-engine emulation and archived Chromium are strong
+compatibility evidence but do not replace that device result.
+
+Validation passes formatting, lint, type checking, all 562 unit tests, a fresh
+production build, build and version validation, release packaging, and all 183
+Playwright tests across Chromium, Firefox, and WebKit. The fresh production
+bundle also loads in archived Chromium `86.0.4240.0` with `Array.prototype.at`
+absent: the camera module and recorded-media bottom drawer both render with no
+page error. A separate production-bundle check confirms the recorded-video
+viewer, bottom drawer, open dialog, and video player all construct visibly in
+that engine with no page error.
+
+The supplied Android logcat excerpt contains no frontend JavaScript exception
+or failed CameraOptics asset request. It does show AVC decoders created for
+`640×480` and `1920×1080` media and one decoder released. The surrounding
+BufferQueue and codec-release messages are native media teardown evidence, not
+a demonstrated CameraOptics failure, so they did not justify a speculative
+transport change.
 
 ## Total failure of background live recovery work
 

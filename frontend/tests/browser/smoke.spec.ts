@@ -118,6 +118,84 @@ test("loads the responsive CameraOptics card shell", async ({ page }) => {
   ).toBe("function");
 });
 
+test("loads camera and recorded media without post-WebView-86 Array.at", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Array.prototype, "at", {
+      configurable: true,
+      value: undefined,
+      writable: true,
+    });
+  });
+  await page.route("**/legacy-snapshot.svg", (route) =>
+    route.fulfill({
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120"/>',
+      contentType: "image/svg+xml",
+    }),
+  );
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  await page.locator("camera-optics-card").evaluate((element) => {
+    const card = element as HTMLElement & {
+      hass: unknown;
+      setConfig(config: unknown): void;
+    };
+    card.setConfig({
+      camera_entity: "camera.front",
+      recorded_media_player_type: "bottom_drawer",
+      stage_type: "camera_only",
+      type: "custom:camera-optics-card",
+    });
+    card.hass = {
+      config: { components: ["camera_optics", "frontend", "lovelace"] },
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          state: "idle",
+          attributes: { friendly_name: "Front Door" },
+        },
+      },
+      connection: {
+        connected: true,
+        subscribeMessage: async () => () => undefined,
+      },
+      callService: async () => undefined,
+      callWS: async () => {
+        throw new Error("Camera request failed");
+      },
+      hassUrl: (path: string) => path,
+    };
+  });
+
+  await expect(page.locator("camera-optics-card wzc-camera")).toHaveCount(1);
+  await page.locator("camera-optics-card").evaluate((element) => {
+    element.dispatchEvent(
+      new CustomEvent("wzc-recorded-media-open", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          id: "event:legacy-webview",
+          kind: "snapshot",
+          presentation: "event",
+          preferredTransport: "file",
+          sources: [
+            {
+              content_type: "image/svg+xml",
+              transport: "file",
+              url: "/legacy-snapshot.svg",
+            },
+          ],
+          title: "Legacy WebView event",
+        },
+      }),
+    );
+  });
+  await expect(
+    page.locator("wzc-recorded-media-bottom-drawer dialog"),
+  ).toBeVisible();
+});
+
 test("does not infer missing setup from a transient components list", async ({
   page,
 }) => {
