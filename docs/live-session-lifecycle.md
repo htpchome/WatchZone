@@ -386,9 +386,10 @@ Visibility changes affect presentation and forced mute, not user preference.
 - On desktop and tablet clients, a hidden document keeps actively leased MSE,
   HLS.js, and native-HLS transports unchanged for two minutes. At two minutes
   the manager completely tears down those transports, their players, buffers,
-  and media sources without reconnecting in the background. Returning starts a
-  fresh foreground connection immediately and never presents the expired
-  player. Frigate MSE may discard media payload delivered while the
+  media sources, managed sessions, and presentation leases without reconnecting
+  in the background. Returning acquires a new session through the ordinary
+  foreground startup path and never presents or reconnects inside the expired
+  session. Frigate MSE may discard media payload delivered while the
   hidden browser prevents SourceBuffer progress, but it retains the same
   WebSocket and SourceBuffer identity inside the window and accepts fresh
   payload immediately when visible.

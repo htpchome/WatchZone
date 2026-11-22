@@ -540,6 +540,14 @@ export class CameraLiveSessionController implements ReactiveController {
   private _adoptFallbackLease(lease: MediaSessionLease): void {
     this._fallbackLease = lease;
     this._fallbackUnsubscribe = lease.subscribe((snapshot) => {
+      if (snapshot.state === "closed") {
+        this._fallbackUnsubscribe?.();
+        this._fallbackUnsubscribe = undefined;
+        this._fallbackLease = undefined;
+        this._fallbackSnapshot = { state: "new" };
+        queueMicrotask(() => this._sync());
+        return;
+      }
       this._fallbackSnapshot = snapshot;
       this._revision += 1;
       if (snapshot.state === "live") {

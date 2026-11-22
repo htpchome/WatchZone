@@ -127,6 +127,7 @@ class ManagedMediaSession {
   private _leaseCount = 0;
   private _options: MediaConnectionOptions = { initialMuted: true };
   private _documentHidden = false;
+  private _expiredWhileHidden = false;
   private _hiddenUntil = 0;
   private _hiddenTeardownTimer?: ReturnType<typeof setTimeout>;
   private _resumeOnVisible = false;
@@ -334,6 +335,11 @@ class ManagedMediaSession {
     this._hiddenUntil = 0;
     this._clearHiddenTeardown();
     this._documentHidden = false;
+    if (this._expiredWhileHidden) {
+      this._expiredWhileHidden = false;
+      this.close();
+      return;
+    }
     if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
     if (this._resumeOnVisible && this._connection) {
       this._resumeOnVisible = false;
@@ -361,7 +367,7 @@ class ManagedMediaSession {
     if (this._snapshot.state !== "failed") return;
     if (this._retryTimer || !this._canRetry()) return;
     this._retryCause ??= "media";
-    void this.retryFailed();
+    this._queueRetry(this);
   }
 
   private async _connect(connectionOptions = this._options): Promise<void> {
@@ -604,6 +610,7 @@ class ManagedMediaSession {
       this._snapshot.transport === "webrtc"
     )
       return;
+    this._expiredWhileHidden = true;
     this._resetRetry("media");
     this._closeConnection();
     this._setSnapshot({ state: "failed" });

@@ -952,6 +952,48 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() => expect(hlsVideo.muted).toBe(false));
   });
 
+  it("reacquires HLS through a new session after the hidden session expires", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("visible");
+    const videos: HTMLVideoElement[] = [];
+    const closes: Array<ReturnType<typeof vi.fn>> = [];
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => {
+      const video = document.createElement("video");
+      const close = vi.fn(() => video.remove());
+      videos.push(video);
+      closes.push(close);
+      return { video, transport: "hls_mse", close };
+    });
+    installTestMediaSessionManager(
+      new MediaSessionManager(
+        vi.fn<ConnectionFactory>(async () => ({ close: vi.fn() })),
+        hlsFactory,
+        { clientDeviceClass: "desktop" },
+      ),
+    );
+    const view = createLiveView(createApi());
+    document.body.append(view);
+    await vi.waitFor(() =>
+      expect(presentation(view)?.fallbackVideo).toBe(videos[0]),
+    );
+    vi.useFakeTimers();
+
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(closes[0]).toHaveBeenCalledOnce();
+
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(hlsFactory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(presentation(view)?.fallbackVideo).toBe(videos[1]),
+    );
+    expect(videos[0].isConnected).toBe(false);
+  });
+
   it("temporarily mutes live video for recorded playback and restores intent", async () => {
     const { api, hlsVideo } = installHlsSession();
     const view = createLiveView(api);
