@@ -4,8 +4,8 @@ import { responsiveWidths } from "../styles/responsive-widths";
 
 export const heightModeInfoStyles = css`
   details {
-    margin-block: 0.75rem;
-    padding: 0.65rem 0.75rem;
+    margin-block: 0.6rem;
+    padding: 0.55rem 0.65rem;
     color: var(--wzc-color-text-2);
     background: var(--wzc-color-fill-primary);
     border-radius: var(--wzc-radius-small);
@@ -49,7 +49,7 @@ export const heightModeSelectorStyles = css`
   }
 
   .height-mode-setting + .height-mode-setting {
-    margin-block-start: 0.75rem;
+    margin-block-start: 0.6rem;
   }
 
   .height-mode-label {
@@ -60,8 +60,8 @@ export const heightModeSelectorStyles = css`
 
   .appearance-grid {
     display: grid;
-    margin-block-start: 0.75rem;
-    border-block-start: 1px solid var(--wzc-color-border);
+    margin-block-start: 0.6rem;
+    border-block-start: 1px solid var(--wzc-accordion-border-color);
   }
 
   .appearance-header,
@@ -69,10 +69,11 @@ export const heightModeSelectorStyles = css`
     display: grid;
     grid-template-columns: minmax(0, 1fr) 10rem 6rem;
     align-items: center;
+    box-sizing: border-box;
   }
 
   .appearance-header {
-    min-block-size: 2.25rem;
+    min-block-size: 2rem;
     color: var(--wzc-color-text-2);
     text-align: center;
   }
@@ -129,8 +130,8 @@ export const heightModeSelectorStyles = css`
   }
 
   .appearance-row {
-    min-block-size: 3.4rem;
-    border-block-start: 1px solid var(--wzc-color-border);
+    min-block-size: 3rem;
+    border-block-start: 1px solid var(--wzc-accordion-border-color);
   }
 
   .appearance-label {

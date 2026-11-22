@@ -11872,7 +11872,18 @@ test("editor uses exclusive accordions and shared draft status", async ({
     'wzc-accordion-item[item-key="live-media-player"]',
   );
   const reviews = editor.locator('wzc-accordion-item[item-key="reviews"]');
+  const layout = editor.locator('wzc-accordion-item[item-key="layout"]');
   await expect(items).toHaveCount(8);
+  await expect(items.locator(".heading")).toHaveText([
+    "Camera Settings",
+    "General Settings",
+    "Stage Management",
+    "Mobile and Touch",
+    "Live Media Player",
+    "Recorded Media Player",
+    "Reviews",
+    "Layout Settings",
+  ]);
   await expect(items.locator("details[open]")).toHaveCount(0);
   await expect(
     items.locator("ha-selector, ha-input, wzc-segmented-control"),
@@ -11907,6 +11918,9 @@ test("editor uses exclusive accordions and shared draft status", async ({
     1,
   );
   await expect(reviewRows.nth(1)).toHaveCSS("border-top-style", "solid");
+  const reviewDividerColor = await reviewRows
+    .nth(1)
+    .evaluate((element) => getComputedStyle(element).borderTopColor);
   const thumbnailOutline = reviews.locator(
     '[data-setting="alert-detection-thumbnail-outline"]',
   );
@@ -11931,6 +11945,20 @@ test("editor uses exclusive accordions and shared draft status", async ({
       ) => element.selector?.number,
     ),
   ).toMatchObject({ mode: "slider", slider_ticks: true });
+  await layout.locator("summary").click();
+  const appearanceRow = layout.locator(
+    "wzc-editor-height-selector .appearance-row",
+  );
+  await expect(appearanceRow).toHaveCount(10);
+  await expect(appearanceRow.first()).toHaveCSS(
+    "border-top-color",
+    reviewDividerColor,
+  );
+  expect(
+    await appearanceRow
+      .first()
+      .evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeLessThanOrEqual(48);
   await liveMedia.locator("summary").click();
   const selectionBars = liveMedia.locator("wzc-segmented-control");
   await expect(selectionBars).toHaveCount(5);
@@ -11973,6 +12001,24 @@ test("editor uses exclusive accordions and shared draft status", async ({
   );
   await expect(status).toContainText("No pending changes.");
   await expect(status).toHaveCSS("backdrop-filter", "none");
+  const statusRegion = editor.locator("wzc-toast-region.editor-status");
+  await expect(statusRegion).toHaveCSS("position", "sticky");
+  await expect(statusRegion).toHaveCSS("top", "0px");
+  const stickyPosition = await editor.evaluate((element) => {
+    const scroller = document.createElement("div");
+    scroller.id = "editor-scroll-fixture";
+    scroller.style.cssText = "height: 240px; overflow: auto";
+    element.before(scroller);
+    scroller.append(element);
+    scroller.scrollTop = 160;
+    const status = element.shadowRoot?.querySelector(".editor-status");
+    if (!status) throw new Error("Editor status was not rendered");
+    return {
+      scrollerTop: scroller.getBoundingClientRect().top,
+      statusTop: status.getBoundingClientRect().top,
+    };
+  });
+  expect(stickyPosition.statusTop).toBeCloseTo(stickyPosition.scrollerTop, 1);
   const general = editor.locator('wzc-accordion-item[item-key="general"]');
   await general.locator("summary").click();
   await expect(general.locator("ha-input")).toHaveCount(1);
@@ -12779,9 +12825,29 @@ test("camera editor configures and sanitizes an additional-camera group", async 
   ).toContainText("A: Porch · B: Street View");
   const secondaryTile = editor.locator(".secondary-camera-tile");
   await expect(secondaryTile).toHaveCount(1);
+  await expect(editor.locator(".secondary-camera-heading")).toHaveText(
+    "Additional Cameras",
+  );
   await expect(secondaryTile.locator(".secondary-camera-copy")).toHaveText(
     "Street View · Grouped with Entry Pair",
   );
+  const mainTile = editor.locator("wzc-sortable-tile .tile").first();
+  expect(
+    await secondaryTile.evaluate(
+      (element) => getComputedStyle(element).borderTopColor,
+    ),
+  ).toBe(
+    await mainTile.evaluate(
+      (element) => getComputedStyle(element).borderTopColor,
+    ),
+  );
+  const [mainTileBox, secondaryTileBox] = await Promise.all([
+    mainTile.boundingBox(),
+    secondaryTile.boundingBox(),
+  ]);
+  expect(mainTileBox).not.toBeNull();
+  expect(secondaryTileBox).not.toBeNull();
+  expect(secondaryTileBox?.x).toBeGreaterThan(mainTileBox?.x ?? 0);
   await expect(editor.locator(".camera-list-heading")).toContainText(
     "3 of 12 configured",
   );

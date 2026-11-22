@@ -168,6 +168,7 @@
   "editor.mse": "MSE (default)",
   "editor.hls_testing": "HLS (testing)",
   "editor.additional_camera": "Additional Camera",
+  "editor.additional_cameras": "Additional Cameras",
   "editor.second_camera": "Second Camera",
   "editor.live_view_layout": "Live View Layout",
   "editor.side_by_side": "Side by Side",

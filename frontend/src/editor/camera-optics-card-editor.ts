@@ -373,6 +373,19 @@ export class CardEditor extends LitElement {
           )}
         </${accordionItemTag}>
         <${accordionItemTag}
+          heading=${this._t("editor.general_settings")}
+          item-key="general"
+          .icon=${"settings"}
+        >
+          ${this._renderSection("general", () =>
+            renderGeneralSettings({
+              ...commonSettings,
+              onTitleChange: this._handleTitleChange,
+              onTitleInput: this._handleTitleInput,
+            }),
+          )}
+        </${accordionItemTag}>
+        <${accordionItemTag}
           heading=${this._t("editor.stage_management")}
           item-key="stage-management"
           .icon=${"layout"}
@@ -497,19 +510,6 @@ export class CardEditor extends LitElement {
           )}
         </${accordionItemTag}>`
         }
-        <${accordionItemTag}
-          heading=${this._t("editor.general_settings")}
-          item-key="general"
-          .icon=${"settings"}
-        >
-          ${this._renderSection("general", () =>
-            renderGeneralSettings({
-              ...commonSettings,
-              onTitleChange: this._handleTitleChange,
-              onTitleInput: this._handleTitleInput,
-            }),
-          )}
-        </${accordionItemTag}>
         ${
           minimal
             ? null

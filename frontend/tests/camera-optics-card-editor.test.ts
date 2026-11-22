@@ -182,12 +182,12 @@ describe("camera-optics-card-editor", () => {
     ];
     expect(items.map((item) => item.heading)).toEqual([
       "Camera Settings",
+      "General Settings",
       "Stage Management",
       "Mobile and Touch",
       "Live Media Player",
       "Recorded Media Player",
       "Reviews",
-      "General Settings",
       "Layout Settings",
     ]);
     expect(items.find((item) => item.itemKey === "layout")?.icon).toBe(
@@ -391,11 +391,11 @@ describe("camera-optics-card-editor", () => {
       ].map((item) => item.getAttribute("item-key")),
     ).toEqual([
       "camera",
+      "general",
       "stage-management",
       "minimal-camera-configuration",
       "mobile-and-touch",
       "interactions",
-      "general",
     ]);
     const cameraSettings = await openEditorSection(editor, "camera");
     expect(cameraSettings.textContent).toContain(

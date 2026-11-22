@@ -29,7 +29,11 @@ export const cardEditorStyles = css`
   }
 
   .editor-status {
+    position: sticky;
+    z-index: 5;
+    inset-block-start: 0;
     margin-block-end: 0.75rem;
+    padding-block-start: 0.25rem;
   }
 
   .section-title {
@@ -49,7 +53,7 @@ export const cardEditorStyles = css`
   }
 
   .review-settings-list > * {
-    padding-block: 0.5rem;
+    padding-block: 0.4rem;
   }
 
   .review-settings-list > * + * {
@@ -279,22 +283,37 @@ export const cardEditorStyles = css`
     white-space: nowrap;
   }
 
+  .secondary-camera-section {
+    display: grid;
+    gap: 0.4rem;
+    margin-block-start: 0.5rem;
+    margin-inline-start: 0.75rem;
+  }
+
+  .secondary-camera-heading {
+    color: var(--wzc-color-text-1);
+    font-size: var(--wzc-font-size-small);
+    line-height: var(--wzc-line-height-condensed);
+  }
+
   .secondary-camera-list {
     display: grid;
-    gap: 0.35rem;
-    margin-block-start: 0.5rem;
+    gap: var(--wzc-sortable-gap);
   }
 
   .secondary-camera-tile {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    min-block-size: 2.25rem;
-    padding: 0.2rem 0.35rem 0.2rem 0.65rem;
-    background: var(--wzc-color-surface-secondary);
-    border: 1px solid var(--wzc-color-border-subtle);
-    border-inline-start: 3px solid var(--wzc-color-primary);
-    border-radius: var(--wzc-radius-medium);
+    box-sizing: border-box;
+    min-block-size: 2.75rem;
+    padding: 0.25rem 0.35rem 0.25rem 0.65rem;
+    color: var(--wzc-sortable-color);
+    background: var(--wzc-sortable-background);
+    border: 1px solid var(--wzc-sortable-border-color);
+    border-inline-start: 0.25rem solid var(--wzc-sortable-accent-color);
+    border-radius: var(--wzc-sortable-radius);
+    box-shadow: var(--wzc-sortable-shadow);
   }
 
   .secondary-camera-copy {
