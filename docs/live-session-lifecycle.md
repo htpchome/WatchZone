@@ -384,11 +384,12 @@ Visibility changes affect presentation and forced mute, not user preference.
 
 - A hidden or parked session is forced muted immediately.
 - On desktop and tablet clients, a hidden document keeps actively leased MSE,
-  HLS.js, and native-HLS transports for two minutes without invoking adapter
-  parking. Returning inside that window reuses the same transport immediately.
-  At two minutes the manager tears those transports down once and does not
-  reconnect them in the background; returning starts their replacement
-  immediately. Frigate MSE may discard media payload delivered while the
+  HLS.js, and native-HLS transports unchanged for two minutes. At two minutes,
+  MSE and native HLS are torn down once without a background reconnect. HLS.js
+  instead stops network loading while retaining its player, source identity,
+  and media pipeline. Returning resumes that same HLS.js player at its live
+  edge and validates that fresh media advances; only failed validation replaces
+  it. Frigate MSE may discard media payload delivered while the
   hidden browser prevents SourceBuffer progress, but it retains the same
   WebSocket and SourceBuffer identity inside the window and accepts fresh
   payload immediately when visible.
@@ -399,9 +400,9 @@ Visibility changes affect presentation and forced mute, not user preference.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.
-- Only an unleased session may park decoder or loading work on desktop and
-  tablet clients. Document visibility alone is not permission to park an
-  actively leased session.
+- Only an unleased session enters the `parked` session state. A hidden,
+  actively leased HLS.js session remains `live` when its adapter suspends media
+  loading after the active two-minute retention window.
 - `document.visibilityState`, route state, module visibility, and intersection
   state are inputs to centralized policy, not independent competing handlers.
 - Returning to visibility removes only the forced reasons that no longer

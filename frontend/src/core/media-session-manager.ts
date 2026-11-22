@@ -588,7 +588,6 @@ class ManagedMediaSession {
       !this._documentHidden ||
       this._leaseCount === 0 ||
       !this._connection ||
-      !this._snapshot.transport ||
       this._snapshot.transport === "webrtc"
     )
       return;
@@ -602,10 +601,14 @@ class ManagedMediaSession {
       !this._documentHidden ||
       this._leaseCount === 0 ||
       !this._connection ||
-      !this._snapshot.transport ||
       this._snapshot.transport === "webrtc"
     )
       return;
+    if (this._snapshot.transport === "hls_mse") {
+      this._connection.park?.();
+      this._resumeOnVisible = true;
+      return;
+    }
     this._resetRetry("media");
     this._closeConnection();
     this._setSnapshot({ state: "failed" });

@@ -12,6 +12,8 @@ const hlsMock = vi.hoisted(() => ({
   isSupported: vi.fn(),
   loadSource: vi.fn(),
   on: vi.fn(),
+  startLoad: vi.fn(),
+  stopLoad: vi.fn(),
 }));
 
 vi.mock("hls.js/dist/hls.light.mjs", () => ({
@@ -29,6 +31,8 @@ vi.mock("hls.js/dist/hls.light.mjs", () => ({
     public readonly destroy = hlsMock.destroy;
     public readonly loadSource = hlsMock.loadSource;
     public readonly on = hlsMock.on;
+    public readonly startLoad = hlsMock.startLoad;
+    public readonly stopLoad = hlsMock.stopLoad;
   },
 }));
 
@@ -328,6 +332,14 @@ describe("Home Assistant HLS connection", () => {
       hls_manifest_loaded: expect.any(Number),
       hls_mse_path_selected: expect.any(Number),
     });
+
+    connection.park?.();
+    expect(hlsMock.stopLoad).toHaveBeenCalledOnce();
+    const resumed = connection.resume?.();
+    video.currentTime = 1;
+    video.dispatchEvent(new Event("timeupdate"));
+    await resumed;
+    expect(hlsMock.startLoad).toHaveBeenCalledWith(-1);
 
     connection.close();
     expect(hlsMock.destroy).toHaveBeenCalledOnce();
