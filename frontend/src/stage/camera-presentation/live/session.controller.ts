@@ -35,12 +35,14 @@ export class CameraLiveSessionController implements ReactiveController {
   private _disconnectGeneration = 0;
   private _entityId?: string;
   private _frigateSource?: FrigateGo2RtcLiveSourceDescriptor;
+  private _frigateSourceFailed = false;
   private _frigateSourcePending = false;
   private _frigateFallback: FrigateFallbackTransport = "mse";
   private _frigateStream?: string;
   private _foregroundWebRtcFrameRequest?: number;
   private _hiddenAt?: number;
   private _sourceGeneration = 0;
+  private _fallbackAcquisitionGeneration = 0;
   private _fallbackLease?: MediaSessionLease;
   private _fallbackPendingKey?: string;
   private _fallbackSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -51,6 +53,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _selected?: PresentedSource;
   private _transport?: MediaTransport;
   private _webRtcDecoded = false;
+  private _webRtcAcquisitionGeneration = 0;
   private _webRtcLease?: MediaSessionLease;
   private _webRtcPendingKey?: string;
   private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -162,6 +165,7 @@ export class CameraLiveSessionController implements ReactiveController {
     discardSessionsOnRelease = false,
     frigateStream?: string,
   ): void {
+    const becameAvailable = !this._available && available;
     const providerChanged = this._connection !== connection;
     const frigateFallbackChanged =
       this._connection === "frigate_go2rtc" &&
@@ -191,6 +195,9 @@ export class CameraLiveSessionController implements ReactiveController {
           ? this._resolver.cachedFrigate(api, entityId, frigateStream)
           : undefined;
       this._frigateSourcePending = false;
+      this._frigateSourceFailed = false;
+    } else if (becameAvailable) {
+      this._frigateSourceFailed = false;
     }
     if (changed || !available) {
       if (
@@ -210,6 +217,7 @@ export class CameraLiveSessionController implements ReactiveController {
   public handleWebRtcDecoded(video: HTMLVideoElement): void {
     if (
       this._webRtcDecoded ||
+      this._webRtcSnapshot.state !== "live" ||
       !this._webRtcSnapshot.stream ||
       this._webRtcSnapshot.video !== video
     )
@@ -300,7 +308,11 @@ export class CameraLiveSessionController implements ReactiveController {
         this._frigateStream,
       );
     }
-    if (this._connection === "frigate_go2rtc" && !this._frigateSource) {
+    if (
+      this._connection === "frigate_go2rtc" &&
+      !this._frigateSource &&
+      !this._frigateSourceFailed
+    ) {
       if (!this._frigateSourcePending) {
         this._frigateSourcePending = true;
         void this._resolveFrigateSource(
@@ -341,7 +353,13 @@ export class CameraLiveSessionController implements ReactiveController {
         this._adoptWebRtcLease(usableLease, true);
       } else {
         this._webRtcPendingKey = webRtcKey;
-        void this._acquireWebRtc(this._api, this._entityId, webRtcKey);
+        const generation = ++this._webRtcAcquisitionGeneration;
+        void this._acquireWebRtc(
+          this._api,
+          this._entityId,
+          webRtcKey,
+          generation,
+        );
       }
     }
     this._syncFallback();
@@ -361,6 +379,7 @@ export class CameraLiveSessionController implements ReactiveController {
       );
       if (generation !== this._sourceGeneration) return;
       this._frigateSourcePending = false;
+      this._frigateSourceFailed = false;
       if (
         !this._connected ||
         this._api?.identity !== api.identity ||
@@ -374,6 +393,7 @@ export class CameraLiveSessionController implements ReactiveController {
     } catch (error) {
       if (generation !== this._sourceGeneration) return;
       this._frigateSourcePending = false;
+      this._frigateSourceFailed = true;
       const message =
         error instanceof Error
           ? error.message
@@ -389,6 +409,7 @@ export class CameraLiveSessionController implements ReactiveController {
     api: HomeAssistantApi,
     entityId: string,
     expectedKey: string,
+    generation: number,
   ): Promise<void> {
     try {
       const lease =
@@ -401,6 +422,7 @@ export class CameraLiveSessionController implements ReactiveController {
           : await this._resolver.acquireHomeAssistantWebRtc(api, entityId);
       if (
         !this._connected ||
+        generation !== this._webRtcAcquisitionGeneration ||
         this._api?.identity !== api.identity ||
         this._entityId !== entityId ||
         lease.key !== expectedKey
@@ -414,13 +436,23 @@ export class CameraLiveSessionController implements ReactiveController {
       }
       this._adoptWebRtcLease(lease, false);
     } catch (error) {
+      if (
+        generation !== this._webRtcAcquisitionGeneration ||
+        !this._connected ||
+        this._api?.identity !== api.identity ||
+        this._entityId !== entityId
+      )
+        return;
       this._webRtcSnapshot = {
         state: "failed",
         error: error instanceof Error ? error.message : "Unable to load WebRTC",
       };
       this._host.requestUpdate();
     } finally {
-      if (this._webRtcPendingKey === expectedKey) {
+      if (
+        generation === this._webRtcAcquisitionGeneration &&
+        this._webRtcPendingKey === expectedKey
+      ) {
         this._webRtcPendingKey = undefined;
       }
     }
@@ -436,6 +468,15 @@ export class CameraLiveSessionController implements ReactiveController {
       this._revision += 1;
       if (snapshot.state === "connecting" || snapshot.state === "failed") {
         this._webRtcDecoded = false;
+      }
+      if (
+        snapshot.state === "live" &&
+        snapshot.usable === true &&
+        snapshot.video &&
+        !this._webRtcDecoded
+      ) {
+        this._webRtcDecoded = true;
+        this._select("webrtc", snapshot.transport, snapshot.video);
       }
       if (snapshot.state === "failed" && this._selected === "webrtc") {
         this._clearSelection();
@@ -512,12 +553,14 @@ export class CameraLiveSessionController implements ReactiveController {
       }
     }
     this._fallbackPendingKey = key;
+    const generation = ++this._fallbackAcquisitionGeneration;
     void this._acquireFallback(
       this._api,
       this._entityId,
       key,
       options,
       frigateFallback,
+      generation,
     );
   }
 
@@ -527,6 +570,7 @@ export class CameraLiveSessionController implements ReactiveController {
     expectedKey: string,
     options: MediaConnectionOptions,
     frigateFallback: FrigateFallbackTransport,
+    generation: number,
   ): Promise<void> {
     try {
       const lease =
@@ -555,6 +599,7 @@ export class CameraLiveSessionController implements ReactiveController {
             );
       if (
         !this._connected ||
+        generation !== this._fallbackAcquisitionGeneration ||
         this._api?.identity !== api.identity ||
         this._entityId !== entityId ||
         (this._connection === "frigate_go2rtc"
@@ -582,6 +627,13 @@ export class CameraLiveSessionController implements ReactiveController {
       }
       this._adoptFallbackLease(lease);
     } catch (error) {
+      if (
+        generation !== this._fallbackAcquisitionGeneration ||
+        !this._connected ||
+        this._api?.identity !== api.identity ||
+        this._entityId !== entityId
+      )
+        return;
       this._fallbackSnapshot = {
         state: "failed",
         error:
@@ -589,7 +641,10 @@ export class CameraLiveSessionController implements ReactiveController {
       };
       this._host.requestUpdate();
     } finally {
-      if (this._fallbackPendingKey === expectedKey) {
+      if (
+        generation === this._fallbackAcquisitionGeneration &&
+        this._fallbackPendingKey === expectedKey
+      ) {
         this._fallbackPendingKey = undefined;
       }
     }
@@ -657,6 +712,7 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   private _releaseWebRtc(discard = false): void {
+    this._webRtcAcquisitionGeneration += 1;
     this._cancelForegroundWebRtcFrame();
     this._webRtcPendingKey = undefined;
     this._webRtcUnsubscribe?.();
@@ -668,6 +724,7 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   private _releaseFallback(discard = false): void {
+    this._fallbackAcquisitionGeneration += 1;
     this._fallbackPendingKey = undefined;
     this._fallbackSnapshot.video?.remove();
     this._fallbackUnsubscribe?.();

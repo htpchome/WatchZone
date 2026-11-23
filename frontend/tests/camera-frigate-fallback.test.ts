@@ -89,18 +89,16 @@ describe("Frigate fallback selection", () => {
       LiveSourceResolver.prototype,
       "acquireUsableFrigateMse",
     ).mockReturnValue(mseLease);
-    const controller = new CameraLiveSessionController(
-      {
-        addController: vi.fn(),
-        removeController: vi.fn(),
-        requestUpdate: vi.fn(),
-        updateComplete: Promise.resolve(true),
-      },
-      {
-        getInitialMuted: () => true,
-        onActiveVideoChanged: vi.fn(),
-      },
-    );
+    const host = {
+      addController: vi.fn(),
+      removeController: vi.fn(),
+      requestUpdate: vi.fn(),
+      updateComplete: Promise.resolve(true),
+    };
+    const controller = new CameraLiveSessionController(host, {
+      getInitialMuted: () => true,
+      onActiveVideoChanged: vi.fn(),
+    });
 
     controller.hostConnected();
     controller.configure(api, "camera.front", true, "frigate_go2rtc");
@@ -306,6 +304,47 @@ describe("Frigate fallback selection", () => {
       "camera.front",
       "front_sub",
     );
+  });
+
+  it("does not loop Frigate source discovery after a failed attempt", async () => {
+    const api = {
+      identity: {},
+      callWS: vi.fn(),
+      resolveUrl: (path: string) => path,
+      subscribeMessage: vi.fn(),
+    } as unknown as HomeAssistantApi;
+    vi.spyOn(LiveSourceResolver.prototype, "cachedFrigate").mockReturnValue(
+      undefined,
+    );
+    const resolveSource = vi
+      .spyOn(LiveSourceResolver.prototype, "resolveFrigate")
+      .mockRejectedValue(new Error("source unavailable"));
+    vi.spyOn(
+      LiveSourceResolver.prototype,
+      "acquireUsableFrigateWebRtc",
+    ).mockReturnValue(lease("frigate_go2rtc:camera.front:main:webrtc"));
+    const host = {
+      addController: vi.fn(),
+      removeController: vi.fn(),
+      requestUpdate: vi.fn(),
+      updateComplete: Promise.resolve(true),
+    };
+    const controller = new CameraLiveSessionController(host, {
+      getInitialMuted: () => true,
+      onActiveVideoChanged: vi.fn(),
+    });
+
+    controller.hostConnected();
+    controller.configure(api, "camera.front", true, "frigate_go2rtc");
+    await vi.waitFor(() => expect(resolveSource).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(host.requestUpdate).toHaveBeenCalled());
+
+    controller.configure(api, "camera.front", true, "frigate_go2rtc");
+    expect(resolveSource).toHaveBeenCalledOnce();
+
+    controller.configure(api, "camera.front", false, "frigate_go2rtc");
+    controller.configure(api, "camera.front", true, "frigate_go2rtc");
+    await vi.waitFor(() => expect(resolveSource).toHaveBeenCalledTimes(2));
   });
 
   it("acquires HLS without also acquiring MSE", () => {

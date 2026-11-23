@@ -32,13 +32,12 @@ export function sync(
   localize: LocalizeFunction,
 ): void {
   const current = observations.get(owner);
+  const onRecovered = (): void => {
+    getMediaSessionManager().wake("frigate_go2rtc:");
+    notifier.success(localize("frigate.up"), { key: "frigate-online" });
+  };
   if (current && current.api === api && current.entityId === entityId) {
-    current.onRecovered = () => {
-      getMediaSessionManager().wake("frigate_go2rtc:");
-      notifier.success(localize("frigate.up"), {
-        key: "frigate-online",
-      });
-    };
+    current.onRecovered = onRecovered;
     return;
   }
   current?.close();
@@ -48,12 +47,7 @@ export function sync(
     api,
     close: () => undefined,
     entityId,
-    onRecovered: () => {
-      getMediaSessionManager().wake("frigate_go2rtc:");
-      notifier.success(localize("frigate.up"), {
-        key: "frigate-online",
-      });
-    },
+    onRecovered,
   };
   observations.set(owner, observation);
   observation.close = observeLiveAvailability(

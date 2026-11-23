@@ -13560,10 +13560,11 @@ test("restores controls after pre-editor and retains a replaced live connection"
   const initialVideo = page.locator("wzc-camera video.webrtc");
   await initialVideo.evaluate((element) => {
     Object.defineProperties(element, {
+      currentTime: { configurable: true, value: 0.1 },
       videoHeight: { configurable: true, value: 90 },
       videoWidth: { configurable: true, value: 160 },
     });
-    element.dispatchEvent(new Event("loadeddata"));
+    element.dispatchEvent(new Event("timeupdate"));
   });
   await expect(page.locator("wzc-camera .source-indicator")).toHaveText(
     "WebRTC",
@@ -13801,7 +13802,7 @@ test("restores controls after pre-editor and retains a replaced live connection"
           }
         ).__wzcTestHlsConnectionCount,
     ),
-  ).toBeLessThanOrEqual(1);
+  ).toBe(2);
   await expect(connectionIndicator).toHaveCount(1);
   const layoutSizing = await page
     .locator("camera-optics-card")
@@ -14085,9 +14086,13 @@ test("restores controls after pre-editor and retains a replaced live connection"
       }),
     )
     .toBe(2);
-  await page
-    .locator("wzc-camera video.webrtc")
-    .evaluate((element) => element.dispatchEvent(new Event("loadeddata")));
+  await page.locator("wzc-camera video.webrtc").evaluate((element) => {
+    Object.defineProperty(element, "currentTime", {
+      configurable: true,
+      value: 0.1,
+    });
+    element.dispatchEvent(new Event("timeupdate"));
+  });
   await expect(connectionIndicator).toHaveText("WebRTC");
   const overlayTransitions = await page.evaluate(() => {
     const camera = document.querySelector("wzc-camera");

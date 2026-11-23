@@ -29,6 +29,7 @@ import {
   togglePictureInPicture,
 } from "../../../core/picture-in-picture";
 import {
+  observeMediaElementAdvance,
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
@@ -95,6 +96,7 @@ export class MinimalCameraModule extends LitElement {
 
   private _activeVideo?: HTMLVideoElement;
   private _attachedWebRtcVideo?: HTMLVideoElement;
+  private _webRtcAdvanceCleanup?: () => void;
   private _holdFired = false;
   private _holdTimer?: ReturnType<typeof setTimeout>;
   private _controlsExpanded = false;
@@ -480,9 +482,6 @@ export class MinimalCameraModule extends LitElement {
     if (this._attachedWebRtcVideo !== webRtc) {
       this._detachWebRtcVideo();
       this._attachedWebRtcVideo = webRtc;
-      for (const event of ["canplay", "loadeddata", "playing"]) {
-        webRtc?.addEventListener(event, this._handleWebRtcDecoded);
-      }
     }
     const webRtcHost = this.renderRoot.querySelector<HTMLElement>(
       this._dialog.openState
@@ -501,24 +500,28 @@ export class MinimalCameraModule extends LitElement {
       refreshNativePictureInPictureSuppression(webRtc);
       void playMediaElement(webRtc).catch(() => undefined);
     }
+    if (webRtc && this._session.webRtcStream && !this._webRtcAdvanceCleanup) {
+      this._webRtcAdvanceCleanup = observeMediaElementAdvance(
+        webRtc,
+        () => {
+          this._webRtcAdvanceCleanup = undefined;
+          if (webRtc === this._session.webRtcVideo) {
+            this._session.handleWebRtcDecoded(webRtc);
+          }
+        },
+        true,
+      );
+    }
     if (this._session.selected === "webrtc") {
       this._session.handleWebRtcPresented();
     }
   }
 
   private _detachWebRtcVideo(): void {
-    for (const event of ["canplay", "loadeddata", "playing"]) {
-      this._attachedWebRtcVideo?.removeEventListener(
-        event,
-        this._handleWebRtcDecoded,
-      );
-    }
+    this._webRtcAdvanceCleanup?.();
+    this._webRtcAdvanceCleanup = undefined;
     this._attachedWebRtcVideo = undefined;
   }
-
-  private readonly _handleWebRtcDecoded = (event: Event): void => {
-    this._session.handleWebRtcDecoded(event.currentTarget as HTMLVideoElement);
-  };
 
   private readonly _handlePointerDown = (event: PointerEvent): void => {
     if (event.button !== 0) return;

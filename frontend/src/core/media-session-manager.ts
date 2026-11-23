@@ -181,9 +181,10 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({ state: "new" });
     } else if (this._snapshot.state === "parked") {
-      if (this._documentHidden) this._resumeOnVisible = true;
-      else this._resumeConnection();
-      this._setSnapshot({ ...this._snapshot, state: "live" });
+      if (this._documentHidden) {
+        this._setSnapshot({ ...this._snapshot, state: "connecting" });
+        this._resumeOnVisible = true;
+      } else this._resumeConnection();
     }
     if (
       api.identity.connected === false &&
@@ -519,6 +520,9 @@ class ManagedMediaSession {
     if (this._snapshot.state === "live") {
       this._connection?.park?.();
       this._setSnapshot({ ...this._snapshot, state: "parked" });
+    } else if (this._snapshot.state === "connecting") {
+      this._connection?.park?.();
+      this._setSnapshot({ ...this._snapshot, state: "parked" });
     }
     this._onRetained();
   }
@@ -534,44 +538,40 @@ class ManagedMediaSession {
 
   private _resumeConnection(): void {
     const connection = this._connection;
-    if (!connection?.resume) return;
+    if (!connection) return;
     const generation = this._generation;
-    let resumed: Promise<void> | void;
-    try {
-      resumed = connection.resume();
-    } catch (error) {
-      this._handleResumeFailure(generation, connection, error);
-      return;
-    }
-    if (!resumed) return;
-    void resumed.catch((error: unknown) =>
-      this._handleResumeFailure(generation, connection, error),
-    );
-  }
-
-  private _handleResumeFailure(
-    generation: number,
-    connection: MediaConnection,
-    error: unknown,
-  ): void {
-    if (
-      generation !== this._generation ||
-      connection !== this._connection ||
-      this._snapshot.state === "closed"
-    )
-      return;
-    this._closeConnection();
+    let proven = this._snapshot.usable === true;
     this._setSnapshot({
-      state: "failed",
-      error: error instanceof Error ? error.message : "Media resume failed",
-      errorCode: "unknown",
-      timing: this._snapshot.timing,
+      ...this._snapshot,
+      state: "connecting",
     });
-    this._retryCause = "media";
-    if (this._leaseCount > 0 && !this._documentHidden) {
-      // A failed foreground validation replaces this transport immediately.
-      // It must not wait behind another candidate for the same presentation.
-      void this._connect();
+    const settle = (error?: unknown): void => {
+      if (generation !== this._generation || connection !== this._connection)
+        return;
+      if (error) {
+        this._closeConnection();
+        this._setSnapshot({ state: "failed" });
+        this._retryCause = "media";
+        if (this._leaseCount > 0 && !this._documentHidden) void this._connect();
+        return;
+      }
+      if (this._leaseCount === 0) connection.park?.();
+      this._setSnapshot({
+        ...this._snapshot,
+        state: this._leaseCount > 0 ? "live" : "parked",
+        usable: proven,
+      });
+    };
+    try {
+      const resumed = connection.resume?.();
+      if (resumed) {
+        void resumed.then(() => {
+          proven = true;
+          settle();
+        }, settle);
+      } else settle();
+    } catch (error) {
+      settle(error);
     }
   }
 

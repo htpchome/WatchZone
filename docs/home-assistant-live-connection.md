@@ -47,10 +47,10 @@ The initial design analysis compared these local source baselines:
 The relevant observation is architectural, not a benchmark claim. Advanced
 Camera Card prepares Home Assistant camera elements early and limits broad card
 updates. Home Assistant's generic camera stream can also perform capability,
-poster, HLS, and WebRTC work. CameraOptics keeps its live UI and concrete adapter
-lazy, but starts a pooled prewarm lease as soon as the configured entity and
-Home Assistant transport are available. Module loading and the eligible live
-connection attempts therefore run in parallel.
+poster, HLS, and WebRTC work. CameraOptics preloads the selected camera poster
+while its live UI and concrete adapters remain lazy. Only the live-session
+controller acquires browser transport leases after the camera element is
+defined; preparation never creates a second live owner.
 
 No startup-time claim is considered verified until measured on the same camera,
 Home Assistant instance, browser, network, and cold/warm cache conditions.

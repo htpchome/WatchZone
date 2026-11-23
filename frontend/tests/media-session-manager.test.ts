@@ -604,6 +604,53 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("keeps a retained player ineligible until resume proves a fresh frame", async () => {
+    let finishResume!: () => void;
+    const resume = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishResume = resolve;
+        }),
+    );
+    const stream = createStream();
+    const video = document.createElement("video");
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      stream,
+      video,
+      close: vi.fn(),
+      park: vi.fn(),
+      resume,
+    }));
+    const manager = new MediaSessionManager(factory);
+    const api = createApi();
+    const initial = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(initial.getSnapshot().state).toBe("live"));
+    initial.markUsable();
+    initial.release();
+
+    const returned = manager.acquireUsable(
+      "home_assistant:webrtc:camera.front",
+      api,
+    );
+    expect(returned?.getSnapshot()).toMatchObject({
+      state: "connecting",
+      usable: true,
+      stream,
+      video,
+    });
+
+    finishResume();
+    await vi.waitFor(() =>
+      expect(returned?.getSnapshot()).toMatchObject({
+        state: "live",
+        usable: true,
+      }),
+    );
+
+    returned?.release();
+    manager.closeAll();
+  });
+
   it("does not treat pagehide as final document teardown", async () => {
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({

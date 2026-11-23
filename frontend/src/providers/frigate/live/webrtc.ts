@@ -14,6 +14,7 @@ import {
   createWebRtcPeerConnection,
   type WebRtcSignalingEvent,
 } from "../../../core/webrtc-peer-connection";
+import { requestWebRtcClientConfiguration } from "../../live/webrtc-client-configuration";
 
 const CONNECT_TIMEOUT_MS = 15_000;
 const DISCONNECTED_GRACE_MS = 5_000;
@@ -39,10 +40,12 @@ export async function createFrigateWebRtcConnection(
   options: MediaConnectionOptions = { initialMuted: true },
   sourceKey?: string,
 ): Promise<MediaConnection> {
-  const client = await api.callWS<{
-    readonly configuration: RTCConfiguration;
-    readonly dataChannel?: string;
-  }>({ type: "camera/webrtc/get_client_config", entity_id: entityId });
+  const client = await requestWebRtcClientConfiguration(
+    api,
+    entityId,
+    signal,
+    CONNECT_TIMEOUT_MS,
+  );
   const connection = await createWebRtcPeerConnection({
     configuration: client.configuration,
     connectTimeoutMs: CONNECT_TIMEOUT_MS,

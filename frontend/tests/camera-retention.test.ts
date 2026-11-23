@@ -720,7 +720,7 @@ describe("camera presentation retention", () => {
       expect(presentation(view)?.webRtcVideo?.srcObject).toBe(stream),
     );
     expect(decodedFrame).toBeDefined();
-    decodedFrame?.(0, {} as VideoFrameCallbackMetadata);
+    decodedFrame?.(0, { mediaTime: 0.1 } as VideoFrameCallbackMetadata);
 
     await vi.waitFor(() =>
       expect(

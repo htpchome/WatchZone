@@ -11,6 +11,7 @@ import {
   TOAST_REGION_TAG,
 } from "../../../core/constants";
 import {
+  observeMediaElementAdvance,
   playMediaElement,
   setMediaElementMuted,
 } from "../../../core/media-playback";
@@ -115,7 +116,7 @@ export class CameraLivePresentation extends LitElement {
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
   private _reportedGestureLocked = false;
-  private _webRtcFrameRequest?: number;
+  private _webRtcAdvanceCleanup?: () => void;
   private readonly _sourceVisibilityMotion = new VisibilityMotion();
   private readonly _spinnerMotion = new OwnedMotion();
   private _spinnerElement?: HTMLElement;
@@ -251,7 +252,7 @@ export class CameraLivePresentation extends LitElement {
     // after the current task, so route changes retain no element-owned work.
     queueMicrotask(() => {
       if (this.isConnected || generation !== this._disconnectGeneration) return;
-      this._cancelWebRtcFrameRequest();
+      this._cancelWebRtcAdvanceObserver();
       this._detachWebRtcVideo();
       this._setActiveVideo(undefined);
     });
@@ -557,18 +558,12 @@ export class CameraLivePresentation extends LitElement {
     );
   }
 
-  private readonly _handleWebRtcDecoded = (event: Event): void => {
-    this._emitWebRtcDecoded(event.currentTarget as HTMLVideoElement);
-  };
-
   private _syncWebRtcVideo(): void {
     const video = this.webRtcMedia;
     if (this._attachedWebRtcVideo !== video) {
       this._detachWebRtcVideo();
       this._attachedWebRtcVideo = video;
-      for (const eventName of ["canplay", "loadeddata", "playing"]) {
-        video?.addEventListener(eventName, this._handleWebRtcDecoded);
-      }
+      video?.addEventListener("loadeddata", this._handleWebRtcMediaReady);
     }
     if (!video) return;
     video.className =
@@ -587,25 +582,37 @@ export class CameraLivePresentation extends LitElement {
     if (host && video.parentElement !== host) {
       host.append(video);
       if (this.webRtcStream) {
-        this._observeWebRtcFrame(video, this.webRtcStream);
         this._emitMediaAttached(video);
       }
+    }
+    if (this.webRtcStream && !this._webRtcAdvanceCleanup) {
+      this._webRtcAdvanceCleanup = observeMediaElementAdvance(
+        video,
+        () => {
+          this._webRtcAdvanceCleanup = undefined;
+          if (
+            video === this.webRtcMedia &&
+            video.srcObject === this.webRtcStream
+          ) {
+            this._emitWebRtcDecoded(video);
+          }
+        },
+        true,
+      );
     }
   }
 
   private _detachWebRtcVideo(): void {
     const video = this._attachedWebRtcVideo;
     if (!video) return;
-    this._cancelWebRtcFrameRequest(video);
-    for (const eventName of ["canplay", "loadeddata", "playing"]) {
-      video.removeEventListener(eventName, this._handleWebRtcDecoded);
-    }
+    this._cancelWebRtcAdvanceObserver();
+    video.removeEventListener("loadeddata", this._handleWebRtcMediaReady);
     video.remove();
     this._attachedWebRtcVideo = undefined;
   }
 
   private _emitWebRtcDecoded(video: HTMLVideoElement): void {
-    this._cancelWebRtcFrameRequest(video);
+    this._cancelWebRtcAdvanceObserver();
     refreshNativePictureInPictureSuppression(video);
     this.dispatchEvent(
       new CustomEvent<HTMLVideoElement>("camera-webrtc-decoded", {
@@ -616,27 +623,15 @@ export class CameraLivePresentation extends LitElement {
     );
   }
 
-  private _observeWebRtcFrame(
-    video: HTMLVideoElement,
-    stream: MediaStream,
-  ): void {
-    if (typeof video.requestVideoFrameCallback !== "function") return;
-    this._webRtcFrameRequest = video.requestVideoFrameCallback(() => {
-      this._webRtcFrameRequest = undefined;
-      if (
-        video === this.webRtcMedia &&
-        video.srcObject === stream &&
-        this.webRtcStream === stream
-      ) {
-        this._emitWebRtcDecoded(video);
-      }
-    });
-  }
+  private readonly _handleWebRtcMediaReady = (event: Event): void => {
+    refreshNativePictureInPictureSuppression(
+      event.currentTarget as HTMLVideoElement,
+    );
+  };
 
-  private _cancelWebRtcFrameRequest(video = this.webRtcVideo): void {
-    if (this._webRtcFrameRequest === undefined || !video) return;
-    video.cancelVideoFrameCallback?.(this._webRtcFrameRequest);
-    this._webRtcFrameRequest = undefined;
+  private _cancelWebRtcAdvanceObserver(): void {
+    this._webRtcAdvanceCleanup?.();
+    this._webRtcAdvanceCleanup = undefined;
   }
 
   private readonly _handleCameraControl = (
@@ -671,7 +666,8 @@ export class CameraLivePresentation extends LitElement {
     setMediaElementMuted(video, this.muted);
     void playMediaElement(video).catch(() => undefined);
     if (this.selected === "webrtc" && this.webRtcStream) {
-      this._observeWebRtcFrame(video, this.webRtcStream);
+      this._cancelWebRtcAdvanceObserver();
+      this._syncWebRtcVideo();
     }
     this._emitMediaAttached(video);
   }
