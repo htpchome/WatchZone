@@ -260,17 +260,29 @@ describe("Frigate fallback selection", () => {
       expect(acquireFrigateHls).not.toHaveBeenCalled();
       expect(acquireFrigateMse).not.toHaveBeenCalled();
 
-      webRtcSession.emit(
-        trigger === "proof"
-          ? {
-              state: "live",
-              stream,
-              transport: "webrtc",
-              usable: false,
-              video: webRtcVideo,
-            }
-          : { state: "connecting" },
-      );
+      if (trigger === "proof") {
+        webRtcSession.emit({
+          state: "live",
+          stream,
+          transport: "webrtc",
+          usable: false,
+          video: webRtcVideo,
+        });
+      } else {
+        Object.defineProperty(document, "visibilityState", {
+          configurable: true,
+          value: "hidden",
+        });
+        webRtcSession.emit({ state: "failed" });
+        expect(acquireHomeAssistantHls).not.toHaveBeenCalled();
+        expect(acquireFrigateHls).not.toHaveBeenCalled();
+        expect(acquireFrigateMse).not.toHaveBeenCalled();
+        Object.defineProperty(document, "visibilityState", {
+          configurable: true,
+          value: "visible",
+        });
+        webRtcSession.emit({ state: "connecting" });
+      }
 
       if (connection === "home_assistant") {
         await vi.waitFor(() =>

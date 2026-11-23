@@ -577,13 +577,7 @@ class ManagedMediaSession {
 
   private _scheduleHiddenTeardown(): void {
     this._clearHiddenTeardown();
-    if (
-      !this._documentHidden ||
-      this._leaseCount === 0 ||
-      !this._connection ||
-      !this._snapshot.transport ||
-      this._snapshot.transport === "webrtc"
-    )
+    if (!this._documentHidden || !this._connection || !this._snapshot.transport)
       return;
     this._hiddenTeardownTimer = setTimeout(() => {
       this._expireHiddenStream();
@@ -593,13 +587,6 @@ class ManagedMediaSession {
   private _expireHiddenStream(): void {
     if (!this._documentHidden || !this._connection || !this._snapshot.transport)
       return;
-    if (this._snapshot.transport === "webrtc") {
-      if (this._snapshot.usable === true) {
-        this._setSnapshot({ ...this._snapshot, usable: false });
-      }
-      return;
-    }
-    if (this._leaseCount === 0) return;
     this._resetRetry("media");
     this._closeConnection();
     this._setSnapshot({ state: "failed" });

@@ -153,7 +153,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("keeps desktop media running unchanged while hidden", async () => {
+  it("keeps desktop WebRTC running inside two hidden minutes", async () => {
     vi.useFakeTimers();
     const close = vi.fn();
     const park = vi.fn();
@@ -176,7 +176,7 @@ describe("MediaSessionManager", () => {
       value: "hidden",
     });
     document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    await vi.advanceTimersByTimeAsync(119_999);
     expect(park).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
 
@@ -193,7 +193,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("revokes retained WebRTC usability after two hidden minutes without closing it", async () => {
+  it("closes unleased retained WebRTC after two hidden minutes and waits for demand", async () => {
     vi.useFakeTimers();
     const close = vi.fn();
     const factory = vi.fn<ConnectionFactory>(async () => ({
@@ -220,21 +220,23 @@ describe("MediaSessionManager", () => {
     lease.release();
     await vi.advanceTimersByTimeAsync(120_000);
 
+    expect(lease.getSnapshot()).toMatchObject({ state: "failed" });
+    expect(close).toHaveBeenCalledOnce();
+
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     });
     document.dispatchEvent(new Event("visibilitychange"));
 
-    expect(lease.getSnapshot()).toMatchObject({
-      state: "parked",
-      transport: "webrtc",
-      usable: false,
-    });
     expect(manager.acquireUsable(key, api)).toBeUndefined();
     expect(factory).toHaveBeenCalledOnce();
-    expect(close).not.toHaveBeenCalled();
 
+    const returned = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
+
+    returned.release();
     manager.closeAll();
   });
 
@@ -360,7 +362,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it.each(["mse", "hls_mse", "hls_native"] as const)(
+  it.each(["webrtc", "mse", "hls_mse", "hls_native"] as const)(
     "retains desktop %s for two hidden minutes, then reconnects on return",
     async (transport) => {
       const closes: Array<ReturnType<typeof vi.fn>> = [];

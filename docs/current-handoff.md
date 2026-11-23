@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `8f6f3d4`
-  (`v0.0.5-dev.31`).
-- Application version: `0.0.5-dev.32`.
+- HEAD before the current uncommitted change: `78d5322`
+  (`v0.0.5-dev.32`).
+- Application version: `0.0.5-dev.33`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -20,7 +20,24 @@ precedence.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
 
-## Current HLS foreground-resume correction
+## Current fresh-load foreground correction
+
+Physical `dev.32` testing showed that the prior presentation-level corrections
+did not restore fresh-load behavior. After more than two hidden minutes, the
+session manager still exempted WebRTC and zero-lease retained sessions from its
+teardown. The old WebRTC session therefore restarted first while its MSE or HLS
+alternative had already been discarded, allowing the WebRTC adapter timeout to
+delay the alternative by about 15 seconds.
+
+`dev.33` removes both teardown exemptions. After two hidden minutes, every
+connected WebRTC, MSE, or HLS transport is closed, including a parked retained
+session, and no replacement starts while the document remains hidden. Returning
+with an active presentation starts WebRTC and the configured MSE or HLS
+alternative concurrently through the ordinary fresh-load path. A session with
+no foreground demand stays closed until it is acquired. Tests cover active and
+unleased WebRTC expiry alongside MSE and HLS expiry.
+
+## Superseded foreground-resume corrections
 
 Physical `dev.31` timings isolated the actual 15-second gate. A Home Assistant
 WebRTC attempt began at `04:13:02.642`; HLS did not begin until

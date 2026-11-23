@@ -73,12 +73,12 @@ For the initial Home Assistant direct source, CameraOptics uses a hedged startup
    decoding the frame required for takeover. When supported, presentation uses
    `requestVideoFrameCallback` to confirm a frame from a replacement stream;
    media readiness events remain the standards-based fallback.
-   After a document remains hidden beyond the active-media retention window, a
-   previously selected retained WebRTC player must prove a new foreground frame.
-   HLS starts concurrently during that proof; it never waits for the retained
-   peer's failure timeout. The document-scoped media-session snapshot carries
-   the invalidated usability proof so card destruction or recreation during the
-   hidden interval cannot restore stale WebRTC presentation authority.
+   After a document remains hidden beyond the active-media retention window,
+   the media-session manager closes both connected candidates, including any
+   retained WebRTC peer. Foreground return is a fresh hedged startup: WebRTC and
+   HLS start concurrently, and HLS never waits for a retained peer's failure
+   timeout. Card destruction or recreation during the hidden interval cannot
+   preserve an expired transport.
    Likewise, a previously selected WebRTC session that returns to `connecting`
    immediately loses presentation authority and starts HLS; HLS does not wait
    for the WebRTC setup attempt to time out or report failure.
@@ -230,7 +230,8 @@ therefore have independent session identities and cleanup while still
 participating in one selection policy, and incompatible HLS modes never share
 a session. Compatible card and editor-preview instances in the same document
 share sessions. Removing a live element releases its lease and detaches
-presentation; it does not close a healthy retained winner.
+presentation; it does not close a healthy retained transport before its
+retention deadline.
 
 WebRTC uses element attachment after the adapter creates its session-owned
 player. The retained stream remains separately exposed for capabilities such

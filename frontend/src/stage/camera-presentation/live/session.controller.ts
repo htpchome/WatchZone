@@ -405,8 +405,8 @@ export class CameraLiveSessionController implements ReactiveController {
         this._webRtcDecoded = false;
         if (this._selected === "webrtc") {
           this._clearSelection();
-          this._syncFallback();
         }
+        this._syncFallback();
       }
       if (
         snapshot.state === "live" &&
@@ -439,6 +439,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _syncFallback(): void {
     if (
       this._selected === "webrtc" ||
+      document.visibilityState !== "visible" ||
       !this._api ||
       !this._entityId ||
       !this._available ||
