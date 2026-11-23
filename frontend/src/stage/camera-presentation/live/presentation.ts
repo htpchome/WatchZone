@@ -101,6 +101,7 @@ export class CameraLivePresentation extends LitElement {
     posterPriority: { attribute: false, type: Boolean },
     selected: { attribute: false },
     sessionRevision: { attribute: false, type: Number },
+    sourceIntroductionRevision: { attribute: false, type: Number },
     suspendPending: { attribute: false, type: Boolean },
     suspendSupported: { attribute: false, type: Boolean },
     suspended: { attribute: false, type: Boolean },
@@ -115,6 +116,7 @@ export class CameraLivePresentation extends LitElement {
   private _disconnectGeneration = 0;
   private _posterDimensions?: MediaDimensions;
   private _posterFailed = false;
+  private _presentedSourceIntroductionRevision = 0;
   private _reportedGestureLocked = false;
   private _webRtcAdvanceCleanup?: () => void;
   private readonly _sourceVisibilityMotion = new VisibilityMotion();
@@ -175,6 +177,7 @@ export class CameraLivePresentation extends LitElement {
   public posterPriority = false;
   public selected?: PresentedSource;
   public sessionRevision = 0;
+  public sourceIntroductionRevision = 0;
   public suspendPending = false;
   public suspendSupported = false;
   public suspended = false;
@@ -273,8 +276,16 @@ export class CameraLivePresentation extends LitElement {
       this._posterDimensions = undefined;
       this._posterFailed = false;
     }
-    if (changed.has("transport") && this.transport)
+    if (
+      (changed.has("sourceIntroductionRevision") || changed.has("active")) &&
+      this.active &&
+      this.sourceIntroductionRevision >
+        this._presentedSourceIntroductionRevision
+    ) {
+      this._presentedSourceIntroductionRevision =
+        this.sourceIntroductionRevision;
       this._overlay.revealSource();
+    }
     if (changed.has("zoomKey")) this._zoom.configure(this.zoomKey);
     if (changed.has("suspended") && this.suspended) this._zoom.resetZoom();
     if (changed.has("active") || changed.has("overlayInteractionEnabled")) {

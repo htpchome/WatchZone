@@ -199,6 +199,7 @@ export class CameraView extends LitElement {
                 .posterPriority=${this.active}
                 .selected=${this._session.selected}
                 .sessionRevision=${this._session.revision}
+                .sourceIntroductionRevision=${this._session.sourceIntroductionRevision}
                 .suspendPending=${this._runtime.pending}
                 .suspendSupported=${runtime?.supported === true}
                 .suspended=${suspended}

@@ -150,6 +150,8 @@ export class PtzComponent extends LitElement {
               aria-hidden=${visible ? "false" : "true"}
               aria-label=${this.localize("ptz.expand")}
               ?inert=${!visible}
+              @pointerenter=${this._overlay.handlePointerEnter}
+              @pointerleave=${this._overlay.handlePointerLeave}
               @pointerdown=${this._stopPropagation}
               @pointerup=${releaseTouchFocus}
               @click=${this._toggleExpanded}

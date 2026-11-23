@@ -110,6 +110,7 @@ export class CameraModule extends LitElement {
   private _deepLinkLoad?: Promise<void>;
   private _deepLink?: DeepLinkController;
   private _navigationVisible = false;
+  private _releaseNavigationOverlayHold?: () => void;
   private _selectionSettled = true;
   private readonly _overlayVisibilityByCamera = new Map<string, boolean>();
   private _stageSize: CameraStageSize = {
@@ -280,6 +281,8 @@ export class CameraModule extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    this._releaseNavigationOverlayHold?.();
+    this._releaseNavigationOverlayHold = undefined;
     this._previousNavigationMotion.disconnect();
     this._nextNavigationMotion.disconnect();
     this.removeEventListener(
@@ -421,6 +424,8 @@ export class CameraModule extends LitElement {
         ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${this._carouselItems.length < 2}
+        @pointerenter=${this._handleNavigationPointerEnter}
+        @pointerleave=${this._handleNavigationPointerLeave}
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._previous}
@@ -439,6 +444,8 @@ export class CameraModule extends LitElement {
         ?inert=${!this._navigationVisible}
         tabindex=${this._navigationVisible ? "0" : "-1"}
         ?disabled=${this._carouselItems.length < 2}
+        @pointerenter=${this._handleNavigationPointerEnter}
+        @pointerleave=${this._handleNavigationPointerLeave}
         @pointerdown=${this._stopPointerPropagation}
         @pointerup=${releaseTouchFocus}
         @click=${this._next}
@@ -517,6 +524,21 @@ export class CameraModule extends LitElement {
     this.requestUpdate();
     this._publishSelection();
   }
+
+  private readonly _handleNavigationPointerEnter = (
+    event: PointerEvent,
+  ): void => {
+    if (event.pointerType === "touch") return;
+    this._releaseNavigationOverlayHold?.();
+    const session = this.cameraSession?.session;
+    this._releaseNavigationOverlayHold = session?.holdOverlay();
+    session?.revealOverlay();
+  };
+
+  private readonly _handleNavigationPointerLeave = (): void => {
+    this._releaseNavigationOverlayHold?.();
+    this._releaseNavigationOverlayHold = undefined;
+  };
 
   private _selectEntity = (entityId: string): void => {
     if (!CLIENT_PROFILE.isPhone) {

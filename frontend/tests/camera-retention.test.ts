@@ -282,18 +282,35 @@ describe("camera presentation retention", () => {
     );
     const api = createApi();
     const first = createLiveView(api);
+    first.interactionActive = true;
     document.body.append(first);
     await vi.waitFor(() =>
       expect(presentation(first)?.selected).toBe("fallback"),
+    );
+    await vi.waitFor(() =>
+      expect(presentation(first)?.sourceIntroductionRevision).toBe(1),
+    );
+    await vi.waitFor(() =>
+      expect(
+        presentation(first)
+          ?.shadowRoot?.querySelector(".source-indicator")
+          ?.classList.contains("visible"),
+      ).toBe(true),
     );
     expect(presentation(first)?.webRtcVideo).toBe(webRtcVideo);
 
     first.remove();
     const returned = createLiveView(api);
+    returned.interactionActive = true;
     document.body.append(returned);
     await vi.waitFor(() =>
       expect(presentation(returned)?.selected).toBe("fallback"),
     );
+    expect(
+      presentation(returned)
+        ?.shadowRoot?.querySelector(".source-indicator")
+        ?.classList.contains("visible"),
+    ).toBe(false);
 
     expect(presentation(returned)?.webRtcVideo).toBe(webRtcVideo);
     expect(presentation(returned)?.fallbackVideo).toBe(hlsVideo);

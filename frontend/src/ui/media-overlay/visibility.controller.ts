@@ -20,6 +20,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   private _hovered = false;
   private _interactionRoot?: HTMLElement;
   private _pointerFocusPending = false;
+  private _pointerLeaveGeneration = 0;
   private _outsidePointerTimer?: ReturnType<typeof setTimeout>;
 
   public constructor(
@@ -114,7 +115,18 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   public readonly handlePointerLeave = (event: PointerEvent): void => {
     if (event.pointerType === "touch") return;
     this._hovered = false;
-    this._scheduleHide();
+    this._clearHideTimer();
+    const generation = ++this._pointerLeaveGeneration;
+    queueMicrotask(() => {
+      if (
+        generation !== this._pointerLeaveGeneration ||
+        this._hovered ||
+        this._focused ||
+        this._holds.size > 0
+      )
+        return;
+      this.hide();
+    });
   };
 
   public readonly handlePointerMove = (event: PointerEvent): void => {
@@ -163,6 +175,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
 
   private _show(): void {
     if (!this._active) return;
+    this._pointerLeaveGeneration += 1;
     this._clearHideTimer();
     if (this.visible && this.sourceVisible) return;
     this.visible = true;
@@ -193,6 +206,7 @@ export class MediaOverlayVisibilityController implements ReactiveController {
   }
 
   private _resetInteraction(): void {
+    this._pointerLeaveGeneration += 1;
     this._clearHideTimer();
     this._focused = false;
     this._hovered = false;

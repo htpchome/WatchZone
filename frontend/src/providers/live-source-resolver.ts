@@ -126,6 +126,18 @@ export class LiveSourceResolver {
     );
   }
 
+  public acquireUsableHomeAssistantHls(
+    api: HomeAssistantApi,
+    entityId: string,
+    options: MediaConnectionOptions,
+  ): MediaSessionLease | undefined {
+    return getMediaSessionManager().acquireUsable(
+      this.homeAssistantHlsKey(entityId, options.lowLatencyHls !== false),
+      api,
+      options,
+    );
+  }
+
   public homeAssistantWebRtcKey(entityId: string): string {
     return `home_assistant:webrtc:${entityId}`;
   }

@@ -1488,6 +1488,9 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
     .toBe(false);
 
   await page
+    .locator("wzc-camera .swiper-slide-active wzc-camera-live .viewport")
+    .hover({ force: true });
+  await page
     .locator("wzc-camera .carousel-navigation.previous")
     .click({ force: true });
   await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
@@ -2594,9 +2597,15 @@ test("applies configured camera carousel transitions to swipe and arrow navigati
   await expect(front).toHaveAttribute("aria-selected", "true");
 
   await carousel
+    .locator(".swiper-slide-active wzc-camera-live .viewport")
+    .hover({ force: true });
+  await carousel
     .locator(".carousel-navigation.previous")
     .click({ force: true });
   await expect(back).toHaveAttribute("aria-selected", "true");
+  await carousel
+    .locator(".swiper-slide-active wzc-camera-live .viewport")
+    .hover({ force: true });
   await carousel.locator(".carousel-navigation.next").click({ force: true });
   await expect(front).toHaveAttribute("aria-selected", "true");
 });
@@ -5447,9 +5456,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   }
   const transport = page.locator("wzc-recorded-video-transport");
   await page.mouse.move(0, 0);
-  await expect(transport).toBeHidden({
-    timeout: MEDIA_OVERLAY_HIDE_DELAY_MS + 1_000,
-  });
+  await expect(transport).toBeHidden({ timeout: 500 });
   await page
     .locator("wzc-recorded-video-player .viewport")
     .hover({ force: true });
@@ -5462,6 +5469,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(
     page.getByRole("button", { name: "Enter Picture-in-Picture" }),
   ).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(transport).toBeHidden({ timeout: 500 });
   const recordedControls = page.locator(
     "wzc-recorded-video-player wzc-media-controls .control-button",
   );
@@ -5483,6 +5492,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
       buttons.map((button) => button.getAttribute("data-control")),
     ),
   ).toEqual(["picture_in_picture", "fullscreen"]);
+  await page
+    .locator("wzc-recorded-video-player .viewport")
+    .hover({ force: true });
   await expect(transport).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Play recorded video" }),
@@ -7761,6 +7773,7 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
       y: rect.y - hostRect.y,
     };
   });
+  await selectedLiveViewport.hover({ force: true });
   await ptzTrigger.click();
   await expect(ptzControl).toHaveClass(/\bexpanded\b/);
   const expansionFrames = await ptzControl.evaluate(async (element) => {

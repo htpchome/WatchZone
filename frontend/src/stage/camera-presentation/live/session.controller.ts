@@ -42,7 +42,9 @@ export class CameraLiveSessionController implements ReactiveController {
   private _foregroundWebRtcFrameRequest?: number;
   private _hiddenAt?: number;
   private _sourceGeneration = 0;
+  private _sourceIntroductionRevision = 0;
   private _fallbackAcquisitionGeneration = 0;
+  private _introduceNextFallbackSelection = true;
   private _fallbackLease?: MediaSessionLease;
   private _fallbackPendingKey?: string;
   private _fallbackSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -54,6 +56,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _transport?: MediaTransport;
   private _webRtcDecoded = false;
   private _webRtcAcquisitionGeneration = 0;
+  private _introduceNextWebRtcSelection = true;
   private _webRtcLease?: MediaSessionLease;
   private _webRtcPendingKey?: string;
   private _webRtcSnapshot: MediaSessionSnapshot = { state: "new" };
@@ -91,6 +94,10 @@ export class CameraLiveSessionController implements ReactiveController {
 
   public get selected(): PresentedSource | undefined {
     return this._selected;
+  }
+
+  public get sourceIntroductionRevision(): number {
+    return this._sourceIntroductionRevision;
   }
 
   public get transport(): MediaTransport | undefined {
@@ -226,7 +233,12 @@ export class CameraLiveSessionController implements ReactiveController {
     this._webRtcLease?.markUsable();
     this._webRtcSnapshot.timing?.mark("first_frame_decoded");
     this._webRtcSnapshot.timing?.mark("presentation_selected");
-    this._select("webrtc", this._webRtcSnapshot.transport, video);
+    this._select(
+      "webrtc",
+      this._webRtcSnapshot.transport,
+      video,
+      this._introduceNextWebRtcSelection,
+    );
   }
 
   private readonly _handleVisibilityChange = (): void => {
@@ -462,12 +474,14 @@ export class CameraLiveSessionController implements ReactiveController {
     lease: MediaSessionLease,
     selectUsable: boolean,
   ): void {
+    this._introduceNextWebRtcSelection = !selectUsable;
     this._webRtcLease = lease;
     this._webRtcUnsubscribe = lease.subscribe((snapshot) => {
       this._webRtcSnapshot = snapshot;
       this._revision += 1;
       if (snapshot.state === "connecting" || snapshot.state === "failed") {
         this._webRtcDecoded = false;
+        this._introduceNextWebRtcSelection = true;
       }
       if (
         snapshot.state === "live" &&
@@ -476,7 +490,12 @@ export class CameraLiveSessionController implements ReactiveController {
         !this._webRtcDecoded
       ) {
         this._webRtcDecoded = true;
-        this._select("webrtc", snapshot.transport, snapshot.video);
+        this._select(
+          "webrtc",
+          snapshot.transport,
+          snapshot.video,
+          this._introduceNextWebRtcSelection,
+        );
       }
       if (snapshot.state === "failed" && this._selected === "webrtc") {
         this._clearSelection();
@@ -495,6 +514,7 @@ export class CameraLiveSessionController implements ReactiveController {
         "webrtc",
         this._webRtcSnapshot.transport,
         this._webRtcSnapshot.video,
+        false,
       );
     }
   }
@@ -533,9 +553,9 @@ export class CameraLiveSessionController implements ReactiveController {
       lowLatencyHls: this._lowLatencyHls,
       nativeHlsOnly: this._isFrigateHlsOnly(),
     };
-    if (this._connection === "frigate_go2rtc") {
-      const usableLease =
-        frigateFallback === "hls"
+    const usableLease =
+      this._connection === "frigate_go2rtc"
+        ? frigateFallback === "hls"
           ? this._resolver.acquireUsableFrigateHls(
               this._api,
               this._entityId,
@@ -546,11 +566,15 @@ export class CameraLiveSessionController implements ReactiveController {
               this._api,
               this._frigateSource!,
               options,
-            );
-      if (usableLease) {
-        this._adoptFallbackLease(usableLease);
-        return;
-      }
+            )
+        : this._resolver.acquireUsableHomeAssistantHls(
+            this._api,
+            this._entityId,
+            options,
+          );
+    if (usableLease) {
+      this._adoptFallbackLease(usableLease, false);
+      return;
     }
     this._fallbackPendingKey = key;
     const generation = ++this._fallbackAcquisitionGeneration;
@@ -625,7 +649,7 @@ export class CameraLiveSessionController implements ReactiveController {
         this._releaseUnusedLease(lease);
         return;
       }
-      this._adoptFallbackLease(lease);
+      this._adoptFallbackLease(lease, true);
     } catch (error) {
       if (
         generation !== this._fallbackAcquisitionGeneration ||
@@ -650,16 +674,28 @@ export class CameraLiveSessionController implements ReactiveController {
     }
   }
 
-  private _adoptFallbackLease(lease: MediaSessionLease): void {
+  private _adoptFallbackLease(
+    lease: MediaSessionLease,
+    introduceInitialSelection: boolean,
+  ): void {
+    this._introduceNextFallbackSelection = introduceInitialSelection;
     this._fallbackLease = lease;
     this._fallbackUnsubscribe = lease.subscribe((snapshot) => {
       this._fallbackSnapshot = snapshot;
       this._revision += 1;
+      if (snapshot.state === "connecting" || snapshot.state === "failed") {
+        this._introduceNextFallbackSelection = true;
+      }
       if (snapshot.state === "live") {
-        if (this._connection === "frigate_go2rtc") lease.markUsable();
+        lease.markUsable();
         if (!this._selected) {
           snapshot.timing?.mark("presentation_selected");
-          this._select("fallback", snapshot.transport, snapshot.video);
+          this._select(
+            "fallback",
+            snapshot.transport,
+            snapshot.video,
+            this._introduceNextFallbackSelection,
+          );
         }
         if (this._retryWebRtcAfterFallbackRecovery) {
           this._retryWebRtcAfterFallbackRecovery = false;
@@ -682,7 +718,11 @@ export class CameraLiveSessionController implements ReactiveController {
     source: PresentedSource,
     transport: MediaTransport | undefined,
     video: HTMLVideoElement | undefined,
+    introduceSource: boolean,
   ): void {
+    if (introduceSource) this._sourceIntroductionRevision += 1;
+    if (source === "webrtc") this._introduceNextWebRtcSelection = false;
+    else this._introduceNextFallbackSelection = false;
     this._selected = source;
     this._transport = transport;
     this._callbacks.onActiveVideoChanged(video);

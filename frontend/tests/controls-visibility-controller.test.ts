@@ -33,7 +33,7 @@ describe("media overlay visibility controller", () => {
     vi.useRealTimers();
   });
 
-  it("stays visible while hovered and hides after the named delay", () => {
+  it("stays visible while hovered and hides immediately when pointer leaves", async () => {
     vi.useFakeTimers();
     const host = new TestHost();
     const visibility: boolean[] = [];
@@ -48,9 +48,7 @@ describe("media overlay visibility controller", () => {
     expect(controller.visible).toBe(true);
 
     controller.handlePointerLeave(pointerEvent("mouse"));
-    vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS - 1);
-    expect(controller.visible).toBe(true);
-    vi.advanceTimersByTime(1);
+    await Promise.resolve();
     expect(controller.visible).toBe(false);
     expect(controller.sourceVisible).toBe(false);
     expect(host.requestUpdate).toHaveBeenCalledTimes(2);
@@ -98,7 +96,7 @@ describe("media overlay visibility controller", () => {
     expect(controller.visible).toBe(false);
   });
 
-  it("does not let pointer-origin focus pin the overlay", () => {
+  it("does not let pointer-origin focus pin the overlay", async () => {
     vi.useFakeTimers();
     const root = {
       blur: vi.fn(),
@@ -109,6 +107,7 @@ describe("media overlay visibility controller", () => {
     controller.handlePointerDown(pointerEvent("mouse", root));
     controller.handleFocusIn({ target: root } as unknown as FocusEvent);
     controller.handlePointerLeave(pointerEvent("mouse", root));
+    await Promise.resolve();
     vi.advanceTimersByTime(MEDIA_OVERLAY_HIDE_DELAY_MS);
 
     expect(controller.visible).toBe(false);

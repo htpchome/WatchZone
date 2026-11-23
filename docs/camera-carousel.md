@@ -66,7 +66,10 @@ mounted but release transport leases into the document retention policy. One
 slide disables movement; multiple slides enable swipe and the
 camera-local previous/next chevrons. Those chevrons consume the selected live
 presentation's typed overlay-visibility signal, so controls, source badge, and
-navigation share one timer rather than maintaining parallel hide timers.
+navigation share one input-aware visibility policy rather than maintaining
+parallel hide timers. Fine-pointer hover ends immediately after the pointer
+leaves the video and its overlay controls; touch reveal retains the shared
+timer.
 Multiple slides navigate as a circular sequence: swiping or navigating backward
 from the first slide reaches the last, and moving forward from the last reaches
 the first. Motion owns those boundary transitions while Swiper retains stable
