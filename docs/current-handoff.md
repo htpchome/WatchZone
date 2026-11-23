@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `72a0700`
-  (`v0.0.5-dev.35`).
-- Application version: `0.0.5-dev.36`.
+- HEAD before the current uncommitted change: `8196035`
+  (`v0.0.5-dev.36`).
+- Application version: `0.0.5-dev.37`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -19,19 +19,21 @@ precedence.
   61,420-byte eager graph, 20 bytes below the 61,440-byte release limit.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
-- `dev.30` through `dev.35` also failed to solve the physical 15-second
-  foreground-return delay and have been removed in full.
+- `dev.30` through `dev.35` failed to solve the physical 15-second
+  foreground-return delay. Their recovery hypotheses remain removed.
 
 ## Restored live baseline
 
-`dev.36` is the `v0.0.5-dev.29` tree restored byte-for-byte except for the four
-explicit application-version references and this handoff. It preserves the
-`dev.29` winner-takes-all behavior: WebRTC may be retained, losing MSE/HLS
-fallbacks are closed, and a foreground hedge can reacquire the configured
-fallback. No `dev.30` through `dev.35` live-lifecycle change remains.
+`dev.37` preserves the `dev.29` winner-takes-all policy: WebRTC may be retained,
+losing MSE/HLS fallbacks are closed, and a foreground hedge can reacquire the
+configured fallback. No `dev.31` through `dev.35` recovery change remains.
+After `dev.36` failed on GitHub at 61,441 bytes, `dev.37` reapplies only compact
+state predicates and messages from the build-focused `dev.30` change. It does
+not restore a discarded recovery hypothesis.
 
-The rebuilt `dev.36` package validates with a 61,427-byte eager graph, below
-the repository's 61,440-byte validation limit.
+The rebuilt `dev.37` package validates locally with a 61,377-byte eager graph,
+63 bytes below the repository's 61,440-byte validation limit and 64 bytes below
+the failing `dev.36` runner artifact.
 
 ## Browser-compatibility rollback
 

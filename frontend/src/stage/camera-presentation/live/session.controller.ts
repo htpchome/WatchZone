@@ -7,7 +7,6 @@ import type {
 } from "../../../core/config";
 import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import {
-  ACTIVE_MEDIA_HIDDEN_RETENTION_MS,
   type MediaConnectionOptions,
   type MediaSessionLease,
   type MediaSessionSnapshot,
@@ -16,6 +15,8 @@ import {
 import { playMediaElement } from "../../../core/media-playback";
 import { LiveSourceResolver } from "../../../providers/live-source-resolver";
 import type { RetainedCameraAudio } from "../../camera-session-context";
+
+const ACTIVE_MEDIA_HIDDEN_RETENTION_MS = 120_000;
 
 export type PresentedSource = "fallback" | "webrtc";
 
