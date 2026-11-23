@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `78d5322`
-  (`v0.0.5-dev.32`).
-- Application version: `0.0.5-dev.33`.
+- HEAD before the current uncommitted change: `9aeecd9`
+  (`v0.0.5-dev.33`).
+- Application version: `0.0.5-dev.34`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -21,6 +21,23 @@ precedence.
   failure and must not be treated as successful work.
 
 ## Current fresh-load foreground correction
+
+Physical `dev.33` testing showed a common 15-second foreground delay across
+WebRTC, HLS, and MSE. Earlier captured timings identify the shared boundary:
+the foreground attempt began immediately, but its first Home Assistant command
+remained pending. For Frigate WebRTC, `peer_created` occurred 16,050.3 ms after
+the attempt began; the peer and signaling work then completed in under 400 ms.
+The same adapters define a 15-second startup deadline, explaining the visible
+boundary before recovery.
+
+`dev.34` moves foreground connection creation out of the browser's
+`visibilitychange` dispatch and into the first microtask after that event has
+completed. This adds no timed wait. WebRTC and the configured MSE or HLS path
+still start together, but Home Assistant and the browser finish their own
+foreground handlers before CameraOptics issues setup commands. Regression
+coverage verifies that neither factory runs inside the visibility event and
+that both run in the immediately following microtask. This change does not
+alter the `dev.33` retention policy; retention restoration remains separate.
 
 Physical `dev.32` testing showed that the prior presentation-level corrections
 did not restore fresh-load behavior. After more than two hidden minutes, the

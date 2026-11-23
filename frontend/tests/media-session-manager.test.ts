@@ -467,10 +467,17 @@ describe("MediaSessionManager", () => {
         value: "visible",
       });
       document.dispatchEvent(new Event("visibilitychange"));
-      await vi.advanceTimersByTimeAsync(0);
 
+      // Foreground setup must not issue Home Assistant commands from inside
+      // the visibility event. Both candidates begin together immediately
+      // after the event completes.
+      expect(webRtcFactory).toHaveBeenCalledOnce();
+      expect(hlsFactory).toHaveBeenCalledOnce();
+      await Promise.resolve();
       expect(webRtcFactory).toHaveBeenCalledTimes(2);
       expect(hlsFactory).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(0);
+
       await vi.waitFor(() => expect(hls.getSnapshot().state).toBe("live"));
 
       webRtc.release();

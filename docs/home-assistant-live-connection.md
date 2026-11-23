@@ -279,6 +279,12 @@ background-stalled pending connection. A failed WebRTC probe keeps its
 provider cooldown so repeated visibility or navigation events cannot create a
 second upstream consumer for the same session key.
 
+Visibility recovery issues new Home Assistant setup commands only after the
+browser's `visibilitychange` event has completed. It does not add a timed delay;
+the first microtask after the event starts all active transport candidates.
+This prevents a command issued during the host's own foreground transition from
+remaining pending until an adapter's 15-second startup deadline.
+
 ## 8. Current audio behavior
 
 The configured phone or tablet/desktop startup policy determines the initial
