@@ -88,6 +88,8 @@ export interface HomeAssistant {
 export interface HomeAssistantApi {
   readonly identity: HomeAssistantConnection;
   readonly locale?: HomeAssistantLocale;
+  /** Opaque Home Assistant transport revision token. */
+  readonly r?: object;
   callWS<T>(message: HomeAssistantMessage): Promise<T>;
   resolveUrl(path: string): string;
   subscribeMessage<T>(
@@ -96,6 +98,11 @@ export interface HomeAssistantApi {
     options?: HomeAssistantSubscriptionOptions,
   ): Promise<HomeAssistantUnsubscribe>;
 }
+
+export const homeAssistantTransportEpochs = new WeakMap<
+  HomeAssistantConnection,
+  object
+>();
 
 export function isHomeAssistant(value: unknown): value is HomeAssistant {
   if (typeof value !== "object" || value === null) {
@@ -115,6 +122,7 @@ export function createHomeAssistantApi(hass: HomeAssistant): HomeAssistantApi {
   return {
     identity: hass.connection,
     locale: homeAssistantLocale(hass),
+    r: homeAssistantTransportEpochs.get(hass.connection),
     callWS: (message) => hass.callWS(message),
     resolveUrl: (path) => hass.hassUrl(path),
     subscribeMessage: (callback, message, options) =>

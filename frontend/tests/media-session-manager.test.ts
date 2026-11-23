@@ -17,9 +17,10 @@ import {
 import { MediaConnectionError } from "../src/core/media-connection-error";
 import { TestMediaSessionManager as MediaSessionManager } from "./test-media-session-manager";
 
-function createApi(identity: object = {}): HomeAssistantApi {
+function createApi(identity: object = {}, revision?: object): HomeAssistantApi {
   return {
     identity: identity as HomeAssistantApi["identity"],
+    r: revision,
     callWS: vi.fn(),
     resolveUrl: (path) => path,
     subscribeMessage: vi.fn(),
@@ -467,17 +468,10 @@ describe("MediaSessionManager", () => {
         value: "visible",
       });
       document.dispatchEvent(new Event("visibilitychange"));
-
-      // Foreground setup must not issue Home Assistant commands from inside
-      // the visibility event. Both candidates begin together immediately
-      // after the event completes.
-      expect(webRtcFactory).toHaveBeenCalledOnce();
-      expect(hlsFactory).toHaveBeenCalledOnce();
-      await Promise.resolve();
-      expect(webRtcFactory).toHaveBeenCalledTimes(2);
-      expect(hlsFactory).toHaveBeenCalledTimes(2);
       await vi.advanceTimersByTimeAsync(0);
 
+      expect(webRtcFactory).toHaveBeenCalledTimes(2);
+      expect(hlsFactory).toHaveBeenCalledTimes(2);
       await vi.waitFor(() => expect(hls.getSnapshot().state).toBe("live"));
 
       webRtc.release();
@@ -734,6 +728,38 @@ describe("MediaSessionManager", () => {
     expect(factory).toHaveBeenCalledTimes(2);
     first.release();
     second.release();
+    manager.closeAll();
+  });
+
+  it("restarts with a current API wrapper after Home Assistant restores the same transport", async () => {
+    const identity = {};
+    const firstApi = createApi(identity);
+    const restoredApi = createApi(identity, {});
+    const closes: Array<ReturnType<typeof vi.fn>> = [];
+    const factory = vi.fn<ConnectionFactory>(async () => {
+      const close = vi.fn();
+      closes.push(close);
+      return { stream: createStream(), close };
+    });
+    const manager = new MediaSessionManager(factory);
+    const first = manager.acquireHomeAssistant(firstApi, "camera.front");
+    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
+
+    const restored = manager.acquireHomeAssistant(restoredApi, "camera.front");
+    await vi.waitFor(() => expect(restored.getSnapshot().state).toBe("live"));
+
+    expect(closes[0]).toHaveBeenCalledOnce();
+    expect(factory).toHaveBeenNthCalledWith(
+      2,
+      restoredApi,
+      "camera.front",
+      expect.any(AbortSignal),
+      expect.any(Function),
+      expect.anything(),
+      expect.anything(),
+    );
+    first.release();
+    restored.release();
     manager.closeAll();
   });
 

@@ -166,7 +166,8 @@ class ManagedMediaSession {
     api: HomeAssistantApi,
     options: MediaConnectionOptions = { initialMuted: true },
   ): MediaSessionLease {
-    const transportChanged = this._api.identity !== api.identity;
+    const transportChanged =
+      this._api.identity !== api.identity || this._api.r !== api.r;
     this._api = api;
     this._options = {
       initialMuted: options.initialMuted,
@@ -346,27 +347,13 @@ class ManagedMediaSession {
     const connecting = this._snapshot.state === "connecting";
     if (!connecting && this._snapshot.state !== "failed") return;
     if (this._retryTimer || !this._canRetry()) return;
+    if (connecting) this._closeConnection();
     this._retryCause ??= "media";
     // Foreground recovery is a fresh-load boundary, not a provider-outage
-    // retry. Let the visibility event finish before issuing Home Assistant
-    // commands: a command sent from inside that event can remain queued until
-    // its 15-second adapter deadline even though inbound subscriptions have
-    // already resumed. Each actively leased transport still restarts
-    // independently in the same microtask checkpoint.
-    queueMicrotask(() => {
-      if (
-        this._documentHidden ||
-        this._snapshot.state === "closed" ||
-        this._leaseCount === 0 ||
-        this._retryTimer ||
-        !this._canRetry()
-      )
-        return;
-      const currentConnecting = this._snapshot.state === "connecting";
-      if (!currentConnecting && this._snapshot.state !== "failed") return;
-      if (currentConnecting) this._closeConnection();
-      void this._connect();
-    });
+    // retry. Restart each actively leased transport independently so a slow
+    // preferred candidate cannot hold its fallback behind the serialized
+    // provider retry queue.
+    void this._connect();
   }
 
   private async _connect(connectionOptions = this._options): Promise<void> {

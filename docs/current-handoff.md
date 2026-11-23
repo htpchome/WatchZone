@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `9aeecd9`
-  (`v0.0.5-dev.33`).
-- Application version: `0.0.5-dev.34`.
+- HEAD before the current uncommitted change: `94b6e9d`
+  (`v0.0.5-dev.34`).
+- Application version: `0.0.5-dev.35`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -30,14 +30,27 @@ the attempt began; the peer and signaling work then completed in under 400 ms.
 The same adapters define a 15-second startup deadline, explaining the visible
 boundary before recovery.
 
-`dev.34` moves foreground connection creation out of the browser's
-`visibilitychange` dispatch and into the first microtask after that event has
-completed. This adds no timed wait. WebRTC and the configured MSE or HLS path
-still start together, but Home Assistant and the browser finish their own
-foreground handlers before CameraOptics issues setup commands. Regression
-coverage verifies that neither factory runs inside the visibility event and
-that both run in the immediately following microtask. This change does not
-alter the `dev.33` retention policy; retention restoration remains separate.
+Physical `dev.34` testing showed no improvement, disproving visibility-event
+dispatch timing as the cause. Its microtask deferral has been removed.
+
+The card's Home Assistant lifecycle contained the shared defect: disconnect
+and ready handlers set `_transportConnected` false, and the ready handler
+explicitly waited for Home Assistant's next `hass` assignment, but
+`_syncRuntime()` ignored that state and continued passing the pre-background
+API wrapper to every live transport. Foreground WebRTC, HLS, and MSE therefore
+issued their first setup command through stale API state and waited for the
+15-second adapter boundary.
+
+`dev.35` withholds the API from the Stage while Home Assistant transport state
+is not current. A disconnect advances a transport epoch. The next connected
+`hass` assignment creates an API wrapper for that epoch; the presentation
+releases and reacquires its leases, and the session manager cancels setup work
+that captured the prior epoch even when Home Assistant retains the same
+connection object. Ordinary card reparenting or card replacement within the
+same epoch still reuses healthy media. Regression coverage exercises
+disconnect, ready, same-connection `hass` restoration, active-session
+replacement, editor reparenting, and card replacement. Retention policy remains
+unchanged from `dev.33`.
 
 Physical `dev.32` testing showed that the prior presentation-level corrections
 did not restore fresh-load behavior. After more than two hidden minutes, the

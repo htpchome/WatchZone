@@ -32,6 +32,7 @@ import {
 } from "../core/constants";
 import {
   createHomeAssistantApi,
+  homeAssistantTransportEpochs,
   HomeAssistantCameraImageCredentialGuard,
   isHomeAssistant,
   type HomeAssistant,
@@ -135,6 +136,8 @@ export class DashboardCard extends LitElement {
       return;
     }
     const transportChanged = this._hass?.connection !== value.connection;
+    const transportConnected = value.connection.connected !== false;
+    const transportRestored = !this._transportConnected && transportConnected;
     this._hass = value;
     this._themeProfile.setHomeAssistant(value);
     this._localization.setLanguage(value.locale?.language ?? value.language);
@@ -142,10 +145,10 @@ export class DashboardCard extends LitElement {
       this.requestUpdate();
       return;
     }
-    if (transportChanged || !this._haApi) {
+    if (transportChanged || transportRestored || !this._haApi) {
       this._setHomeAssistantApi(createHomeAssistantApi(value));
     }
-    this._transportConnected = value.connection.connected !== false;
+    this._transportConnected = transportConnected;
     this._observeConnection(value.connection);
     this._syncRuntime();
     if (transportChanged) this.requestUpdate();
@@ -567,14 +570,20 @@ export class DashboardCard extends LitElement {
   }
 
   private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =
-    () => {
+    (connection) => {
       this._cameraImageCredentials.retire(this._hass, this._cameraEntityIds());
+      if (this._transportConnected) {
+        homeAssistantTransportEpochs.set(connection, {});
+      }
       this._transportConnected = false;
       this._syncRuntime();
     };
 
   private readonly _handleConnectionReady: HomeAssistantConnectionEventListener =
-    () => {
+    (connection) => {
+      if (this._transportConnected) {
+        homeAssistantTransportEpochs.set(connection, {});
+      }
       // Wait for Home Assistant's next `hass` assignment so restored entity
       // pictures cannot reuse access tokens from before the restart.
       this._transportConnected = false;
@@ -631,6 +640,7 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncRuntime(): void {
+    const api = this._transportConnected ? this._haApi : undefined;
     const frigate = (this._previewConfig ?? this._config).cameras.find(
       (camera) => camera.connection === "frigate_go2rtc",
     )?.entity_id;
@@ -638,7 +648,7 @@ export class DashboardCard extends LitElement {
     void statusModule?.then(({ sync }) =>
       sync(
         this,
-        this.isConnected && this._haApi,
+        this.isConnected ? api : undefined,
         frigate,
         this._toasts,
         this._localization.localize,
@@ -652,7 +662,7 @@ export class DashboardCard extends LitElement {
       : undefined;
     this._layoutRuntime.setRuntime(
       hass,
-      this._haApi,
+      api,
       this._localization.localize,
       this.preview,
     );

@@ -422,11 +422,7 @@ Visibility changes affect presentation and forced mute, not user preference.
   and does not renegotiate.
 - Returning to a visible browser document resumes the active media element.
   A media failure detected while hidden does not start a replacement transport;
-  the foreground transition starts that replacement immediately after the
-  browser's visibility event finishes. Provider setup commands must not be sent
-  from inside the visibility event because the browser or host connection may
-  not yet accept foreground command work even though inbound events have
-  resumed.
+  the foreground transition starts that replacement immediately.
   An active failed retry keeps its provider cooldown so repeated lifecycle
   events cannot overlap upstream consumers. A connection attempt that remained
   pending while hidden is cancelled and restarted once in the foreground so

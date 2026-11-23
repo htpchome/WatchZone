@@ -165,6 +165,7 @@ export class CameraLiveSessionController implements ReactiveController {
       this._frigateStream !== frigateStream;
     const changed =
       this._api?.identity !== api?.identity ||
+      this._api?.r !== api?.r ||
       identityChanged ||
       this._lowLatencyHls !== lowLatencyHls ||
       frigateFallbackChanged;

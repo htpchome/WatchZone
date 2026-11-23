@@ -279,11 +279,14 @@ background-stalled pending connection. A failed WebRTC probe keeps its
 provider cooldown so repeated visibility or navigation events cannot create a
 second upstream consumer for the same session key.
 
-Visibility recovery issues new Home Assistant setup commands only after the
-browser's `visibilitychange` event has completed. It does not add a timed delay;
-the first microtask after the event starts all active transport candidates.
-This prevents a command issued during the host's own foreground transition from
-remaining pending until an adapter's 15-second startup deadline.
+After Home Assistant reports a disconnect or ready transition, the card
+withholds its API from Stage consumers until Home Assistant supplies the next
+current `hass` object. A transport epoch distinguishes that restored API even
+when the underlying connection object is unchanged. Live presentations
+reacquire their leases through the current epoch, and the session manager
+cancels setup work that captured the prior epoch. API wrappers created by card
+reparenting or card replacement inside the same epoch continue sharing healthy
+retained media.
 
 ## 8. Current audio behavior
 
