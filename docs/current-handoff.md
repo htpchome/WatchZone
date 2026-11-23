@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `a88b590`
-  (`v0.0.5-dev.26`).
-- Application version: `0.0.5-dev.27`.
+- HEAD before the current uncommitted change: `1736851`
+  (`v0.0.5-dev.27`).
+- Application version: `0.0.5-dev.28`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -21,6 +21,24 @@ precedence.
   failure and must not be treated as successful work.
 
 ## Current HLS foreground-resume correction
+
+`dev.28` corrects a shared foreground-recovery ordering defect affecting both
+Home Assistant HLS and Frigate go2rtc HLS. After the two-minute hidden-window
+teardown, the session manager placed the expired HLS transport and an
+unavailable WebRTC candidate into the same serialized provider-retry queue.
+Because WebRTC was acquired first, its adapter timeout could prevent HLS from
+starting for approximately 15 seconds even though the HLS pipeline itself was
+fast and the backend stream was warm.
+
+Foreground lifecycle replacement now restarts each actively leased transport
+independently, matching fresh hedged startup. Healthy retained WebRTC remains
+untouched, HLS is no longer gated by a failed or pending WebRTC attempt, and
+ordinary provider-outage retries across cameras remain serialized. The same
+rule applies when retained HLS fails its foreground advancing-frame validation.
+Regression coverage exercises both Home Assistant and Frigate go2rtc session
+keys with a WebRTC candidate that remains pending while HLS reconnects.
+The fresh `dev.28` release package validates with a 61,432-byte eager graph,
+eight bytes below the repository's 61,440-byte limit.
 
 Physical Firefox diagnostics proved that Frigate HLS itself acquired its URL
 in 16.7 ms, loaded its manifest in 66.7 ms, and decoded and selected its first

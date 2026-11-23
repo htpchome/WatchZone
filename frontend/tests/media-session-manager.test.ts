@@ -355,6 +355,83 @@ describe("MediaSessionManager", () => {
     },
   );
 
+  it.each([
+    {
+      hlsKey: "home_assistant:hls:camera.front",
+      label: "Home Assistant",
+      webRtcKey: "home_assistant:webrtc:camera.front",
+    },
+    {
+      hlsKey: "frigate_go2rtc:camera.front:main:hls",
+      label: "Frigate go2rtc",
+      webRtcKey: "frigate_go2rtc:camera.front:main:webrtc",
+    },
+  ])(
+    "does not hold $label foreground HLS recovery behind an unavailable WebRTC candidate",
+    async ({ hlsKey, webRtcKey }) => {
+      vi.useFakeTimers();
+      const webRtcFactory = vi
+        .fn<ConnectionFactory>()
+        .mockRejectedValueOnce(new Error("WebRTC is unavailable"))
+        .mockImplementationOnce(
+          () =>
+            new Promise(() => {
+              // Model a candidate that remains pending until its adapter timeout.
+            }),
+        );
+      const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+        close: vi.fn(),
+        transport: "hls_mse",
+        video: document.createElement("video"),
+      }));
+      const manager = new MediaSessionManager(webRtcFactory, hlsFactory, {
+        clientDeviceClass: "desktop",
+      });
+      const api = createApi();
+      const webRtc = manager.acquire({
+        api,
+        cameraKey: "camera.front",
+        entityId: "camera.front",
+        factory: webRtcFactory,
+        key: webRtcKey,
+        retention: "preferred",
+      });
+      const hls = manager.acquire({
+        api,
+        cameraKey: "camera.front",
+        entityId: "camera.front",
+        factory: hlsFactory,
+        key: hlsKey,
+        retention: "fallback",
+      });
+      await vi.waitFor(() => expect(webRtc.getSnapshot().state).toBe("failed"));
+      await vi.waitFor(() => expect(hls.getSnapshot().state).toBe("live"));
+
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(hls.getSnapshot().state).toBe("failed");
+
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(webRtcFactory).toHaveBeenCalledTimes(2);
+      expect(hlsFactory).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() => expect(hls.getSnapshot().state).toBe("live"));
+
+      webRtc.release();
+      hls.release();
+      manager.closeAll();
+    },
+  );
+
   it("defers a hidden desktop replacement until the document is visible", async () => {
     const failures: Array<(error: Error) => void> = [];
     const factory = vi.fn<ConnectionFactory>(

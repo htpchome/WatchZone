@@ -364,7 +364,11 @@ class ManagedMediaSession {
     if (this._snapshot.state !== "failed") return;
     if (this._retryTimer || !this._canRetry()) return;
     this._retryCause ??= "media";
-    this._queueRetry(this);
+    // Foreground recovery is a fresh-load boundary, not a provider-outage
+    // retry. Restart each actively leased transport independently so a slow
+    // preferred candidate cannot hold its fallback behind the serialized
+    // provider retry queue.
+    void this._connect();
   }
 
   private async _connect(connectionOptions = this._options): Promise<void> {
@@ -581,7 +585,9 @@ class ManagedMediaSession {
     });
     this._retryCause = "media";
     if (this._leaseCount > 0 && !this._documentHidden) {
-      this._queueRetry(this);
+      // A failed foreground validation replaces this transport immediately.
+      // It must not wait behind another candidate for the same presentation.
+      void this._connect();
     }
   }
 
