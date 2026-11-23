@@ -396,6 +396,12 @@ Visibility changes affect presentation and forced mute, not user preference.
   while healthy. Loss of window focus alone has no transport effect. Every
   retained transport remains subject to the ordinary session budget and
   eviction policy.
+- A WebRTC player selected before a document remains hidden beyond the
+  two-minute active-media window retains its peer connection but loses its old
+  presentation-usability proof. Foreground return immediately restores the
+  configured fallback hedge instead of waiting for the retained peer's failure
+  timeout. WebRTC retakes presentation only after proving a newly decoded
+  foreground frame; a fallback that wins first remains visible meanwhile.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.
@@ -418,11 +424,10 @@ Visibility changes affect presentation and forced mute, not user preference.
   events cannot overlap upstream consumers. A connection attempt that remained
   pending while hidden is cancelled and restarted once in the foreground so
   its adapter timeout cannot impose an additional foreground delay.
-- Frigate MSE may keep one bounded parked fallback after WebRTC takeover. The
-  parked adapter discards incoming media and bounds its buffer; reacquisition
-  seeks that same player to the live edge. The normal retention profile and
-  eviction budget remain authoritative, especially for mobile and Companion
-  clients.
+- A losing Frigate MSE or HLS fallback is closed after WebRTC takeover. Parking
+  remains available for a transport retained because its presentation lease
+  ended during navigation, but CameraOptics does not keep a second go2rtc
+  fallback consumer solely as standby beside active WebRTC.
 
 ## 11. Failure and reconnect behavior
 

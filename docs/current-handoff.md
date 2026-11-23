@@ -9,7 +9,7 @@ precedence.
 - Branch: `main`.
 - HEAD before the current uncommitted change: `1736851`
   (`v0.0.5-dev.27`).
-- Application version: `0.0.5-dev.28`.
+- Application version: `0.0.5-dev.29`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -21,6 +21,33 @@ precedence.
   failure and must not be treated as successful work.
 
 ## Current HLS foreground-resume correction
+
+`dev.29` addresses the presentation gate demonstrated by physical `dev.28`
+timings. Frigate HLS began and selected in 183.3 ms, but its attempt did not
+start until the retained WebRTC presentation had already consumed the visible
+delay. A WebRTC player that decoded before the document was hidden retained its
+old usability proof, remained selected on return, and suppressed fallback
+acquisition until the peer declared failure. This affected both Home Assistant
+Direct and Frigate go2rtc HLS.
+
+After the document remains hidden beyond the shared two-minute active-media
+window, CameraOptics now retains the WebRTC peer but invalidates only its old
+presentation proof. It starts the configured fallback immediately and asks the
+retained player to prove a fresh decoded frame. HLS may therefore paint in its
+measured sub-second time; WebRTC takes presentation back only if it produces a
+new frame. Frigate MSE previously avoided the long delay by keeping its losing
+fallback session parked after WebRTC takeover. That behavior kept a second
+go2rtc WebSocket consumer alive and could continue receiving media payload only
+to discard it in the browser. `dev.29` removes that standby connection: losing
+MSE and HLS fallbacks are both closed after WebRTC takeover, and either fallback
+is reacquired immediately by the same foreground hedge when needed.
+The fresh `dev.29` release package validates with a 61,436-byte eager graph,
+four bytes below the repository's 61,440-byte limit.
+
+`dev.28` did not improve the reported physical behavior. Its foreground retry
+separation remains as protection for the distinct case where multiple expired
+actively leased transports restart together, but it was not the missing
+presentation-level correction.
 
 `dev.28` corrects a shared foreground-recovery ordering defect affecting both
 Home Assistant HLS and Frigate go2rtc HLS. After the two-minute hidden-window

@@ -73,6 +73,10 @@ For the initial Home Assistant direct source, CameraOptics uses a hedged startup
    decoding the frame required for takeover. When supported, presentation uses
    `requestVideoFrameCallback` to confirm a frame from a replacement stream;
    media readiness events remain the standards-based fallback.
+   After a document remains hidden beyond the active-media retention window, a
+   previously selected retained WebRTC player must prove a new foreground frame.
+   HLS starts concurrently during that proof; it never waits for the retained
+   peer's failure timeout.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed. The presentation
    commits WebRTC visibility before discarding HLS so the handoff cannot expose

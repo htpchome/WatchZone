@@ -81,6 +81,8 @@ export interface MediaSessionLease {
 
 export type MediaRetentionClass = "fallback" | "preferred";
 
+export const ACTIVE_MEDIA_HIDDEN_RETENTION_MS = 120_000;
+
 export interface MediaReconnectPolicy {
   readonly baseDelayMs: number;
   readonly maxAttempts: number;
@@ -308,7 +310,7 @@ class ManagedMediaSession {
   public handleDocumentHidden(closeConnection: boolean): void {
     if (this._snapshot.state === "closed" || this._documentHidden) return;
     this._documentHidden = true;
-    this._hiddenUntil = Date.now() + 120_000;
+    this._hiddenUntil = Date.now() + ACTIVE_MEDIA_HIDDEN_RETENTION_MS;
     if (this._retryTimer) {
       clearTimeout(this._retryTimer);
       this._retryTimer = undefined;

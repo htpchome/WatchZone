@@ -6,12 +6,14 @@ import type {
   LiveConnectionType,
 } from "../../../core/config";
 import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
-import type {
-  MediaConnectionOptions,
-  MediaSessionLease,
-  MediaSessionSnapshot,
-  MediaTransport,
+import {
+  ACTIVE_MEDIA_HIDDEN_RETENTION_MS,
+  type MediaConnectionOptions,
+  type MediaSessionLease,
+  type MediaSessionSnapshot,
+  type MediaTransport,
 } from "../../../core/media-session-manager";
+import { playMediaElement } from "../../../core/media-playback";
 import { LiveSourceResolver } from "../../../providers/live-source-resolver";
 import type { RetainedCameraAudio } from "../../camera-session-context";
 
@@ -35,6 +37,8 @@ export class CameraLiveSessionController implements ReactiveController {
   private _frigateSourcePending = false;
   private _frigateFallback: FrigateFallbackTransport = "mse";
   private _frigateStream?: string;
+  private _foregroundWebRtcFrameRequest?: number;
+  private _hiddenAt?: number;
   private _sourceGeneration = 0;
   private _fallbackLease?: MediaSessionLease;
   private _fallbackPendingKey?: string;
@@ -125,11 +129,16 @@ export class CameraLiveSessionController implements ReactiveController {
   public hostConnected(): void {
     this._disconnectGeneration += 1;
     this._connected = true;
+    document.addEventListener("visibilitychange", this._handleVisibilityChange);
     this._sync();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
+    document.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityChange,
+    );
     const generation = ++this._disconnectGeneration;
     // Home Assistant synchronously reparents cards while entering and leaving
     // dashboard editing. Let that matching reconnect keep the existing lease
@@ -211,6 +220,57 @@ export class CameraLiveSessionController implements ReactiveController {
     this._select("webrtc", this._webRtcSnapshot.transport, video);
   }
 
+  private readonly _handleVisibilityChange = (): void => {
+    if (document.visibilityState !== "visible") {
+      this._hiddenAt = Date.now();
+      return;
+    }
+    const hiddenAt = this._hiddenAt;
+    this._hiddenAt = undefined;
+    if (
+      hiddenAt === undefined ||
+      Date.now() - hiddenAt < ACTIVE_MEDIA_HIDDEN_RETENTION_MS ||
+      this._selected !== "webrtc" ||
+      this._isFrigateHlsOnly()
+    )
+      return;
+
+    // A retained peer can still report live after the browser or network path
+    // stopped producing frames. Restore the normal fresh-load hedge instead
+    // of waiting for that peer's failure timeout before HLS may start.
+    this._webRtcDecoded = false;
+    this._clearSelection();
+    this._observeForegroundWebRtcFrame();
+    this._syncFallback();
+    this._host.requestUpdate();
+  };
+
+  private _observeForegroundWebRtcFrame(): void {
+    this._cancelForegroundWebRtcFrame();
+    const video = this._webRtcSnapshot.video;
+    const stream = this._webRtcSnapshot.stream;
+    if (!video || !stream) return;
+    void playMediaElement(video).catch(() => undefined);
+    if (typeof video.requestVideoFrameCallback !== "function") return;
+    this._foregroundWebRtcFrameRequest = video.requestVideoFrameCallback(() => {
+      this._foregroundWebRtcFrameRequest = undefined;
+      if (
+        this._connected &&
+        this._webRtcSnapshot.video === video &&
+        this._webRtcSnapshot.stream === stream
+      ) {
+        this.handleWebRtcDecoded(video);
+      }
+    });
+  }
+
+  private _cancelForegroundWebRtcFrame(): void {
+    const request = this._foregroundWebRtcFrameRequest;
+    if (request === undefined) return;
+    this._webRtcSnapshot.video?.cancelVideoFrameCallback?.(request);
+    this._foregroundWebRtcFrameRequest = undefined;
+  }
+
   public handleWebRtcPresented(): void {
     if (this._selected !== "webrtc") return;
     if (
@@ -219,10 +279,7 @@ export class CameraLiveSessionController implements ReactiveController {
       this._fallbackSnapshot.state === "new"
     )
       return;
-    const retainFrigateMse =
-      this._connection === "frigate_go2rtc" &&
-      this._effectiveFrigateFallback() === "mse";
-    this._releaseFallback(!retainFrigateMse);
+    this._releaseFallback(true);
     this._host.requestUpdate();
   }
 
@@ -599,6 +656,7 @@ export class CameraLiveSessionController implements ReactiveController {
   }
 
   private _releaseWebRtc(discard = false): void {
+    this._cancelForegroundWebRtcFrame();
     this._webRtcPendingKey = undefined;
     this._webRtcUnsubscribe?.();
     this._webRtcUnsubscribe = undefined;

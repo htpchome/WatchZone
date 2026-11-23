@@ -397,7 +397,7 @@ describe("camera presentation retention", () => {
     );
   });
 
-  it("reattaches retained Frigate WebRTC without presenting a connecting state", async () => {
+  it("reattaches retained Frigate WebRTC after closing its losing MSE fallback", async () => {
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     const stream = { getTracks: () => [] } as unknown as MediaStream;
     const webRtcVideo = document.createElement("video");
@@ -437,8 +437,8 @@ describe("camera presentation retention", () => {
     await vi.waitFor(() =>
       expect(presentation(first)?.selected).toBe("webrtc"),
     );
-    await vi.waitFor(() => expect(parkMse).toHaveBeenCalledOnce());
-    expect(closeMse).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(closeMse).toHaveBeenCalledOnce());
+    expect(parkMse).not.toHaveBeenCalled();
 
     first.remove();
     const returned = createLiveView(api);
@@ -456,7 +456,7 @@ describe("camera presentation retention", () => {
     expect(api.callWS).toHaveBeenCalledOnce();
     expect(webRtcFactory).toHaveBeenCalledOnce();
     expect(mseFactory).toHaveBeenCalledOnce();
-    expect(closeMse).not.toHaveBeenCalled();
+    expect(closeMse).toHaveBeenCalledOnce();
   });
 
   it("reattaches the same verified WebRTC player without restarting HLS", async () => {
