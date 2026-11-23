@@ -403,6 +403,10 @@ export class CameraLiveSessionController implements ReactiveController {
       this._revision += 1;
       if (snapshot.state === "connecting" || snapshot.state === "failed") {
         this._webRtcDecoded = false;
+        if (this._selected === "webrtc") {
+          this._clearSelection();
+          this._syncFallback();
+        }
       }
       if (
         snapshot.state === "live" &&
@@ -413,10 +417,6 @@ export class CameraLiveSessionController implements ReactiveController {
         this._webRtcDecoded = false;
         if (this._selected === "webrtc") this._clearSelection();
         this._observeForegroundWebRtcFrame();
-        this._syncFallback();
-      }
-      if (snapshot.state === "failed" && this._selected === "webrtc") {
-        this._clearSelection();
         this._syncFallback();
       }
       this._host.requestUpdate();

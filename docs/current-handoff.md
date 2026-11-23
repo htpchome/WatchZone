@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `12a411c`
-  (`v0.0.5-dev.29`).
-- Application version: `0.0.5-dev.31`.
+- HEAD before the current uncommitted change: `8f6f3d4`
+  (`v0.0.5-dev.31`).
+- Application version: `0.0.5-dev.32`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -21,6 +21,23 @@ precedence.
   failure and must not be treated as successful work.
 
 ## Current HLS foreground-resume correction
+
+Physical `dev.31` timings isolated the actual 15-second gate. A Home Assistant
+WebRTC attempt began at `04:13:02.642`; HLS did not begin until
+`04:13:17.642`, exactly 15 seconds later, then decoded and selected in 1.87
+seconds. When the selected WebRTC session transitioned back to `connecting`,
+the presentation controller reset its decoded flag but incorrectly left WebRTC
+selected. That stale selection caused `_syncFallback()` to reject both MSE and
+HLS until the existing `failed` handler cleared it after the WebRTC timeout.
+
+`dev.32` makes `connecting` revoke presentation authority just as `failed`
+already did. The configured fallback starts at the WebRTC reconnect transition,
+without waiting for failure; a newly decoded WebRTC frame may still take
+presentation back and closes the losing fallback. Regression coverage exercises
+Home Assistant HLS, Frigate HLS, and Frigate MSE for both foreground-proof
+invalidation and a selected WebRTC session returning to `connecting`.
+The fresh `dev.32` release package validates with a 61,402-byte eager graph,
+38 bytes below the repository's 61,440-byte validation limit.
 
 Physical `dev.30` testing showed the same approximately 15-second foreground
 delay for both Frigate MSE and HLS. The `dev.29` presentation correction kept

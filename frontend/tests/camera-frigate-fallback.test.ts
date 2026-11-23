@@ -144,12 +144,15 @@ describe("Frigate fallback selection", () => {
   });
 
   it.each([
-    { connection: "home_assistant", fallback: "hls" },
-    { connection: "frigate_go2rtc", fallback: "hls" },
-    { connection: "frigate_go2rtc", fallback: "mse" },
+    { connection: "home_assistant", fallback: "hls", trigger: "proof" },
+    { connection: "frigate_go2rtc", fallback: "hls", trigger: "proof" },
+    { connection: "frigate_go2rtc", fallback: "mse", trigger: "proof" },
+    { connection: "home_assistant", fallback: "hls", trigger: "reconnect" },
+    { connection: "frigate_go2rtc", fallback: "hls", trigger: "reconnect" },
+    { connection: "frigate_go2rtc", fallback: "mse", trigger: "reconnect" },
   ] as const)(
-    "starts $connection $fallback immediately when retained WebRTC loses its foreground proof",
-    async ({ connection, fallback }) => {
+    "starts $connection $fallback immediately when retained WebRTC loses authority through $trigger",
+    async ({ connection, fallback, trigger }) => {
       const api = {
         identity: {},
         callWS: vi.fn(),
@@ -257,13 +260,17 @@ describe("Frigate fallback selection", () => {
       expect(acquireFrigateHls).not.toHaveBeenCalled();
       expect(acquireFrigateMse).not.toHaveBeenCalled();
 
-      webRtcSession.emit({
-        state: "live",
-        stream,
-        transport: "webrtc",
-        usable: false,
-        video: webRtcVideo,
-      });
+      webRtcSession.emit(
+        trigger === "proof"
+          ? {
+              state: "live",
+              stream,
+              transport: "webrtc",
+              usable: false,
+              video: webRtcVideo,
+            }
+          : { state: "connecting" },
+      );
 
       if (connection === "home_assistant") {
         await vi.waitFor(() =>
@@ -286,7 +293,17 @@ describe("Frigate fallback selection", () => {
       }
       await vi.waitFor(() => expect(controller.selected).toBe("fallback"));
 
-      deliverFreshWebRtcFrame?.();
+      if (trigger === "proof") {
+        deliverFreshWebRtcFrame?.();
+      } else {
+        webRtcSession.emit({
+          state: "live",
+          stream,
+          transport: "webrtc",
+          video: webRtcVideo,
+        });
+        controller.handleWebRtcDecoded(webRtcVideo);
+      }
       expect(controller.selected).toBe("webrtc");
       controller.handleWebRtcPresented();
       expect(fallbackLease.discard).toHaveBeenCalledOnce();

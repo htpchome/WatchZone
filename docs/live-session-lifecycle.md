@@ -406,6 +406,11 @@ Visibility changes affect presentation and forced mute, not user preference.
   it through the retained session snapshot. It must survive destruction or
   recreation of the card element while the document is hidden; an element-local
   visibility timestamp is not authoritative lifecycle state.
+- A selected WebRTC session that transitions to `connecting` has already lost
+  presentation authority, even before it reports `failed`. The presentation
+  clears WebRTC selection and starts the configured fallback at that transition;
+  it never waits for the WebRTC adapter timeout. A new decoded WebRTC frame may
+  take presentation back through the ordinary winner handoff.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.

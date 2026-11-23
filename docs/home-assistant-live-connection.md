@@ -79,6 +79,9 @@ For the initial Home Assistant direct source, CameraOptics uses a hedged startup
    peer's failure timeout. The document-scoped media-session snapshot carries
    the invalidated usability proof so card destruction or recreation during the
    hidden interval cannot restore stale WebRTC presentation authority.
+   Likewise, a previously selected WebRTC session that returns to `connecting`
+   immediately loses presentation authority and starts HLS; HLS does not wait
+   for the WebRTC setup attempt to time out or report failure.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed. The presentation
    commits WebRTC visibility before discarding HLS so the handoff cannot expose
