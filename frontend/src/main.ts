@@ -18,7 +18,6 @@ runtime[RUNTIME_DIAGNOSTICS_KEY] = Object.freeze({
   activeCardVersion,
   build: APP_BUILD,
   getLiveStartupTimings,
-  loadedAt: new Date().toISOString(),
   version: APP_VERSION,
 });
 

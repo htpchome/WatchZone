@@ -163,19 +163,15 @@ export class DashboardCard extends LitElement {
   public setConfig(value: unknown): void {
     const next = normalizeCardConfig(value);
     this.toggleAttribute("video-bg", next.use_theme_video_background);
-    if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
-      this._cardHostAppearance.configure(
-        activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
-      );
-      this._cardLayout.configure(next);
-      return;
-    }
-    this._config = next;
-    this._previewConfig = undefined;
     this._cardHostAppearance.configure(
       activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
     );
     this._cardLayout.configure(next);
+    if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
+      return;
+    }
+    this._config = next;
+    this._previewConfig = undefined;
     if (this.isConnected && !this._cardPickerPreview) {
       this._syncLayout(next);
     }
@@ -192,13 +188,11 @@ export class DashboardCard extends LitElement {
       this.requestUpdate();
       return;
     }
+    const config = this._previewConfig ?? this._config;
     this._cardHostAppearance.configure(
-      activeDeviceAppearanceConfig(
-        this._previewConfig ?? this._config,
-        CLIENT_PROFILE.isPhone,
-      ),
+      activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );
-    this._cardLayout.configure(this._previewConfig ?? this._config);
+    this._cardLayout.configure(config);
     if (this._rawHaApi && !this._backendAvailabilityUnsubscribe) {
       this._setHomeAssistantApi(this._rawHaApi);
     }
@@ -223,7 +217,7 @@ export class DashboardCard extends LitElement {
       RECORDED_VIDEO_CLOSE_EVENT,
       this._handleRecordedMediaClose,
     );
-    this._syncLayout(this._previewConfig ?? this._config);
+    this._syncLayout(config);
     this._loadCompanionPhoneLandscape();
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();

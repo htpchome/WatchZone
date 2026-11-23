@@ -281,8 +281,7 @@ export class CameraModule extends LitElement {
   }
 
   public disconnectedCallback(): void {
-    this._releaseNavigationOverlayHold?.();
-    this._releaseNavigationOverlayHold = undefined;
+    this._handleNavigationPointerLeave();
     this._previousNavigationMotion.disconnect();
     this._nextNavigationMotion.disconnect();
     this.removeEventListener(
@@ -529,10 +528,8 @@ export class CameraModule extends LitElement {
     event: PointerEvent,
   ): void => {
     if (event.pointerType === "touch") return;
-    this._releaseNavigationOverlayHold?.();
-    const session = this.cameraSession?.session;
-    this._releaseNavigationOverlayHold = session?.holdOverlay();
-    session?.revealOverlay();
+    this._releaseNavigationOverlayHold ??=
+      this.cameraSession?.session?.holdOverlay();
   };
 
   private readonly _handleNavigationPointerLeave = (): void => {

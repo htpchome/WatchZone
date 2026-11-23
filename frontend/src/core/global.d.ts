@@ -52,7 +52,6 @@ interface Window {
       readonly signalingPath?: string;
       readonly startedAt: string;
     }>;
-    loadedAt: string;
     version: string;
   }>;
   customCards?: Array<{
