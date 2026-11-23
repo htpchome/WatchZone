@@ -76,7 +76,9 @@ For the initial Home Assistant direct source, CameraOptics uses a hedged startup
    After a document remains hidden beyond the active-media retention window, a
    previously selected retained WebRTC player must prove a new foreground frame.
    HLS starts concurrently during that proof; it never waits for the retained
-   peer's failure timeout.
+   peer's failure timeout. The document-scoped media-session snapshot carries
+   the invalidated usability proof so card destruction or recreation during the
+   hidden interval cannot restore stale WebRTC presentation authority.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed. The presentation
    commits WebRTC visibility before discarding HLS so the handoff cannot expose

@@ -9,7 +9,7 @@ precedence.
 - Branch: `main`.
 - HEAD before the current uncommitted change: `12a411c`
   (`v0.0.5-dev.29`).
-- Application version: `0.0.5-dev.30`.
+- Application version: `0.0.5-dev.31`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -21,6 +21,25 @@ precedence.
   failure and must not be treated as successful work.
 
 ## Current HLS foreground-resume correction
+
+Physical `dev.30` testing showed the same approximately 15-second foreground
+delay for both Frigate MSE and HLS. The `dev.29` presentation correction kept
+the two-minute hidden timestamp in `CameraLiveSessionController`, so Home
+Assistant could erase the decision by disconnecting and recreating the card
+while hidden or during foreground restoration. The replacement controller then
+accepted the retained WebRTC session's old `usable: true`, selected WebRTC, and
+suppressed either configured fallback until the peer failed.
+
+`dev.31` moves that decision into the document-scoped media-session owner. On
+return after the two-minute window, a retained WebRTC transport stays connected
+but its shared snapshot changes to `usable: false`. Existing and newly created
+presentation controllers immediately start their configured MSE or HLS hedge,
+while WebRTC can retake presentation only after a fresh decoded frame marks the
+same retained session usable again. Coverage includes Home Assistant HLS,
+Frigate HLS, Frigate MSE, and a released/parked WebRTC lease reacquired by a new
+owner after foreground return.
+The fresh `dev.31` release package validates with a 61,400-byte eager graph,
+40 bytes below the repository's 61,440-byte validation limit.
 
 `dev.29` addresses the presentation gate demonstrated by physical `dev.28`
 timings. Frigate HLS began and selected in 183.3 ms, but its attempt did not

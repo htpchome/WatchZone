@@ -193,6 +193,51 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("revokes retained WebRTC usability after two hidden minutes without closing it", async () => {
+    vi.useFakeTimers();
+    const close = vi.fn();
+    const factory = vi.fn<ConnectionFactory>(async () => ({
+      close,
+      stream: createStream(),
+      transport: "webrtc",
+      video: document.createElement("video"),
+    }));
+    const manager = new MediaSessionManager(factory, factory, {
+      clientDeviceClass: "desktop",
+    });
+    const api = createApi();
+    const key = "home_assistant:webrtc:camera.front";
+    const lease = manager.acquireHomeAssistant(api, "camera.front");
+    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
+    lease.markUsable();
+    expect(lease.getSnapshot().usable).toBe(true);
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    lease.release();
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(lease.getSnapshot()).toMatchObject({
+      state: "parked",
+      transport: "webrtc",
+      usable: false,
+    });
+    expect(manager.acquireUsable(key, api)).toBeUndefined();
+    expect(factory).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
+
+    manager.closeAll();
+  });
+
   it.each(["mse"] as const)(
     "reuses desktop %s when returning inside two hidden minutes",
     async (transport) => {

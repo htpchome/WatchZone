@@ -313,10 +313,7 @@ class ManagedMediaSession {
       if (this._connection || this._snapshot.state === "connecting") {
         this._resetRetry();
         this._closeConnection();
-        this._setSnapshot({
-          state: "failed",
-          error: "Media suspended in background",
-        });
+        this._setSnapshot({ state: "failed" });
       }
       return;
     }
@@ -594,14 +591,15 @@ class ManagedMediaSession {
   }
 
   private _expireHiddenStream(): void {
-    if (
-      !this._documentHidden ||
-      this._leaseCount === 0 ||
-      !this._connection ||
-      !this._snapshot.transport ||
-      this._snapshot.transport === "webrtc"
-    )
+    if (!this._documentHidden || !this._connection || !this._snapshot.transport)
       return;
+    if (this._snapshot.transport === "webrtc") {
+      if (this._snapshot.usable === true) {
+        this._setSnapshot({ ...this._snapshot, usable: false });
+      }
+      return;
+    }
+    if (this._leaseCount === 0) return;
     this._resetRetry("media");
     this._closeConnection();
     this._setSnapshot({ state: "failed" });

@@ -402,6 +402,10 @@ Visibility changes affect presentation and forced mute, not user preference.
   configured fallback hedge instead of waiting for the retained peer's failure
   timeout. WebRTC retakes presentation only after proving a newly decoded
   foreground frame; a fallback that wins first remains visible meanwhile.
+  The document-scoped media-session manager owns this invalidation and publishes
+  it through the retained session snapshot. It must survive destruction or
+  recreation of the card element while the document is hidden; an element-local
+  visibility timestamp is not authoritative lifecycle state.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.
