@@ -415,7 +415,6 @@ describe("camera-optics-card", () => {
       () => {
         const current = element.shadowRoot?.querySelector<
           HTMLElement & {
-            api?: unknown;
             cameras: readonly { label: string; posterUrl?: string }[];
           }
         >("wzc-camera");
@@ -424,9 +423,6 @@ describe("camera-optics-card", () => {
       },
       { timeout: 10_000 },
     );
-    if (!camera) throw new Error("Camera module did not render");
-    const initialApi = camera.api;
-    expect(initialApi).toBeDefined();
     Object.defineProperty(connection, "connected", { value: false });
     for (const listener of listeners.get("disconnected") ?? []) {
       listener(connection);
@@ -435,12 +431,10 @@ describe("camera-optics-card", () => {
     await vi.waitFor(() =>
       expect(camera?.cameras[0]?.posterUrl).toBeUndefined(),
     );
-    await vi.waitFor(() => expect(camera.api).toBeUndefined());
     expect(camera?.cameras[0]?.label).toBe("Front Door");
 
     Object.defineProperty(connection, "connected", { value: true });
     for (const listener of listeners.get("ready") ?? []) listener(connection);
-    expect(camera.api).toBeUndefined();
     element.hass = {
       states: {
         "camera.front": {
@@ -456,8 +450,6 @@ describe("camera-optics-card", () => {
       callWS: vi.fn(),
       hassUrl: (path: string) => path,
     };
-    await vi.waitFor(() => expect(camera.api).toBeDefined());
-    expect(camera.api).not.toBe(initialApi);
     await vi.waitFor(() =>
       expect(camera?.cameras[0]?.posterUrl).toBeUndefined(),
     );

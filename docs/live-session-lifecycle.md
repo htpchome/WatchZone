@@ -383,34 +383,31 @@ session restores its desired state subject to autoplay rules.
 Visibility changes affect presentation and forced mute, not user preference.
 
 - A hidden or parked session is forced muted immediately.
-- On desktop and tablet clients, a hidden document keeps the current WebRTC,
-  MSE, HLS.js, or native-HLS transport for at most two minutes without invoking
-  adapter parking. Returning inside that window reuses the same transport
-  immediately. At two minutes the manager tears down every connected transport,
-  including an unleased retained transport, and does not reconnect it in the
-  background. Frigate MSE may discard media payload delivered while the
+- On desktop and tablet clients, a hidden document keeps actively leased MSE,
+  HLS.js, and native-HLS transports for two minutes without invoking adapter
+  parking. Returning inside that window reuses the same transport immediately.
+  At two minutes the manager tears those transports down once and does not
+  reconnect them in the background; returning starts their replacement
+  immediately. Frigate MSE may discard media payload delivered while the
   hidden browser prevents SourceBuffer progress, but it retains the same
   WebSocket and SourceBuffer identity inside the window and accepts fresh
   payload immediately when visible.
-- Returning after the two-minute window is a fresh live load. An active
-  presentation starts WebRTC and its configured MSE or HLS alternative
-  concurrently; neither attempt waits for the other to fail. A retained session
-  without an active presentation remains closed until a new lease requests it.
-  The document-scoped media-session manager owns the deadline and teardown, so
-  card destruction or recreation while hidden cannot preserve an expired
-  transport.
-- A selected WebRTC session that transitions to `connecting` has already lost
-  presentation authority, even before it reports `failed`. The presentation
-  clears WebRTC selection and starts the configured fallback at that transition;
-  it never waits for the WebRTC adapter timeout. A new decoded WebRTC frame may
-  take presentation back through the ordinary winner handoff.
+- Desktop and tablet WebRTC remains actively retained for the document lifetime
+  while healthy. Loss of window focus alone has no transport effect. Every
+  retained transport remains subject to the ordinary session budget and
+  eviction policy.
+- A WebRTC player selected before a document remains hidden beyond the
+  two-minute active-media window retains its peer connection but loses its old
+  presentation-usability proof. Foreground return immediately restores the
+  configured fallback hedge instead of waiting for the retained peer's failure
+  timeout. WebRTC retakes presentation only after proving a newly decoded
+  foreground frame; a fallback that wins first remains visible meanwhile.
 - A physical phone closes its live transports when the document becomes
   hidden. Returning to the foreground reconnects actively leased sessions
   immediately without changing camera identity or explicit mute preference.
 - Only an unleased session may park decoder or loading work on desktop and
-  tablet clients inside the two-minute window. Document visibility alone is not
-  permission to park an actively leased session, and expiry closes parked and
-  actively leased transports alike.
+  tablet clients. Document visibility alone is not permission to park an
+  actively leased session.
 - `document.visibilityState`, route state, module visibility, and intersection
   state are inputs to centralized policy, not independent competing handlers.
 - Returning to visibility removes only the forced reasons that no longer

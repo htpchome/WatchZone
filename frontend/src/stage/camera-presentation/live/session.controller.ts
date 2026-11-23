@@ -7,6 +7,7 @@ import type {
 } from "../../../core/config";
 import type { FrigateGo2RtcLiveSourceDescriptor } from "../../../api/live-source";
 import {
+  ACTIVE_MEDIA_HIDDEN_RETENTION_MS,
   type MediaConnectionOptions,
   type MediaSessionLease,
   type MediaSessionSnapshot,
@@ -37,6 +38,7 @@ export class CameraLiveSessionController implements ReactiveController {
   private _frigateFallback: FrigateFallbackTransport = "mse";
   private _frigateStream?: string;
   private _foregroundWebRtcFrameRequest?: number;
+  private _hiddenAt?: number;
   private _sourceGeneration = 0;
   private _fallbackLease?: MediaSessionLease;
   private _fallbackPendingKey?: string;
@@ -127,11 +129,16 @@ export class CameraLiveSessionController implements ReactiveController {
   public hostConnected(): void {
     this._disconnectGeneration += 1;
     this._connected = true;
+    document.addEventListener("visibilitychange", this._handleVisibilityChange);
     this._sync();
   }
 
   public hostDisconnected(): void {
     this._connected = false;
+    document.removeEventListener(
+      "visibilitychange",
+      this._handleVisibilityChange,
+    );
     const generation = ++this._disconnectGeneration;
     // Home Assistant synchronously reparents cards while entering and leaving
     // dashboard editing. Let that matching reconnect keep the existing lease
@@ -165,7 +172,6 @@ export class CameraLiveSessionController implements ReactiveController {
       this._frigateStream !== frigateStream;
     const changed =
       this._api?.identity !== api?.identity ||
-      this._api?.r !== api?.r ||
       identityChanged ||
       this._lowLatencyHls !== lowLatencyHls ||
       frigateFallbackChanged;
@@ -213,6 +219,31 @@ export class CameraLiveSessionController implements ReactiveController {
     this._webRtcSnapshot.timing?.mark("presentation_selected");
     this._select("webrtc", this._webRtcSnapshot.transport, video);
   }
+
+  private readonly _handleVisibilityChange = (): void => {
+    if (document.visibilityState !== "visible") {
+      this._hiddenAt = Date.now();
+      return;
+    }
+    const hiddenAt = this._hiddenAt;
+    this._hiddenAt = undefined;
+    if (
+      hiddenAt === undefined ||
+      Date.now() - hiddenAt < ACTIVE_MEDIA_HIDDEN_RETENTION_MS ||
+      this._selected !== "webrtc" ||
+      this._isFrigateHlsOnly()
+    )
+      return;
+
+    // A retained peer can still report live after the browser or network path
+    // stopped producing frames. Restore the normal fresh-load hedge instead
+    // of waiting for that peer's failure timeout before HLS may start.
+    this._webRtcDecoded = false;
+    this._clearSelection();
+    this._observeForegroundWebRtcFrame();
+    this._syncFallback();
+    this._host.requestUpdate();
+  };
 
   private _observeForegroundWebRtcFrame(): void {
     this._cancelForegroundWebRtcFrame();
@@ -404,20 +435,9 @@ export class CameraLiveSessionController implements ReactiveController {
       this._revision += 1;
       if (snapshot.state === "connecting" || snapshot.state === "failed") {
         this._webRtcDecoded = false;
-        if (this._selected === "webrtc") {
-          this._clearSelection();
-        }
-        this._syncFallback();
       }
-      if (
-        snapshot.state === "live" &&
-        snapshot.usable === false &&
-        snapshot.stream &&
-        snapshot.video
-      ) {
-        this._webRtcDecoded = false;
-        if (this._selected === "webrtc") this._clearSelection();
-        this._observeForegroundWebRtcFrame();
+      if (snapshot.state === "failed" && this._selected === "webrtc") {
+        this._clearSelection();
         this._syncFallback();
       }
       this._host.requestUpdate();
@@ -440,7 +460,6 @@ export class CameraLiveSessionController implements ReactiveController {
   private _syncFallback(): void {
     if (
       this._selected === "webrtc" ||
-      document.visibilityState !== "visible" ||
       !this._api ||
       !this._entityId ||
       !this._available ||

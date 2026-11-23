@@ -17,10 +17,9 @@ import {
 import { MediaConnectionError } from "../src/core/media-connection-error";
 import { TestMediaSessionManager as MediaSessionManager } from "./test-media-session-manager";
 
-function createApi(identity: object = {}, revision?: object): HomeAssistantApi {
+function createApi(identity: object = {}): HomeAssistantApi {
   return {
     identity: identity as HomeAssistantApi["identity"],
-    r: revision,
     callWS: vi.fn(),
     resolveUrl: (path) => path,
     subscribeMessage: vi.fn(),
@@ -154,7 +153,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it("keeps desktop WebRTC running inside two hidden minutes", async () => {
+  it("keeps desktop media running unchanged while hidden", async () => {
     vi.useFakeTimers();
     const close = vi.fn();
     const park = vi.fn();
@@ -177,7 +176,7 @@ describe("MediaSessionManager", () => {
       value: "hidden",
     });
     document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(119_999);
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect(park).not.toHaveBeenCalled();
     expect(close).not.toHaveBeenCalled();
 
@@ -191,53 +190,6 @@ describe("MediaSessionManager", () => {
     expect(lease.getSnapshot().state).toBe("live");
 
     lease.release();
-    manager.closeAll();
-  });
-
-  it("closes unleased retained WebRTC after two hidden minutes and waits for demand", async () => {
-    vi.useFakeTimers();
-    const close = vi.fn();
-    const factory = vi.fn<ConnectionFactory>(async () => ({
-      close,
-      stream: createStream(),
-      transport: "webrtc",
-      video: document.createElement("video"),
-    }));
-    const manager = new MediaSessionManager(factory, factory, {
-      clientDeviceClass: "desktop",
-    });
-    const api = createApi();
-    const key = "home_assistant:webrtc:camera.front";
-    const lease = manager.acquireHomeAssistant(api, "camera.front");
-    await vi.waitFor(() => expect(lease.getSnapshot().state).toBe("live"));
-    lease.markUsable();
-    expect(lease.getSnapshot().usable).toBe(true);
-
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      value: "hidden",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-    lease.release();
-    await vi.advanceTimersByTimeAsync(120_000);
-
-    expect(lease.getSnapshot()).toMatchObject({ state: "failed" });
-    expect(close).toHaveBeenCalledOnce();
-
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      value: "visible",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-
-    expect(manager.acquireUsable(key, api)).toBeUndefined();
-    expect(factory).toHaveBeenCalledOnce();
-
-    const returned = manager.acquireHomeAssistant(api, "camera.front");
-    await vi.waitFor(() => expect(factory).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() => expect(returned.getSnapshot().state).toBe("live"));
-
-    returned.release();
     manager.closeAll();
   });
 
@@ -363,7 +315,7 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
-  it.each(["webrtc", "mse", "hls_mse", "hls_native"] as const)(
+  it.each(["mse", "hls_mse", "hls_native"] as const)(
     "retains desktop %s for two hidden minutes, then reconnects on return",
     async (transport) => {
       const closes: Array<ReturnType<typeof vi.fn>> = [];
@@ -728,38 +680,6 @@ describe("MediaSessionManager", () => {
     expect(factory).toHaveBeenCalledTimes(2);
     first.release();
     second.release();
-    manager.closeAll();
-  });
-
-  it("restarts with a current API wrapper after Home Assistant restores the same transport", async () => {
-    const identity = {};
-    const firstApi = createApi(identity);
-    const restoredApi = createApi(identity, {});
-    const closes: Array<ReturnType<typeof vi.fn>> = [];
-    const factory = vi.fn<ConnectionFactory>(async () => {
-      const close = vi.fn();
-      closes.push(close);
-      return { stream: createStream(), close };
-    });
-    const manager = new MediaSessionManager(factory);
-    const first = manager.acquireHomeAssistant(firstApi, "camera.front");
-    await vi.waitFor(() => expect(first.getSnapshot().state).toBe("live"));
-
-    const restored = manager.acquireHomeAssistant(restoredApi, "camera.front");
-    await vi.waitFor(() => expect(restored.getSnapshot().state).toBe("live"));
-
-    expect(closes[0]).toHaveBeenCalledOnce();
-    expect(factory).toHaveBeenNthCalledWith(
-      2,
-      restoredApi,
-      "camera.front",
-      expect.any(AbortSignal),
-      expect.any(Function),
-      expect.anything(),
-      expect.anything(),
-    );
-    first.release();
-    restored.release();
     manager.closeAll();
   });
 
@@ -1313,7 +1233,7 @@ describe("MediaSessionManager", () => {
     ).toThrowError(
       expect.objectContaining({
         code: "capacity_exceeded",
-        message: "Live-session capacity is in use",
+        message: "The live-session capacity is currently in use",
       }),
     );
     expect(factory).toHaveBeenCalledTimes(MAX_RETAINED_CAMERA_SESSIONS);

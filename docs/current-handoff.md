@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `94b6e9d`
-  (`v0.0.5-dev.34`).
-- Application version: `0.0.5-dev.35`.
+- HEAD before the current uncommitted change: `72a0700`
+  (`v0.0.5-dev.35`).
+- Application version: `0.0.5-dev.36`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -19,156 +19,19 @@ precedence.
   61,420-byte eager graph, 20 bytes below the 61,440-byte release limit.
 - `dev.17` through `dev.22` did not solve the reported background recovery
   failure and must not be treated as successful work.
+- `dev.30` through `dev.35` also failed to solve the physical 15-second
+  foreground-return delay and have been removed in full.
 
-## Current fresh-load foreground correction
+## Restored live baseline
 
-Physical `dev.33` testing showed a common 15-second foreground delay across
-WebRTC, HLS, and MSE. Earlier captured timings identify the shared boundary:
-the foreground attempt began immediately, but its first Home Assistant command
-remained pending. For Frigate WebRTC, `peer_created` occurred 16,050.3 ms after
-the attempt began; the peer and signaling work then completed in under 400 ms.
-The same adapters define a 15-second startup deadline, explaining the visible
-boundary before recovery.
+`dev.36` is the `v0.0.5-dev.29` tree restored byte-for-byte except for the four
+explicit application-version references and this handoff. It preserves the
+`dev.29` winner-takes-all behavior: WebRTC may be retained, losing MSE/HLS
+fallbacks are closed, and a foreground hedge can reacquire the configured
+fallback. No `dev.30` through `dev.35` live-lifecycle change remains.
 
-Physical `dev.34` testing showed no improvement, disproving visibility-event
-dispatch timing as the cause. Its microtask deferral has been removed.
-
-The card's Home Assistant lifecycle contained the shared defect: disconnect
-and ready handlers set `_transportConnected` false, and the ready handler
-explicitly waited for Home Assistant's next `hass` assignment, but
-`_syncRuntime()` ignored that state and continued passing the pre-background
-API wrapper to every live transport. Foreground WebRTC, HLS, and MSE therefore
-issued their first setup command through stale API state and waited for the
-15-second adapter boundary.
-
-`dev.35` withholds the API from the Stage while Home Assistant transport state
-is not current. A disconnect advances a transport epoch. The next connected
-`hass` assignment creates an API wrapper for that epoch; the presentation
-releases and reacquires its leases, and the session manager cancels setup work
-that captured the prior epoch even when Home Assistant retains the same
-connection object. Ordinary card reparenting or card replacement within the
-same epoch still reuses healthy media. Regression coverage exercises
-disconnect, ready, same-connection `hass` restoration, active-session
-replacement, editor reparenting, and card replacement. Retention policy remains
-unchanged from `dev.33`.
-
-Physical `dev.32` testing showed that the prior presentation-level corrections
-did not restore fresh-load behavior. After more than two hidden minutes, the
-session manager still exempted WebRTC and zero-lease retained sessions from its
-teardown. The old WebRTC session therefore restarted first while its MSE or HLS
-alternative had already been discarded, allowing the WebRTC adapter timeout to
-delay the alternative by about 15 seconds.
-
-`dev.33` removes both teardown exemptions. After two hidden minutes, every
-connected WebRTC, MSE, or HLS transport is closed, including a parked retained
-session, and no replacement starts while the document remains hidden. Returning
-with an active presentation starts WebRTC and the configured MSE or HLS
-alternative concurrently through the ordinary fresh-load path. A session with
-no foreground demand stays closed until it is acquired. Tests cover active and
-unleased WebRTC expiry alongside MSE and HLS expiry.
-
-## Superseded foreground-resume corrections
-
-Physical `dev.31` timings isolated the actual 15-second gate. A Home Assistant
-WebRTC attempt began at `04:13:02.642`; HLS did not begin until
-`04:13:17.642`, exactly 15 seconds later, then decoded and selected in 1.87
-seconds. When the selected WebRTC session transitioned back to `connecting`,
-the presentation controller reset its decoded flag but incorrectly left WebRTC
-selected. That stale selection caused `_syncFallback()` to reject both MSE and
-HLS until the existing `failed` handler cleared it after the WebRTC timeout.
-
-`dev.32` makes `connecting` revoke presentation authority just as `failed`
-already did. The configured fallback starts at the WebRTC reconnect transition,
-without waiting for failure; a newly decoded WebRTC frame may still take
-presentation back and closes the losing fallback. Regression coverage exercises
-Home Assistant HLS, Frigate HLS, and Frigate MSE for both foreground-proof
-invalidation and a selected WebRTC session returning to `connecting`.
-The fresh `dev.32` release package validates with a 61,402-byte eager graph,
-38 bytes below the repository's 61,440-byte validation limit.
-
-Physical `dev.30` testing showed the same approximately 15-second foreground
-delay for both Frigate MSE and HLS. The `dev.29` presentation correction kept
-the two-minute hidden timestamp in `CameraLiveSessionController`, so Home
-Assistant could erase the decision by disconnecting and recreating the card
-while hidden or during foreground restoration. The replacement controller then
-accepted the retained WebRTC session's old `usable: true`, selected WebRTC, and
-suppressed either configured fallback until the peer failed.
-
-`dev.31` moves that decision into the document-scoped media-session owner. On
-return after the two-minute window, a retained WebRTC transport stays connected
-but its shared snapshot changes to `usable: false`. Existing and newly created
-presentation controllers immediately start their configured MSE or HLS hedge,
-while WebRTC can retake presentation only after a fresh decoded frame marks the
-same retained session usable again. Coverage includes Home Assistant HLS,
-Frigate HLS, Frigate MSE, and a released/parked WebRTC lease reacquired by a new
-owner after foreground return.
-The fresh `dev.31` release package validates with a 61,400-byte eager graph,
-40 bytes below the repository's 61,440-byte validation limit.
-
-`dev.29` addresses the presentation gate demonstrated by physical `dev.28`
-timings. Frigate HLS began and selected in 183.3 ms, but its attempt did not
-start until the retained WebRTC presentation had already consumed the visible
-delay. A WebRTC player that decoded before the document was hidden retained its
-old usability proof, remained selected on return, and suppressed fallback
-acquisition until the peer declared failure. This affected both Home Assistant
-Direct and Frigate go2rtc HLS.
-
-After the document remains hidden beyond the shared two-minute active-media
-window, CameraOptics now retains the WebRTC peer but invalidates only its old
-presentation proof. It starts the configured fallback immediately and asks the
-retained player to prove a fresh decoded frame. HLS may therefore paint in its
-measured sub-second time; WebRTC takes presentation back only if it produces a
-new frame. Frigate MSE previously avoided the long delay by keeping its losing
-fallback session parked after WebRTC takeover. That behavior kept a second
-go2rtc WebSocket consumer alive and could continue receiving media payload only
-to discard it in the browser. `dev.29` removes that standby connection: losing
-MSE and HLS fallbacks are both closed after WebRTC takeover, and either fallback
-is reacquired immediately by the same foreground hedge when needed.
-The `dev.29` GitHub runner measured a 61,450-byte eager graph, ten bytes above
-the repository's 61,440-byte validation limit. `dev.30` removes redundant eager
-session-manager state code without changing the lifecycle policy. Its fresh
-local release package validates at 61,398 bytes, 42 bytes below the limit and
-52 bytes below the failing runner artifact.
-
-`dev.28` did not improve the reported physical behavior. Its foreground retry
-separation remains as protection for the distinct case where multiple expired
-actively leased transports restart together, but it was not the missing
-presentation-level correction.
-
-`dev.28` corrects a shared foreground-recovery ordering defect affecting both
-Home Assistant HLS and Frigate go2rtc HLS. After the two-minute hidden-window
-teardown, the session manager placed the expired HLS transport and an
-unavailable WebRTC candidate into the same serialized provider-retry queue.
-Because WebRTC was acquired first, its adapter timeout could prevent HLS from
-starting for approximately 15 seconds even though the HLS pipeline itself was
-fast and the backend stream was warm.
-
-Foreground lifecycle replacement now restarts each actively leased transport
-independently, matching fresh hedged startup. Healthy retained WebRTC remains
-untouched, HLS is no longer gated by a failed or pending WebRTC attempt, and
-ordinary provider-outage retries across cameras remain serialized. The same
-rule applies when retained HLS fails its foreground advancing-frame validation.
-Regression coverage exercises both Home Assistant and Frigate go2rtc session
-keys with a WebRTC candidate that remains pending while HLS reconnects.
-The fresh `dev.28` release package validates with a 61,432-byte eager graph,
-eight bytes below the repository's 61,440-byte limit.
-
-Physical Firefox diagnostics proved that Frigate HLS itself acquired its URL
-in 16.7 ms, loaded its manifest in 66.7 ms, and decoded and selected its first
-frame in 266.7 ms. The remaining delay was therefore not HLS source
-acquisition. The retained-session path kept actively leased HLS alive for two
-hidden minutes but did not invoke its adapter resume and advancing-frame
-validation when the document became visible inside that window. Chromium could
-suspend that retained player and leave it to recover on its own.
-
-`dev.27` resumes and validates actively leased HLS.js and native-HLS players on
-foreground return. A player that advances remains the same retained session; a
-player that fails the bounded validation is closed and replaced through the
-ordinary fresh connection path. The existing two-minute full teardown remains
-unchanged, as do MSE and WebRTC visibility behavior.
-
-The fresh `dev.27` production build validates with a 61,437-byte eager graph,
-three bytes below the repository's 61,440-byte validation limit.
+The rebuilt `dev.36` package validates with a 61,427-byte eager graph, below
+the repository's 61,440-byte validation limit.
 
 ## Browser-compatibility rollback
 
@@ -224,6 +87,38 @@ MSE were also affected. The user continued to experience an approximately
     or `dev.23`, briefly creating unwanted version-only working-tree changes
     after being told to stop.
 
+### Failed `dev.30` through `dev.35` sequence
+
+- `dev.30` only recovered release-budget margin; it did not address the
+  physical delay.
+- `dev.31` tried to preserve fallback recovery across card recreation.
+  Physical testing showed no improvement because card recreation was not the
+  proven owner of the delay.
+- `dev.32` tried to start fallback when retained WebRTC reconnected. Physical
+  testing again showed no improvement. The captured HLS startup itself was
+  still fast, while the change continued to infer orchestration behavior from
+  incomplete attempt timing.
+- `dev.33` forced a fresh transport race after hidden teardown. It broadened
+  the regression: WebRTC, HLS, and MSE all exhibited the approximately
+  15-second foreground return. It also changed retention behavior before the
+  shared delay was isolated.
+- `dev.34` deferred foreground startup to a microtask after
+  `visibilitychange`. Physical testing showed zero improvement; the event
+  dispatch boundary was not the cause.
+- `dev.35` attributed the delay to reuse of a stale Home Assistant API wrapper
+  and introduced a transport-revision mechanism. This conclusion was not
+  established by a physical reproduction before handoff. Passing mocked and
+  cross-browser tests did not prove the real foreground-return behavior, so the
+  release was not a trustworthy fix and was rolled back with the rest.
+
+The repeated failure was methodological: the agent kept changing retention,
+presentation selection, retry ordering, visibility timing, and Home Assistant
+API lifecycle from one hypothesis at a time without first capturing one
+complete physical timeline from foreground event through candidate creation,
+Home Assistant command dispatch, transport readiness, and first advancing
+frame. Each failed physical result should have stopped that line of work;
+instead, another speculative layer was changed.
+
 ## Why this was unacceptable
 
 - The agent changed session ownership, teardown, retry, and reacquisition before
@@ -237,6 +132,8 @@ MSE were also affected. The user continued to experience an approximately
   advancing frame.
 - Hundreds of passing tests were presented as reassurance while the actual
   behavior remained broken.
+- The agent treated partial timing records as proof of causes they did not
+  measure, then presented each new hypothesis too confidently.
 - The agent handed back test, validation, and eager-graph failures despite the
   user explicitly objecting to failed handoffs.
 - It validated stale generated output and reported it as a current production

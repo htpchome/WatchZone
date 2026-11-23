@@ -73,15 +73,10 @@ For the initial Home Assistant direct source, CameraOptics uses a hedged startup
    decoding the frame required for takeover. When supported, presentation uses
    `requestVideoFrameCallback` to confirm a frame from a replacement stream;
    media readiness events remain the standards-based fallback.
-   After a document remains hidden beyond the active-media retention window,
-   the media-session manager closes both connected candidates, including any
-   retained WebRTC peer. Foreground return is a fresh hedged startup: WebRTC and
-   HLS start concurrently, and HLS never waits for a retained peer's failure
-   timeout. Card destruction or recreation during the hidden interval cannot
-   preserve an expired transport.
-   Likewise, a previously selected WebRTC session that returns to `connecting`
-   immediately loses presentation authority and starts HLS; HLS does not wait
-   for the WebRTC setup attempt to time out or report failure.
+   After a document remains hidden beyond the active-media retention window, a
+   previously selected retained WebRTC player must prove a new foreground frame.
+   HLS starts concurrently during that proof; it never waits for the retained
+   peer's failure timeout.
 4. After a successful WebRTC handoff, the losing HLS lease is discarded. A
    shared HLS session used by another consumer is not closed. The presentation
    commits WebRTC visibility before discarding HLS so the handoff cannot expose
@@ -230,8 +225,7 @@ therefore have independent session identities and cleanup while still
 participating in one selection policy, and incompatible HLS modes never share
 a session. Compatible card and editor-preview instances in the same document
 share sessions. Removing a live element releases its lease and detaches
-presentation; it does not close a healthy retained transport before its
-retention deadline.
+presentation; it does not close a healthy retained winner.
 
 WebRTC uses element attachment after the adapter creates its session-owned
 player. The retained stream remains separately exposed for capabilities such
@@ -278,15 +272,6 @@ visibility return resumes healthy media and immediately replaces only a
 background-stalled pending connection. A failed WebRTC probe keeps its
 provider cooldown so repeated visibility or navigation events cannot create a
 second upstream consumer for the same session key.
-
-After Home Assistant reports a disconnect or ready transition, the card
-withholds its API from Stage consumers until Home Assistant supplies the next
-current `hass` object. A transport epoch distinguishes that restored API even
-when the underlying connection object is unchanged. Live presentations
-reacquire their leases through the current epoch, and the session manager
-cancels setup work that captured the prior epoch. API wrappers created by card
-reparenting or card replacement inside the same epoch continue sharing healthy
-retained media.
 
 ## 8. Current audio behavior
 

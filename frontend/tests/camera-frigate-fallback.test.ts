@@ -39,33 +39,6 @@ function liveLease(
   };
 }
 
-function observableLease(
-  key: string,
-  initialSnapshot: MediaSessionSnapshot,
-): { emit(snapshot: MediaSessionSnapshot): void; lease: MediaSessionLease } {
-  let snapshot = initialSnapshot;
-  const listeners = new Set<(value: MediaSessionSnapshot) => void>();
-  return {
-    emit: (value) => {
-      snapshot = value;
-      for (const listener of listeners) listener(value);
-    },
-    lease: {
-      key,
-      discard: vi.fn(),
-      getSnapshot: () => snapshot,
-      markUsable: vi.fn(),
-      release: vi.fn(),
-      retry: vi.fn(),
-      subscribe: vi.fn((listener) => {
-        listeners.add(listener);
-        listener(snapshot);
-        return () => listeners.delete(listener);
-      }),
-    },
-  };
-}
-
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -143,16 +116,11 @@ describe("Frigate fallback selection", () => {
     controller.hostDisconnected();
   });
 
-  it.each([
-    { connection: "home_assistant", fallback: "hls", trigger: "proof" },
-    { connection: "frigate_go2rtc", fallback: "hls", trigger: "proof" },
-    { connection: "frigate_go2rtc", fallback: "mse", trigger: "proof" },
-    { connection: "home_assistant", fallback: "hls", trigger: "reconnect" },
-    { connection: "frigate_go2rtc", fallback: "hls", trigger: "reconnect" },
-    { connection: "frigate_go2rtc", fallback: "mse", trigger: "reconnect" },
-  ] as const)(
-    "starts $connection $fallback immediately when retained WebRTC loses authority through $trigger",
-    async ({ connection, fallback, trigger }) => {
+  it.each(["home_assistant", "frigate_go2rtc"] as const)(
+    "starts %s HLS immediately after a long-hidden retained WebRTC presentation returns",
+    async (connection) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-11-23T02:00:00Z"));
       const api = {
         identity: {},
         callWS: vi.fn(),
@@ -169,7 +137,7 @@ describe("Frigate fallback selection", () => {
       });
       webRtcVideo.cancelVideoFrameCallback = vi.fn();
       webRtcVideo.play = vi.fn(() => Promise.resolve());
-      const webRtcSession = observableLease(
+      const webRtcLease = liveLease(
         connection === "home_assistant"
           ? "home_assistant:webrtc:camera.front"
           : "frigate_go2rtc:camera.front:main:webrtc",
@@ -181,18 +149,15 @@ describe("Frigate fallback selection", () => {
           video: webRtcVideo,
         },
       );
-      const webRtcLease = webRtcSession.lease;
-      const fallbackVideo = document.createElement("video");
-      const fallbackLease = liveLease(
+      const hlsVideo = document.createElement("video");
+      const hlsLease = liveLease(
         connection === "home_assistant"
           ? "home_assistant:hls:camera.front"
-          : fallback === "hls"
-            ? "frigate_go2rtc:camera.front:main:hls"
-            : "frigate_go2rtc:entry-home:front:mse",
+          : "frigate_go2rtc:camera.front:main:hls",
         {
           state: "live",
-          transport: fallback === "mse" ? "mse" : "hls_mse",
-          video: fallbackVideo,
+          transport: "hls_mse",
+          video: hlsVideo,
         },
       );
       const source: FrigateGo2RtcLiveSourceDescriptor = {
@@ -220,19 +185,12 @@ describe("Frigate fallback selection", () => {
         LiveSourceResolver.prototype,
         "acquireUsableFrigateHls",
       ).mockReturnValue(undefined);
-      vi.spyOn(
-        LiveSourceResolver.prototype,
-        "acquireUsableFrigateMse",
-      ).mockReturnValue(undefined);
       const acquireHomeAssistantHls = vi
         .spyOn(LiveSourceResolver.prototype, "acquireHomeAssistantHls")
-        .mockResolvedValue(fallbackLease);
+        .mockResolvedValue(hlsLease);
       const acquireFrigateHls = vi
         .spyOn(LiveSourceResolver.prototype, "acquireFrigateHls")
-        .mockResolvedValue(fallbackLease);
-      const acquireFrigateMse = vi
-        .spyOn(LiveSourceResolver.prototype, "acquireFrigateMse")
-        .mockResolvedValue(fallbackLease);
+        .mockResolvedValue(hlsLease);
       const controller = new CameraLiveSessionController(
         {
           addController: vi.fn(),
@@ -247,78 +205,51 @@ describe("Frigate fallback selection", () => {
       );
 
       controller.hostConnected();
-      controller.configure(
-        api,
-        "camera.front",
-        true,
-        connection,
-        true,
-        fallback,
-      );
+      controller.configure(api, "camera.front", true, connection, true, "hls");
       expect(controller.selected).toBe("webrtc");
+
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(119_999);
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(0);
       expect(acquireHomeAssistantHls).not.toHaveBeenCalled();
       expect(acquireFrigateHls).not.toHaveBeenCalled();
-      expect(acquireFrigateMse).not.toHaveBeenCalled();
+      expect(controller.selected).toBe("webrtc");
 
-      if (trigger === "proof") {
-        webRtcSession.emit({
-          state: "live",
-          stream,
-          transport: "webrtc",
-          usable: false,
-          video: webRtcVideo,
-        });
-      } else {
-        Object.defineProperty(document, "visibilityState", {
-          configurable: true,
-          value: "hidden",
-        });
-        webRtcSession.emit({ state: "failed" });
-        expect(acquireHomeAssistantHls).not.toHaveBeenCalled();
-        expect(acquireFrigateHls).not.toHaveBeenCalled();
-        expect(acquireFrigateMse).not.toHaveBeenCalled();
-        Object.defineProperty(document, "visibilityState", {
-          configurable: true,
-          value: "visible",
-        });
-        webRtcSession.emit({ state: "connecting" });
-      }
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(120_000);
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(0);
 
       if (connection === "home_assistant") {
-        await vi.waitFor(() =>
-          expect(acquireHomeAssistantHls).toHaveBeenCalledOnce(),
-        );
+        expect(acquireHomeAssistantHls).toHaveBeenCalledOnce();
         expect(acquireFrigateHls).not.toHaveBeenCalled();
-        expect(acquireFrigateMse).not.toHaveBeenCalled();
-      } else if (fallback === "hls") {
-        await vi.waitFor(() =>
-          expect(acquireFrigateHls).toHaveBeenCalledOnce(),
-        );
-        expect(acquireHomeAssistantHls).not.toHaveBeenCalled();
-        expect(acquireFrigateMse).not.toHaveBeenCalled();
       } else {
-        await vi.waitFor(() =>
-          expect(acquireFrigateMse).toHaveBeenCalledOnce(),
-        );
+        expect(acquireFrigateHls).toHaveBeenCalledOnce();
         expect(acquireHomeAssistantHls).not.toHaveBeenCalled();
-        expect(acquireFrigateHls).not.toHaveBeenCalled();
       }
-      await vi.waitFor(() => expect(controller.selected).toBe("fallback"));
+      expect(controller.selected).toBe("fallback");
 
-      if (trigger === "proof") {
-        deliverFreshWebRtcFrame?.();
-      } else {
-        webRtcSession.emit({
-          state: "live",
-          stream,
-          transport: "webrtc",
-          video: webRtcVideo,
-        });
-        controller.handleWebRtcDecoded(webRtcVideo);
-      }
+      deliverFreshWebRtcFrame?.();
       expect(controller.selected).toBe("webrtc");
       controller.handleWebRtcPresented();
-      expect(fallbackLease.discard).toHaveBeenCalledOnce();
+      expect(hlsLease.discard).toHaveBeenCalledOnce();
       controller.hostDisconnected();
     },
   );
