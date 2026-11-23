@@ -1,7 +1,6 @@
 import { CAMERA_MODULE_TYPE, CAMERA_TAG } from "../../../core/constants";
 import { cameraImageUrl } from "../../../core/home-assistant";
 import { englishLocalize } from "../../../core/localization";
-import type { MediaSessionLease } from "../../../core/media-session-manager";
 import type { MediaRetentionPreference } from "../../../core/media-retention-policy";
 import type {
   ActivityHighlightMode,
@@ -13,7 +12,6 @@ import type {
   ModuleDefinition,
   PlaceableRuntimeContext,
 } from "../../placeable";
-import { LiveSourceResolver } from "../../../providers/live-source-resolver";
 import type {
   CameraItemConfig,
   CameraModule,
@@ -46,7 +44,6 @@ type CameraModuleItemConfig = Omit<
   "available" | "label" | "posterUrl"
 > & { readonly title: string };
 
-const resolver = new LiveSourceResolver();
 const posterPreloads = new Map<string, HTMLImageElement>();
 const friendlyNameCaches = new WeakMap<CameraModule, Map<string, string>>();
 let definitionPromise: Promise<void> | undefined;
@@ -61,41 +58,10 @@ export const moduleDefinition: ModuleDefinition<
   getEntityIds: ({ cameras }) => cameras.map(({ entityId }) => entityId),
   async prepare(config, context) {
     const first = config.cameras[0];
-    if (!first || !context.api || !context.hass?.states[first.entityId])
-      return undefined;
-    let lease: MediaSessionLease;
-    if (first.connection === "frigate_go2rtc") {
-      const policy = resolver.frigateTransportPolicy(
-        first.frigateFallback ?? "mse",
-      );
-      lease = policy.hlsOnly
-        ? await resolver.acquireFrigateHls(
-            context.api,
-            first.entityId,
-            first.frigateStream,
-            {
-              initialMuted: true,
-              lowLatencyHls: first.lowLatencyHls,
-              nativeHlsOnly: true,
-            },
-          )
-        : await resolver.acquireFrigateWebRtc(
-            context.api,
-            first.entityId,
-            first.frigateStream,
-          );
-    } else {
-      lease = await resolver.acquireHomeAssistantWebRtc(
-        context.api,
-        first.entityId,
-      );
-    }
+    if (!first || !context.hass?.states[first.entityId]) return undefined;
     const posterUrl = cameraImageUrl(context.hass, first.entityId);
     if (posterUrl) preloadPoster(posterUrl);
-    return {
-      release: () =>
-        context.preview === true ? lease.discard() : lease.release(),
-    };
+    return undefined;
   },
   define() {
     return (definitionPromise ??= import("./camera").then(() => undefined));

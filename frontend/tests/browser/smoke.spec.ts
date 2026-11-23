@@ -1161,7 +1161,7 @@ test("opens notification deep links independently of activity presentation", asy
     .toBe("?unrelated=preserved");
 });
 
-test("starts the active camera poster before the full camera element loads", async ({
+test("preloads the active poster without starting media before the camera element loads", async ({
   page,
 }) => {
   let releaseCameraDefinition!: () => void;
@@ -1184,6 +1184,10 @@ test("starts the active camera poster before the full camera element loads", asy
   await page.goto("/");
   await waitForCameraOpticsDefinition(page);
   await page.locator("camera-optics-card").evaluate((element) => {
+    const startupMessages: string[] = [];
+    (
+      window as unknown as { cameraStartupMessages: string[] }
+    ).cameraStartupMessages = startupMessages;
     const card = element as HTMLElement & {
       hass: unknown;
       setConfig(config: unknown): void;
@@ -1203,10 +1207,12 @@ test("starts the active camera poster before the full camera element loads", asy
       connection: { subscribeMessage: async () => () => undefined },
       hassUrl: (path: string) => path,
       callService: async () => undefined,
-      callWS: async (message: { type: string }) =>
-        message.type === "camera_optics/reviews/list"
+      callWS: async (message: { type: string }) => {
+        startupMessages.push(message.type);
+        return message.type === "camera_optics/reviews/list"
           ? { items: [] }
-          : { ready: false },
+          : { ready: false };
+      },
     };
   });
 
@@ -1214,8 +1220,30 @@ test("starts the active camera poster before the full camera element loads", asy
   expect(
     await page.evaluate(() => customElements.get("wzc-camera")),
   ).toBeUndefined();
+  expect(
+    await page.evaluate(() => {
+      const messages = (
+        window as unknown as { cameraStartupMessages: string[] }
+      ).cameraStartupMessages;
+      return messages.some(
+        (type) =>
+          type === "camera/webrtc/get_client_config" ||
+          type === "camera/stream" ||
+          type.startsWith("camera_optics/live/"),
+      );
+    }),
+  ).toBe(false);
   releaseCameraDefinition();
   await expect(page.locator("wzc-camera")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { cameraStartupMessages: string[] })
+            .cameraStartupMessages,
+      ),
+    )
+    .toContain("camera/webrtc/get_client_config");
 });
 
 test("keeps picker and activity geometry stable across lazy loading", async ({
