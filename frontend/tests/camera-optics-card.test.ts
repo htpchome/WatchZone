@@ -556,6 +556,25 @@ describe("camera-optics-card", () => {
     expect(element.style.getPropertyValue("box-shadow")).toBe("");
   });
 
+  it("uses the fixed dark video background unless theme color is enabled", async () => {
+    const element = document.createElement(
+      "camera-optics-card",
+    ) as DashboardCard;
+    element.setConfig({ type: "custom:camera-optics-card" });
+    document.body.append(element);
+    await element.updateComplete;
+
+    expect(element.hasAttribute("video-bg")).toBe(false);
+
+    element.setConfig({
+      type: "custom:camera-optics-card",
+      use_theme_video_background: true,
+    });
+    await element.updateComplete;
+
+    expect(element.hasAttribute("video-bg")).toBe(true);
+  });
+
   it("applies the standard Full Stage height mode and leaves camera-only stages natural", async () => {
     const element = document.createElement(
       "camera-optics-card",

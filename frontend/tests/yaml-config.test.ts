@@ -52,6 +52,20 @@ describe("CameraOptics YAML configuration manager", () => {
     });
   });
 
+  it("persists only the theme video-background opt-in", () => {
+    expect(
+      toYamlCardConfig(
+        normalizeCardConfig({
+          type: CARD_TYPE,
+          use_theme_video_background: true,
+        }),
+      ),
+    ).toEqual({
+      type: CARD_TYPE,
+      use_theme_video_background: true,
+    });
+  });
+
   it("persists the stage gate while omitting that type's default lineup", () => {
     expect(
       toYamlCardConfig(

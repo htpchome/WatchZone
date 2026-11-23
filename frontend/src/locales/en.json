@@ -58,6 +58,7 @@
   "editor.default_stage_layout": "Default",
   "editor.future_stage_layout": "Future",
   "editor.live_media_player": "Live Media Player",
+  "editor.use_theme_video_background": "Use Theme for Video Background",
   "editor.camera_switcher_overlay": "Camera Switcher Overlay",
   "editor.alert_detection_highlight": "Alert and Detection Highlight",
   "editor.alert_detection_thumbnail_outline": "Alert and Detection Thumbnail Outline",

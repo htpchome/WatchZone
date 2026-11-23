@@ -98,6 +98,9 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
     delete yaml.alert_detection_takeover;
   }
   if (!config.start_alert_takeover_on) delete yaml.start_alert_takeover_on;
+  if (!config.use_theme_video_background) {
+    delete yaml.use_theme_video_background;
+  }
   if (config.ptz_overlay_control === "start_open") {
     delete yaml.ptz_overlay_control;
   }

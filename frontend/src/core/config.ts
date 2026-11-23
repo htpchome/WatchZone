@@ -127,6 +127,7 @@ export interface CardConfig {
   readonly rounded_outer_corners_phone: boolean;
   readonly type: typeof CARD_TYPE;
   readonly title: string;
+  readonly use_theme_video_background: boolean;
   readonly [key: string]: unknown;
 }
 
@@ -212,6 +213,7 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     "minimal_camera_show_pip_button",
     "minimal_camera_show_source_label",
     "start_alert_takeover_on",
+    "use_theme_video_background",
     "view_timelapse_on_thumbnail_hover",
     "rounded_outer_corners",
     "rounded_outer_corners_phone",
@@ -360,15 +362,24 @@ export function normalizeCardConfig(value: unknown): CardConfig {
   ]) {
     delete normalized[legacyKey];
   }
+  for (const key of [
+    "camera_rounded_corners_phone",
+    "camera_shadows_phone",
+    "camera_switcher_overlay",
+    "mobile_data_saving",
+    "outer_padding_phone",
+    "outer_shadows_phone",
+    "rounded_outer_corners_phone",
+    "start_alert_takeover_on",
+    "use_theme_video_background",
+  ] as const) {
+    normalized[key] = source[key] === true;
+  }
   normalized.camera_rounded_corners = moduleAppearanceValue(
     source,
     "camera_rounded_corners",
   );
   normalized.camera_shadows = moduleAppearanceValue(source, "camera_shadows");
-  normalized.camera_rounded_corners_phone =
-    source.camera_rounded_corners_phone === true;
-  normalized.camera_shadows_phone = source.camera_shadows_phone === true;
-  normalized.camera_switcher_overlay = source.camera_switcher_overlay === true;
   normalized.companion_rotate_action =
     source.companion_rotate_action === "none" ||
     source.companion_rotate_action === "fullscreen_live_video"
@@ -446,27 +457,13 @@ export function normalizeCardConfig(value: unknown): CardConfig {
     source.slide_advance_time === 30
       ? source.slide_advance_time
       : 10;
-  normalized.start_alert_takeover_on = source.start_alert_takeover_on === true;
   normalized.view_timelapse_on_thumbnail_hover =
     source.view_timelapse_on_thumbnail_hover !== false;
   delete normalized.edge_to_edge_non_phone;
   normalized.edge_to_edge_phone = source.edge_to_edge_phone !== false;
-  normalized.rounded_outer_corners =
-    typeof source.rounded_outer_corners === "boolean"
-      ? source.rounded_outer_corners
-      : true;
-  normalized.rounded_outer_corners_phone =
-    source.rounded_outer_corners_phone === true;
-  normalized.outer_shadows =
-    typeof source.outer_shadows === "boolean" ? source.outer_shadows : true;
-  normalized.outer_shadows_phone = source.outer_shadows_phone === true;
-  normalized.outer_padding =
-    typeof source.outer_padding === "boolean" ? source.outer_padding : true;
-  normalized.outer_padding_phone = source.outer_padding_phone === true;
-  normalized.mobile_data_saving =
-    typeof source.mobile_data_saving === "boolean"
-      ? source.mobile_data_saving
-      : false;
+  normalized.rounded_outer_corners = source.rounded_outer_corners !== false;
+  normalized.outer_shadows = source.outer_shadows !== false;
+  normalized.outer_padding = source.outer_padding !== false;
   const config = normalized as CardConfig;
   explicitConfigKeys.set(
     config,

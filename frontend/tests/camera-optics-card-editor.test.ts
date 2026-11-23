@@ -99,33 +99,35 @@ async function setBooleanSelector(
       ),
     );
     const section =
-      key === "mobile_data_saving"
-        ? "mobile-and-touch"
-        : key === "view_timelapse_on_thumbnail_hover"
-          ? "reviews"
-          : key.startsWith("display_")
-            ? "display"
-            : key === "edge_to_edge_phone" && hasMinimalCameraSettings
-              ? "minimal-camera-configuration"
-              : [
-                    "rounded_outer_corners",
-                    "outer_shadows",
-                    "outer_padding",
-                    "edge_to_edge_phone",
-                    "camera_rounded_corners",
-                    "camera_shadows",
-                    "camera_bar_rounded_corners",
-                    "camera_bar_shadows",
-                    "event_rounded_corners",
-                    "event_shadows",
-                  ].includes(key.replace(/_phone$/, "")) ||
-                  key === "edge_to_edge_phone"
-                ? "layout"
-                : editor.shadowRoot?.querySelector(
-                      `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
-                    )
-                  ? "minimal-camera-configuration"
-                  : "live-media-player";
+      key === "use_theme_video_background"
+        ? "general"
+        : key === "mobile_data_saving"
+          ? "mobile-and-touch"
+          : key === "view_timelapse_on_thumbnail_hover"
+            ? "reviews"
+            : key.startsWith("display_")
+              ? "display"
+              : key === "edge_to_edge_phone" && hasMinimalCameraSettings
+                ? "minimal-camera-configuration"
+                : [
+                      "rounded_outer_corners",
+                      "outer_shadows",
+                      "outer_padding",
+                      "edge_to_edge_phone",
+                      "camera_rounded_corners",
+                      "camera_shadows",
+                      "camera_bar_rounded_corners",
+                      "camera_bar_shadows",
+                      "event_rounded_corners",
+                      "event_shadows",
+                    ].includes(key.replace(/_phone$/, "")) ||
+                    key === "edge_to_edge_phone"
+                  ? "layout"
+                  : editor.shadowRoot?.querySelector(
+                        `${ACCORDION_ITEM_TAG}[item-key="minimal-camera-configuration"]`,
+                      )
+                    ? "minimal-camera-configuration"
+                    : "live-media-player";
     await openEditorSection(editor, section);
     control = queryBooleanSelector(editor, selector);
     if (!control && section === "layout") {
@@ -195,6 +197,14 @@ describe("camera-optics-card-editor", () => {
     );
     expect(items.every((item) => item.childElementCount === 0)).toBe(true);
     expect(items.every((item) => !item.open)).toBe(true);
+    const generalSection = await openEditorSection(editor, "general");
+    const videoBackground = generalSection.querySelector<TestBooleanSelector>(
+      '[data-config-key="use_theme_video_background"]',
+    );
+    expect(videoBackground?.getAttribute("label")).toBe(
+      "Use Theme for Video Background",
+    );
+    expect(videoBackground?.value).toBe(false);
     const liveMedia = await openEditorSection(editor, "live-media-player");
     expect(liveMedia.childElementCount).toBe(7);
     expect(
@@ -1235,6 +1245,29 @@ describe("camera-optics-card-editor", () => {
       title: "Camera",
       alert_detection_takeover: "alerts",
       start_alert_takeover_on: true,
+    });
+  });
+
+  it("saves the General Settings theme background opt-in", async () => {
+    const editor = document.createElement(
+      "camera-optics-card-editor",
+    ) as CardEditor;
+    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
+    const changed = vi.fn();
+    editor.addEventListener("config-changed", changed);
+    document.body.append(editor);
+    await editor.updateComplete;
+
+    await setBooleanSelector(
+      editor,
+      '[data-config-key="use_theme_video_background"]',
+      true,
+    );
+
+    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
+      type: CARD_TYPE,
+      title: "Camera",
+      use_theme_video_background: true,
     });
   });
 

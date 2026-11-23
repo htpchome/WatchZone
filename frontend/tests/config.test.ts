@@ -59,6 +59,7 @@ describe("CameraOptics card configuration", () => {
       slide_advance_time: 10,
       slide_transition: "slide",
       start_alert_takeover_on: false,
+      use_theme_video_background: false,
       stage_flow: {
         default: ["default-stage"],
         phone: ["default-mobile-stage"],
@@ -77,6 +78,17 @@ describe("CameraOptics card configuration", () => {
       mobile_data_saving: false,
       cameras: [],
     });
+  });
+
+  it("defaults video backgrounds to fixed dark and validates theme opt-in", () => {
+    expect(normalizeCardConfig({}).use_theme_video_background).toBe(false);
+    expect(
+      normalizeCardConfig({ use_theme_video_background: true })
+        .use_theme_video_background,
+    ).toBe(true);
+    expect(() =>
+      normalizeCardConfig({ use_theme_video_background: "true" }),
+    ).toThrow("use_theme_video_background must be a boolean");
   });
 
   it("normalizes independent standard and phone height modes", () => {

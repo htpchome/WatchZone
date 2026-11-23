@@ -12,6 +12,10 @@ export const cardStyles = css`
     min-block-size: 0;
   }
 
+  :host([video-bg]) {
+    --wzc-camera-stage: var(--wzc-media-placeholder-background);
+  }
+
   :host(.card-picker-preview-host) {
     block-size: auto !important;
     height: auto !important;

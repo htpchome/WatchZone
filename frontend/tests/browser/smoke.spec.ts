@@ -1513,6 +1513,7 @@ test("paints a translucent camera stage on one owning surface", async ({
     target.style.setProperty("--wzc-camera-stage", "rgba(40, 80, 120, 0.25)");
     target.setConfig({
       type: "custom:camera-optics-card",
+      use_theme_video_background: true,
       cameras: [
         {
           additional_camera: {
@@ -5809,7 +5810,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   );
   await expect(snapshot).toBeVisible();
   await expect(snapshot).toHaveAttribute("src", "/thumbnail.svg");
-  await expect(snapshot).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(snapshot).toHaveCSS("background-color", "rgb(36, 36, 36)");
   await expect(page.locator("wzc-recorded-video-player")).toHaveCount(0);
   await expect(
     mediaDialog.getByRole("button", { name: "View Review" }),
@@ -11680,6 +11681,55 @@ test("exposes and honors the CameraOptics semantic theme-token contract", async 
   expect(result.popoverShadow).toBe(result.taskShadow);
 });
 
+test("switches all video backgrounds between fixed dark and current theme", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & { setConfig(config: unknown): void };
+    host.style.setProperty("--wzc-color-surface-secondary", "rgb(12, 34, 56)");
+    host.setConfig({
+      type: "custom:camera-optics-card",
+      cameras: [{ entity_id: "camera.front" }],
+    });
+  });
+
+  const cameraStage = card.locator(".camera-carousel");
+  await expect(cameraStage).toHaveCSS("background-color", "rgb(36, 36, 36)");
+  expect(
+    await card.evaluate((element) => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--wzc-recorded-media-background)";
+      element.shadowRoot?.append(probe);
+      const background = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return background;
+    }),
+  ).toBe("rgb(36, 36, 36)");
+
+  await card.evaluate((element) => {
+    (element as HTMLElement & { setConfig(config: unknown): void }).setConfig({
+      type: "custom:camera-optics-card",
+      cameras: [{ entity_id: "camera.front" }],
+      use_theme_video_background: true,
+    });
+  });
+
+  await expect(cameraStage).toHaveCSS("background-color", "rgb(12, 34, 56)");
+  expect(
+    await card.evaluate((element) => {
+      const probe = document.createElement("div");
+      probe.style.background = "var(--wzc-recorded-media-background)";
+      element.shadowRoot?.append(probe);
+      const background = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return background;
+    }),
+  ).toBe("rgb(12, 34, 56)");
+});
+
 test("camera selection does not recursively republish dirty state", async ({
   page,
 }) => {
@@ -11867,6 +11917,9 @@ test("editor uses exclusive accordions and shared draft status", async ({
   const stageManagement = editor.locator(
     'wzc-accordion-item[item-key="stage-management"]',
   );
+  const generalSettings = editor.locator(
+    'wzc-accordion-item[item-key="general"]',
+  );
   const liveMedia = editor.locator(
     'wzc-accordion-item[item-key="live-media-player"]',
   );
@@ -11900,6 +11953,15 @@ test("editor uses exclusive accordions and shared draft status", async ({
     stageManagement.locator('input[data-stage-profile="default"]'),
   ).toBeChecked();
   await expect(stageManagement).toContainText("Default");
+  await generalSettings.locator("summary").click();
+  const videoBackground = generalSettings.locator(
+    '[data-config-key="use_theme_video_background"]',
+  );
+  await expect(videoBackground).toHaveCount(1);
+  await expect(videoBackground).toHaveAttribute(
+    "label",
+    "Use Theme for Video Background",
+  );
   await reviews.locator("summary").click();
   const reviewHistory = reviews.locator(
     'ha-selector[label="Days of Reviews to Display"]',

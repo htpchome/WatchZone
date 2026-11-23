@@ -239,7 +239,7 @@ export const themeTokens = css`
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);
     --wzc-media-placeholder-background: var(--wzc-color-surface-secondary);
     --wzc-media-placeholder-color: var(--wzc-color-text-2);
-    --wzc-camera-stage: var(--wzc-media-placeholder-background);
+    --wzc-camera-stage: #242424;
     --wzc-camera-stage-aspect-ratio: 16 / 9;
     --wzc-camera-square-radius: 0px;
     --wzc-camera-suspended-background: var(--ha-color-neutral-05, #111111);

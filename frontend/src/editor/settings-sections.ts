@@ -51,6 +51,7 @@ export type BooleanConfigFlag =
   | "rounded_outer_corners"
   | "rounded_outer_corners_phone"
   | "start_alert_takeover_on"
+  | "use_theme_video_background"
   | "view_timelapse_on_thumbnail_hover";
 
 interface ValueChangedEvent extends Event {
@@ -199,6 +200,12 @@ export function renderGeneralSettings(options: GeneralSettingsOptions) {
       @input=${options.onTitleInput}
       @change=${options.onTitleChange}
     ></ha-input>
+    ${renderBooleanOption(
+      options,
+      "use_theme_video_background",
+      options.localize("editor.use_theme_video_background"),
+      options.config?.use_theme_video_background === true,
+    )}
   `;
 }
 

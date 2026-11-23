@@ -162,6 +162,7 @@ export class DashboardCard extends LitElement {
 
   public setConfig(value: unknown): void {
     const next = normalizeCardConfig(value);
+    this.toggleAttribute("video-bg", next.use_theme_video_background);
     if (cardConfigSignature(next) === cardConfigSignature(this._config)) {
       this._cardHostAppearance.configure(
         activeDeviceAppearanceConfig(next, CLIENT_PROFILE.isPhone),
@@ -390,6 +391,7 @@ export class DashboardCard extends LitElement {
     }
     this._previewConfig = event.detail.config ?? undefined;
     const config = this._previewConfig ?? this._config;
+    this.toggleAttribute("video-bg", config.use_theme_video_background);
     this._cardHostAppearance.configure(
       activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );
