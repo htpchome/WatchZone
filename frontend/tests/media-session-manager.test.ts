@@ -1233,7 +1233,7 @@ describe("MediaSessionManager", () => {
     ).toThrowError(
       expect.objectContaining({
         code: "capacity_exceeded",
-        message: "The live-session capacity is currently in use",
+        message: "Live-session capacity is in use",
       }),
     );
     expect(factory).toHaveBeenCalledTimes(MAX_RETAINED_CAMERA_SESSIONS);

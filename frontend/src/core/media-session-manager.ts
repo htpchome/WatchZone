@@ -81,8 +81,6 @@ export interface MediaSessionLease {
 
 export type MediaRetentionClass = "fallback" | "preferred";
 
-export const ACTIVE_MEDIA_HIDDEN_RETENTION_MS = 120_000;
-
 export interface MediaReconnectPolicy {
   readonly baseDelayMs: number;
   readonly maxAttempts: number;
@@ -189,14 +187,13 @@ class ManagedMediaSession {
     }
     if (
       api.identity.connected === false &&
-      (!this._connection ||
-        (this._snapshot.state !== "live" && this._snapshot.state !== "parked"))
+      (!this._connection || !this._hasLiveState())
     ) {
       this._haInterrupted = true;
       this._closeConnection();
       this._setSnapshot({
         state: "failed",
-        error: "Home Assistant is reconnecting",
+        error: "Home Assistant reconnecting",
       });
     } else if (this._snapshot.state === "new") {
       void this._connect(options);
@@ -262,7 +259,7 @@ class ManagedMediaSession {
       this._connection !== undefined &&
       this._snapshot.usable === true &&
       this._snapshot.video !== undefined &&
-      (this._snapshot.state === "live" || this._snapshot.state === "parked")
+      this._hasLiveState()
     );
   }
 
@@ -295,10 +292,7 @@ class ManagedMediaSession {
   public async handleTransportReady(): Promise<void> {
     if (this._snapshot.state === "closed" || !this._haInterrupted) return;
     this._haInterrupted = false;
-    if (
-      this._connection &&
-      (this._snapshot.state === "live" || this._snapshot.state === "parked")
-    ) {
+    if (this._connection && this._hasLiveState()) {
       return;
     }
     this._resetRetry("home_assistant");
@@ -310,7 +304,7 @@ class ManagedMediaSession {
   public handleDocumentHidden(closeConnection: boolean): void {
     if (this._snapshot.state === "closed" || this._documentHidden) return;
     this._documentHidden = true;
-    this._hiddenUntil = Date.now() + ACTIVE_MEDIA_HIDDEN_RETENTION_MS;
+    this._hiddenUntil = Date.now() + 120_000;
     if (this._retryTimer) {
       clearTimeout(this._retryTimer);
       this._retryTimer = undefined;
@@ -321,7 +315,7 @@ class ManagedMediaSession {
         this._closeConnection();
         this._setSnapshot({
           state: "failed",
-          error: "Media suspended while the mobile client is backgrounded",
+          error: "Media suspended in background",
         });
       }
       return;
@@ -347,24 +341,15 @@ class ManagedMediaSession {
     if (this._haInterrupted) {
       if (this._api.identity.connected === false) return;
       this._haInterrupted = false;
-      if (
-        this._connection &&
-        (this._snapshot.state === "live" || this._snapshot.state === "parked")
-      ) {
+      if (this._connection && this._hasLiveState()) {
         return;
       }
       this._resetRetry("home_assistant");
     }
-    if (this._snapshot.state === "connecting") {
-      this._closeConnection();
-      this._setSnapshot({
-        state: "failed",
-        error: "Media connection resumed in the foreground",
-      });
-      this._retryCause ??= "media";
-    }
-    if (this._snapshot.state !== "failed") return;
+    const connecting = this._snapshot.state === "connecting";
+    if (!connecting && this._snapshot.state !== "failed") return;
     if (this._retryTimer || !this._canRetry()) return;
+    if (connecting) this._closeConnection();
     this._retryCause ??= "media";
     // Foreground recovery is a fresh-load boundary, not a provider-outage
     // retry. Restart each actively leased transport independently so a slow
@@ -539,11 +524,7 @@ class ManagedMediaSession {
   }
 
   private _markUsable(): void {
-    if (
-      this._snapshot.usable === true ||
-      (this._snapshot.state !== "live" && this._snapshot.state !== "parked")
-    )
-      return;
+    if (this._snapshot.usable === true || !this._hasLiveState()) return;
     this._setSnapshot({ ...this._snapshot, usable: true });
   }
 
@@ -562,6 +543,10 @@ class ManagedMediaSession {
     void resumed.catch((error: unknown) =>
       this._handleResumeFailure(generation, connection, error),
     );
+  }
+
+  private _hasLiveState(): boolean {
+    return this._snapshot.state === "live" || this._snapshot.state === "parked";
   }
 
   private _handleResumeFailure(
@@ -832,7 +817,7 @@ export class MediaSessionManager {
       if (this._sessions.size >= MAX_RETAINED_CAMERA_SESSIONS) {
         throw new MediaConnectionError(
           "capacity_exceeded",
-          "The live-session capacity is currently in use",
+          "Live-session capacity is in use",
         );
       }
       session = new ManagedMediaSession(

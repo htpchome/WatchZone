@@ -7,9 +7,9 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `1736851`
-  (`v0.0.5-dev.27`).
-- Application version: `0.0.5-dev.29`.
+- HEAD before the current uncommitted change: `12a411c`
+  (`v0.0.5-dev.29`).
+- Application version: `0.0.5-dev.30`.
 - Home Assistant config-entry schema: **2**.
 - The implementation has been restored to commit `cd96f87`, the last state
   before the `dev.23` through `dev.25` browser-compatibility changes.
@@ -41,8 +41,11 @@ go2rtc WebSocket consumer alive and could continue receiving media payload only
 to discard it in the browser. `dev.29` removes that standby connection: losing
 MSE and HLS fallbacks are both closed after WebRTC takeover, and either fallback
 is reacquired immediately by the same foreground hedge when needed.
-The fresh `dev.29` release package validates with a 61,436-byte eager graph,
-four bytes below the repository's 61,440-byte limit.
+The `dev.29` GitHub runner measured a 61,450-byte eager graph, ten bytes above
+the repository's 61,440-byte validation limit. `dev.30` removes redundant eager
+session-manager state code without changing the lifecycle policy. Its fresh
+local release package validates at 61,398 bytes, 42 bytes below the limit and
+52 bytes below the failing runner artifact.
 
 `dev.28` did not improve the reported physical behavior. Its foreground retry
 separation remains as protection for the distinct case where multiple expired
