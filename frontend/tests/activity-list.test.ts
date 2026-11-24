@@ -10,6 +10,7 @@ import type {
   ActivityListItem,
 } from "../src/ui/activity-list";
 import "../src/ui/activity-list";
+import { iconPath } from "../src/ui/icons";
 
 function item(revision: string): ActivityListItem {
   return {
@@ -44,6 +45,28 @@ describe("activity list media failures", () => {
     expect(
       list.shadowRoot?.querySelector(".viewport.compact-dense"),
     ).not.toBeNull();
+  });
+
+  it("uses the canonical reviewed and unreviewed state icons", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.items = [{ ...item("reviewed-icon"), reviewed: true }];
+    document.body.append(list);
+    await list.updateComplete;
+
+    expect(
+      list.shadowRoot
+        ?.querySelector(".review-state-indicator path")
+        ?.getAttribute("d"),
+    ).toBe(iconPath("checkCircleOutline"));
+
+    list.items = [{ ...item("unreviewed-icon"), reviewed: false }];
+    await list.updateComplete;
+    expect(
+      list.shadowRoot
+        ?.querySelector(".review-state-indicator path")
+        ?.getAttribute("d"),
+    ).toBe(iconPath("checkboxMarkedCirclePlusOutline"));
+    expect(list.shadowRoot?.querySelector(".review-state-plus")).toBeNull();
   });
 
   it("clears stale Top visibility when a retained list reconnects at the beginning", async () => {

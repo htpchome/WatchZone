@@ -3977,12 +3977,14 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const list = (element.getRootNode() as ShadowRoot).host;
     const analysisIcon = element.querySelector<HTMLElement>("ha-icon");
     const informationIcon = information?.querySelector<HTMLElement>("svg");
+    const metadata = tile?.querySelector<HTMLElement>(".metadata");
     if (
       !tile ||
       !actions ||
       !information ||
       !analysisIcon ||
       !informationIcon ||
+      !metadata ||
       !list
     ) {
       throw new Error("Expected the complete narrow activity-tile grid.");
@@ -3996,7 +3998,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
       borderWidth: style.borderTopWidth,
       containerWidth: list.getBoundingClientRect().width,
       height: tile.getBoundingClientRect().height,
+      iconColor: getComputedStyle(information).color,
       informationIconSize: informationIcon.getBoundingClientRect().width,
+      metadataColor: getComputedStyle(metadata).color,
       informationWidth: information.getBoundingClientRect().width,
       titleDisplay: getComputedStyle(element.querySelector("span")!).display,
       width: element.getBoundingClientRect().width,
@@ -4164,6 +4168,11 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const reviewLabel = reviewState?.querySelector<HTMLElement>(
       ".review-state-label",
     );
+    const informationIcon = information?.querySelector<HTMLElement>("svg");
+    const metadata = tile?.querySelector<HTMLElement>(".metadata");
+    const firstBadge = tile?.querySelector<HTMLElement>(
+      ".badges wzc-badge:not([hidden])",
+    );
     const zone = tile?.querySelector<HTMLElement>(".metadata.zone");
     if (
       !tile ||
@@ -4172,6 +4181,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
       !information ||
       !reviewState ||
       !reviewLabel ||
+      !informationIcon ||
+      !metadata ||
+      !firstBadge ||
       !zone
     ) {
       throw new Error("Expected the complete dense activity-tile grid.");
@@ -4185,9 +4197,16 @@ test("keeps activity content in an independently scrolling viewport", async ({
     });
     return {
       actionDisplay: getComputedStyle(actions).display,
+      badgeTopInset:
+        firstBadge.getBoundingClientRect().top -
+        tile.getBoundingClientRect().top,
       height: tile.getBoundingClientRect().height,
+      iconColor: getComputedStyle(information).color,
+      informationIconSize: informationIcon.getBoundingClientRect().width,
+      metadataColor: getComputedStyle(metadata).color,
       reviewLabelDisplay: getComputedStyle(reviewLabel).display,
       reviewShape: getComputedStyle(reviewState).borderRadius,
+      reviewVisualSize: reviewState.getBoundingClientRect().width,
       thumbnailWidth: thumbnail.getBoundingClientRect().width,
       touchTargets,
       viewportDense: Boolean(
@@ -4197,7 +4216,13 @@ test("keeps activity content in an independently scrolling viewport", async ({
     };
   });
   expect(denseTileLayout.actionDisplay).toBe("none");
+  expect(denseTileLayout.badgeTopInset).toBeLessThanOrEqual(8);
   expect(denseTileLayout.height).toBeLessThan(compactTileLayout.height);
+  expect(denseTileLayout.iconColor).toBe(denseTileLayout.metadataColor);
+  expect(denseTileLayout.reviewVisualSize).toBeCloseTo(
+    denseTileLayout.informationIconSize,
+    0,
+  );
   expect(denseTileLayout.reviewLabelDisplay).toBe("none");
   expect(denseTileLayout.reviewShape).toBe("999px");
   expect(denseTileLayout.thumbnailWidth).toBeLessThan(204);
@@ -4586,7 +4611,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
   await expect(reviewState.locator(".review-state-label")).toHaveText(
     "Not reviewed",
   );
-  await expect(reviewState.locator(".review-state-plus")).toHaveCount(1);
+  await expect(reviewState.locator(".review-state-indicator svg")).toHaveCount(
+    1,
+  );
+  await expect(reviewState.locator(".review-state-plus")).toHaveCount(0);
   const unreviewedPresentation = await reviewState.evaluate((button) => {
     const style = getComputedStyle(button);
     return {

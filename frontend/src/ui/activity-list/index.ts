@@ -771,12 +771,11 @@ export class ActivityList extends LitElement {
               }}
             >
               <span class="review-state-indicator" aria-hidden="true">
-                ${renderIcon("check")}
-                ${
+                ${renderIcon(
                   item.reviewed
-                    ? null
-                    : html`<span class="review-state-plus">+</span>`
-                }
+                    ? "checkCircleOutline"
+                    : "checkboxMarkedCirclePlusOutline",
+                )}
               </span>
               <span class="review-state-label"
                 >${this.localize(

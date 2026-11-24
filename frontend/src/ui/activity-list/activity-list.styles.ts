@@ -48,19 +48,32 @@ export const activityListStyles = css`
   .viewport.compact-dense {
     --wzc-event-thumbnail-inline-size: 9.6rem;
     --wzc-event-tile-block-size: 5.4rem;
-    --wzc-review-state-block-size: 1.5rem;
+    --wzc-review-state-block-size: 1.25rem;
     --wzc-review-state-border-radius: var(--wzc-radius-pill);
     --wzc-review-state-gap: 0;
-    --wzc-review-state-inline-size: 1.5rem;
+    --wzc-review-state-inline-size: 1.25rem;
     --wzc-review-state-justify-content: center;
     --wzc-review-state-label-display: none;
     --wzc-review-state-margin-block-start: 0.15rem;
-    --wzc-review-state-min-block-size: 1.5rem;
+    --wzc-review-state-min-block-size: 1.25rem;
     --wzc-review-state-padding: 0;
   }
 
   .viewport.compact-dense .metadata.zone {
     display: none;
+  }
+
+  .viewport.compact-dense .review-state {
+    border: 0;
+  }
+
+  .viewport.compact-dense .review-state-indicator {
+    block-size: 1.25rem;
+    inline-size: 1.25rem;
+  }
+
+  .viewport.compact-dense .badges {
+    padding-block-start: var(--wzc-event-content-padding);
   }
 
   :is(.viewport.compact, .viewport.compact-dense) .analysis-title {
@@ -373,9 +386,8 @@ export const activityListStyles = css`
   .review-state-indicator {
     display: inline-grid;
     flex: 0 0 auto;
-    grid-template-columns: 0.675rem 0.2625rem;
     inline-size: 0.9375rem;
-    block-size: 0.75rem;
+    block-size: 0.9375rem;
     place-items: center;
     color: inherit;
   }
@@ -390,15 +402,8 @@ export const activityListStyles = css`
 
   .review-state svg {
     display: block;
-    inline-size: 0.75rem;
-    block-size: 0.75rem;
-  }
-
-  .review-state-plus {
-    font-size: 0.6rem;
-    font-weight: var(--wzc-font-weight-semibold);
-    line-height: 1;
-    transform: translate(-0.06rem, 0.21rem);
+    inline-size: 100%;
+    block-size: 100%;
   }
 
   .review-state-label {
@@ -473,7 +478,7 @@ export const activityListStyles = css`
     appearance: none;
     background: var(--wzc-color-surface);
     border: 1px solid var(--wzc-color-border-control);
-    color: var(--wzc-color-text-1);
+    color: var(--wzc-event-secondary-color);
     cursor: pointer;
     grid-row: 2;
     pointer-events: auto;
@@ -651,7 +656,7 @@ export const activityListStyles = css`
     border-radius: var(--wzc-radius-pill);
     block-size: 1.5rem;
     bottom: 0.12rem;
-    color: var(--wzc-color-text-1);
+    color: var(--wzc-event-secondary-color);
     display: inline-flex;
     inline-size: 1.5rem;
     inset-inline-end: var(--wzc-event-action-margin);
