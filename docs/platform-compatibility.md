@@ -129,39 +129,11 @@ This host-application sizing policy is independent from phone-only Stage,
 appearance, and edge-to-edge selection; a Companion tablet retains the
 standard presentation while using the mobile viewport-height mode.
 
-The built-in mobile Full Stage has one narrower host-specific exception. On a
-physical phone inside Companion, an explicit card preference may leave the
-ordinary phone presentation unchanged, present the compatible wide Stage
-variant as a viewport-edge 60/40 overlay, or open that overlay's existing
-CameraOptics camera presentation to its viewport-covering state. The
-same Stage nodes and live sessions are retained in a 60/40 camera/activity
-composition. Companion owns the physical WebView rotation; CameraOptics does not
-add a second `rotate()`. On the first landscape aspect-ratio change, CameraOptics
-commits the final 60/40 destination before the ordinary wide responsive layout
-can paint. The Stage supplies two persistent nested surfaces: Camera with
-camera navigation, and activity navigation with the active Activity stack.
-Motion maps their stored portrait geometry into the rotated coordinate space
-and starts both translate/scale animations during that first aspect-ratio
-change with one duration and easing. There is no viewport-settle timer,
-follow-up animation-frame delay, or separately fading navigation. The pull handle is connected
-only after the final gutter has been measured and remains synchronized through
-ResizeObserver updates. Returning to portrait releases the fixed overlay
-immediately so Home Assistant's own header and flow become authoritative
-without an assumed header height while the same two surfaces settle. Browser
-phones and every tablet remain outside this controller.
-
-Fullscreen Live Video is the narrow exception to exposing the committed
-landscape Stage immediately. It paints the semantic Camera-stage backdrop
-beyond the card containing block while the already committed Stage grid,
-safe-area origin, and Camera carousel finish their bounded frame-coalesced
-layout work, then exposes the retained Camera directly at its final
-viewport-covering bounds. This is not a viewport-settle timer or a second
-animation. Leaving full cover restores the ordinary card backdrop from pull
-progress instead of waiting for an animation-completion callback.
-
-Minimal Camera Stage uses its existing internal live dialog for its reduced
-Fullscreen Live Video rotate choice; it does not request browser-native
-fullscreen.
+Phone orientation is not a host-specific presentation trigger. CameraOptics
+keeps the mobile Stage in ordinary Home Assistant flow and selects responsive
+variants from measured card-container width. A future landscape composition
+must use the same retained Stage nodes and shared Motion boundary without
+introducing a second layout or animation engine.
 
 ### 2.3 Theme profile
 

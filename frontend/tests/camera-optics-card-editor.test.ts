@@ -965,37 +965,6 @@ describe("camera-optics-card-editor", () => {
     });
   });
 
-  it("defaults and saves the Companion rotate action", async () => {
-    const editor = document.createElement(
-      "camera-optics-card-editor",
-    ) as CardEditor;
-    editor.setConfig({ type: CARD_TYPE, title: "Camera" });
-    const changed = vi.fn();
-    editor.addEventListener("config-changed", changed);
-    document.body.append(editor);
-    await editor.updateComplete;
-    await openEditorSection(editor, "mobile-and-touch");
-
-    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
-      '[data-setting="companion-rotate-action"]',
-    );
-    expect(control?.value).toBe("double_column");
-    expect(
-      control?.shadowRoot?.querySelector('[data-value="double_column"]'),
-    ).not.toBeNull();
-
-    control?.shadowRoot
-      ?.querySelector<HTMLButtonElement>('[data-value="fullscreen_live_video"]')
-      ?.click();
-    await editor.updateComplete;
-
-    expect(changed.mock.calls.at(-1)?.[0].detail.config).toEqual({
-      type: CARD_TYPE,
-      title: "Camera",
-      companion_rotate_action: "fullscreen_live_video",
-    });
-  });
-
   it("defaults and saves the recorded media player type", async () => {
     const editor = document.createElement(
       "camera-optics-card-editor",
@@ -1022,59 +991,6 @@ describe("camera-optics-card-editor", () => {
       title: "Camera",
       recorded_media_player_type: "bottom_drawer",
     });
-  });
-
-  it("removes Double Column from Minimal Camera Stage rotate actions", async () => {
-    const editor = document.createElement(
-      "camera-optics-card-editor",
-    ) as CardEditor;
-    editor.setConfig({
-      type: CARD_TYPE,
-      title: "Camera",
-      stage_type: "minimal_camera_only",
-    });
-    document.body.append(editor);
-    await editor.updateComplete;
-    await openEditorSection(editor, "mobile-and-touch");
-
-    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
-      '[data-setting="companion-rotate-action"]',
-    );
-    expect(control?.value).toBe("none");
-    expect(
-      control?.shadowRoot?.querySelector('[data-value="double_column"]'),
-    ).toBeNull();
-    expect(
-      control?.shadowRoot?.querySelector('[data-value="none"]'),
-    ).not.toBeNull();
-    expect(
-      control?.shadowRoot?.querySelector(
-        '[data-value="fullscreen_live_video"]',
-      ),
-    ).not.toBeNull();
-  });
-
-  it("keeps every Companion rotate action available for Camera Only Stage", async () => {
-    const editor = document.createElement(
-      "camera-optics-card-editor",
-    ) as CardEditor;
-    editor.setConfig({
-      type: CARD_TYPE,
-      title: "Camera",
-      stage_type: "camera_only",
-    });
-    document.body.append(editor);
-    await editor.updateComplete;
-    await openEditorSection(editor, "mobile-and-touch");
-
-    const control = editor.shadowRoot?.querySelector<SegmentedControl>(
-      '[data-setting="companion-rotate-action"]',
-    );
-    for (const value of ["none", "double_column", "fullscreen_live_video"]) {
-      expect(
-        control?.shadowRoot?.querySelector(`[data-value="${value}"]`),
-      ).not.toBeNull();
-    }
   });
 
   it("shows system versions and the effective Home Assistant time zone", async () => {

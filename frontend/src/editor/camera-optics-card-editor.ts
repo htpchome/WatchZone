@@ -15,7 +15,6 @@ import {
   type AlertTakeoverMode,
   type CameraConfig,
   type CardConfig,
-  type CompanionRotateAction,
   type FrigateFallbackTransport,
   type LiveConnectionType,
   type MinimalCameraMenuPosition,
@@ -425,9 +424,6 @@ export class CardEditor extends LitElement {
           ${this._renderSection("mobile-and-touch", () =>
             renderMobileAndTouchSettings({
               ...commonSettings,
-              minimal,
-              onCompanionRotateActionChange:
-                this._handleCompanionRotateActionChange,
             }),
           )}
         </${accordionItemTag}>
@@ -2028,27 +2024,6 @@ export class CardEditor extends LitElement {
       [key]: event.detail.value,
     };
     this._applyDraft(normalizeCardConfig(next), true);
-  };
-
-  private readonly _handleCompanionRotateActionChange = (
-    event: CustomEvent<SegmentedControlValueDetail>,
-  ): void => {
-    if (!this._config) return;
-    const action = event.detail.value as CompanionRotateAction;
-    if (
-      action !== "none" &&
-      action !== "double_column" &&
-      action !== "fullscreen_live_video"
-    ) {
-      return;
-    }
-    this._applyDraft(
-      normalizeCardConfig({
-        ...this._config,
-        companion_rotate_action: action,
-      }),
-      true,
-    );
   };
 
   private readonly _handleRecordedMediaPlayerTypeChange = (

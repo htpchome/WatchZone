@@ -68,9 +68,6 @@ import {
   type CardPickerStubConfig,
 } from "../features/card-picker-preview";
 
-const USE_COMPANION_PHONE_LANDSCAPE =
-  CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isPhone;
-
 const toastRegionTag = unsafeStatic(TOAST_REGION_TAG);
 const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
@@ -218,7 +215,6 @@ export class DashboardCard extends LitElement {
       this._handleRecordedMediaClose,
     );
     this._syncLayout(config);
-    this._loadCompanionPhoneLandscape();
     if (this._hass) this._observeConnection(this._hass.connection);
     this._syncRuntime();
   }
@@ -541,25 +537,6 @@ export class DashboardCard extends LitElement {
     );
     this._layoutRuntime.setStageSet(designs, flow);
     this._syncRuntime();
-  }
-
-  private _loadCompanionPhoneLandscape(): void {
-    if (!USE_COMPANION_PHONE_LANDSCAPE) return;
-    void import("../features/companion-landscape")
-      .then(({ installCompanionPhoneLandscape }) =>
-        installCompanionPhoneLandscape(
-          this,
-          () => {
-            const config = this._previewConfig ?? this._config;
-            return config.stage_type === "full"
-              ? config.companion_rotate_action
-              : "none";
-          },
-          (active) => this._cardLayout.setCompanionLandscape(active),
-          this._localization.localize,
-        ),
-      )
-      .catch(console.error);
   }
 
   private readonly _handleConnectionDisconnected: HomeAssistantConnectionEventListener =

@@ -1,11 +1,7 @@
 import { html } from "lit";
 import { html as staticHtml, unsafeStatic } from "lit/static-html.js";
 
-import type {
-  CardConfig,
-  CompanionRotateAction,
-  RecordedMediaPlayerType,
-} from "../core/config";
+import type { CardConfig, RecordedMediaPlayerType } from "../core/config";
 import {
   DEFAULT_EVENT_HISTORY_DAYS,
   EDITOR_GENERAL_INFO_TAG,
@@ -79,12 +75,7 @@ interface MinimalCameraSettingsOptions extends CommonSectionOptions {
   ) => void;
 }
 
-interface MobileAndTouchSettingsOptions extends CommonSectionOptions {
-  readonly minimal: boolean;
-  readonly onCompanionRotateActionChange: (
-    event: CustomEvent<SegmentedControlValueDetail>,
-  ) => void;
-}
+type MobileAndTouchSettingsOptions = CommonSectionOptions;
 
 interface LiveMediaPlayerSettingsOptions extends CommonSectionOptions {
   readonly onActivityHighlightModeChange: (
@@ -213,43 +204,7 @@ export function renderMobileAndTouchSettings(
   options: MobileAndTouchSettingsOptions,
 ) {
   const { config, localize } = options;
-  const rotateOptions: readonly SegmentedControlOption[] = [
-    { label: localize("editor.rotate_action_none"), value: "none" },
-    ...(options.minimal
-      ? []
-      : [
-          {
-            label: localize("editor.rotate_action_double_column"),
-            value: "double_column" satisfies CompanionRotateAction,
-          },
-        ]),
-    {
-      label: localize("editor.rotate_action_fullscreen_live_video"),
-      value: "fullscreen_live_video",
-    },
-  ];
   return html`
-    <div class="segmented-setting">
-      <span class="segmented-setting-label">
-        ${localize("editor.rotate_action_companion_app")}
-      </span>
-      <wzc-segmented-control
-        class="editor-segmented-control"
-        data-setting="companion-rotate-action"
-        appearance="compact"
-        mode="radio"
-        .label=${localize("editor.rotate_action_companion_app")}
-        .options=${rotateOptions}
-        .value=${
-          options.minimal &&
-          (config?.companion_rotate_action ?? "double_column") ===
-            "double_column"
-            ? "none"
-            : (config?.companion_rotate_action ?? "double_column")
-        }
-        @wzc-segmented-control-value=${options.onCompanionRotateActionChange}
-      ></wzc-segmented-control>
-    </div>
     ${renderBooleanOption(
       options,
       "mobile_data_saving",

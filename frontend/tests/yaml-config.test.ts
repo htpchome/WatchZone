@@ -195,7 +195,6 @@ describe("CameraOptics YAML configuration manager", () => {
           slide_transition: "fade",
           slide_advance_time: 20,
           mobile_data_saving: true,
-          companion_rotate_action: "fullscreen_live_video",
           grid_options: { columns: 8 },
         }),
       ),
@@ -246,7 +245,6 @@ describe("CameraOptics YAML configuration manager", () => {
       slide_transition: "fade",
       slide_advance_time: 20,
       mobile_data_saving: true,
-      companion_rotate_action: "fullscreen_live_video",
       grid_options: { columns: 8 },
     });
   });

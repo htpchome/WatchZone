@@ -331,6 +331,18 @@ designer UI so saved layouts are declarative and testable.
 - Security review for provider credentials, signed media, downloads, layout
   validation, permissions, microphone use, and external URLs.
 
+### 17. Mobile presentation redesign
+
+- Rebuild phone layouts from container measurements and intrinsic content
+  constraints across narrow portrait and short landscape viewports.
+- Define the future two-column landscape composition as a mobile Stage variant,
+  preserving stable placeable and media-session identity across the change.
+- Choreograph that variant change with a shared-Motion FLIP sequence: capture
+  first geometry, commit and measure the final layout, invert with transforms,
+  then play to rest. Reduced motion commits the destination immediately.
+- Keep safe-area policy at the viewport-owning boundary and validate the result
+  on representative iOS, Android, browser-phone, and Companion-phone sizes.
+
 ## Dependency-oriented delivery sequence
 
 This is an ordering guide, not a dated release plan.

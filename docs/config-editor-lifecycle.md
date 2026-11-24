@@ -143,11 +143,9 @@ an omitted value normalizes to `both`, and normalized YAML uses only the new
 key.
 
 The Mobile and Touch disclosure owns physical-client and touch-oriented card
-preferences. It contains Mobile Data Saving and the Companion-app rotate
-action. The rotate action uses the shared segmented-control presentation and
-defaults to `double_column`; YAML omits that default. Full Stage and Camera
-Only expose None, Double Column, and Fullscreen Live Video. Minimal Camera
-Stage omits the inapplicable Double Column choice.
+preferences. It currently contains Mobile Data Saving. Phone orientation is
+not a configurable action and does not automatically select a two-column or
+fullscreen presentation.
 
 The Recorded Media Player disclosure owns the presentation used by every
 recorded-media request, including Reviews, Events, Recordings, Exports, and

@@ -1,10 +1,8 @@
 import { html, LitElement, nothing } from "lit";
 
 import { MINIMAL_CAMERA_TAG } from "../../../core/constants";
-import { CLIENT_PROFILE } from "../../../core/client-profile";
 import type {
   ActivityHighlightMode,
-  CompanionRotateAction,
   FrigateFallbackTransport,
   HomeAssistantActionConfig,
   LiveConnectionType,
@@ -83,7 +81,6 @@ export class MinimalCameraModule extends LitElement {
     activityHighlightMode: { attribute: false },
     localize: { attribute: false },
     menuPosition: { attribute: false },
-    rotateAction: { attribute: false },
     showFullscreenButton: { attribute: false, type: Boolean },
     showMuteButton: { attribute: false, type: Boolean },
     showPictureInPictureButton: { attribute: false, type: Boolean },
@@ -102,9 +99,7 @@ export class MinimalCameraModule extends LitElement {
   private _controlsExpanded = false;
   private _snapshotError?: string;
   private _snapshotPending = false;
-  private _automaticLandscapeFullscreen = false;
   private _nativeFullscreenActive = false;
-  private _rotateAction: CompanionRotateAction = "none";
   private _tapTimer?: ReturnType<typeof setTimeout>;
   private readonly _audioControlMotion = new OwnedMotion();
   private readonly _volumeMotion = new OwnedMotion();
@@ -185,18 +180,6 @@ export class MinimalCameraModule extends LitElement {
   public holdAction: HomeAssistantActionConfig = { action: "none" };
   public doubleTapAction: HomeAssistantActionConfig = { action: "none" };
 
-  public get rotateAction(): CompanionRotateAction {
-    return this._rotateAction;
-  }
-
-  public set rotateAction(value: CompanionRotateAction) {
-    const previous = this._rotateAction;
-    if (value === previous) return;
-    this._rotateAction = value;
-    this.requestUpdate("rotateAction", previous);
-    this._syncCompanionRotateAction();
-  }
-
   public connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener("fullscreenchange", this._handleFullscreenChange);
@@ -204,8 +187,6 @@ export class MinimalCameraModule extends LitElement {
       "webkitfullscreenchange",
       this._handleFullscreenChange,
     );
-    window.addEventListener("resize", this._syncCompanionRotateAction);
-    this._syncCompanionRotateAction();
   }
 
   protected willUpdate(): void {
@@ -320,7 +301,7 @@ export class MinimalCameraModule extends LitElement {
         }
       </div>
       <dialog
-        class=${`live-dialog${this._automaticLandscapeFullscreen ? " companion-rotate-fullscreen" : ""}`}
+        class="live-dialog"
         aria-label=${this.camera?.title || this.localize("camera.live")}
         @cancel=${this._dialog.close}
         @close=${this._dialog.handleClosed}
@@ -446,7 +427,6 @@ export class MinimalCameraModule extends LitElement {
       "webkitfullscreenchange",
       this._handleFullscreenChange,
     );
-    window.removeEventListener("resize", this._syncCompanionRotateAction);
     super.disconnectedCallback();
   }
 
@@ -751,20 +731,6 @@ export class MinimalCameraModule extends LitElement {
     this._dialog.open();
   }
 
-  private readonly _syncCompanionRotateAction = (): void => {
-    const active =
-      CLIENT_PROFILE.isCompanionApp &&
-      CLIENT_PROFILE.isPhone &&
-      !this._nativeFullscreenActive &&
-      this.rotateAction === "fullscreen_live_video" &&
-      window.innerWidth > window.innerHeight;
-    if (active === this._automaticLandscapeFullscreen) return;
-    this._automaticLandscapeFullscreen = active;
-    if (active) this._openLiveDialog();
-    else this._dialog.close();
-    this.requestUpdate();
-  };
-
   private _dialogMediaAspectRatio(): number {
     return this._activeVideo?.videoWidth && this._activeVideo.videoHeight
       ? this._activeVideo.videoWidth / this._activeVideo.videoHeight
@@ -810,7 +776,6 @@ export class MinimalCameraModule extends LitElement {
     this._nativeFullscreenActive = active;
     if (exited) this._attachMedia(true);
     dispatchCameraNativeFullscreenChange(this, active);
-    this._syncCompanionRotateAction();
   }
 
   static styles = minimalCameraStyles;

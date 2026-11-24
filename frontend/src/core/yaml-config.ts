@@ -39,9 +39,6 @@ export function toYamlCardConfig(config: CardConfig): YamlCardConfig {
   if (config.camera_shadows !== false) delete yaml.camera_shadows;
   if (!config.camera_shadows_phone) delete yaml.camera_shadows_phone;
   if (!config.camera_switcher_overlay) delete yaml.camera_switcher_overlay;
-  if (config.companion_rotate_action === "double_column") {
-    delete yaml.companion_rotate_action;
-  }
   if (config.camera_bar_rounded_corners !== false) {
     delete yaml.camera_bar_rounded_corners;
   }

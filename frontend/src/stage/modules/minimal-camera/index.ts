@@ -5,7 +5,6 @@ import {
 import { cameraImageUrl } from "../../../core/home-assistant";
 import type {
   ActivityHighlightMode,
-  CompanionRotateAction,
   FrigateFallbackTransport,
   HomeAssistantActionConfig,
   LiveConnectionType,
@@ -29,7 +28,6 @@ export interface MinimalCameraModuleConfig {
   readonly activityHighlightMode: ActivityHighlightMode;
   readonly holdAction: HomeAssistantActionConfig;
   readonly menuPosition: MinimalCameraMenuPosition;
-  readonly rotateAction: CompanionRotateAction;
   readonly showFullscreenButton: boolean;
   readonly showMuteButton: boolean;
   readonly showPictureInPictureButton: boolean;
@@ -66,7 +64,6 @@ export const moduleDefinition: ModuleDefinition<MinimalCameraModuleConfig> = {
     camera.activityHighlightMode = config.activityHighlightMode;
     camera.holdAction = config.holdAction;
     camera.menuPosition = config.menuPosition;
-    camera.rotateAction = config.rotateAction;
     camera.showFullscreenButton = config.showFullscreenButton;
     camera.showMuteButton = config.showMuteButton;
     camera.showPictureInPictureButton = config.showPictureInPictureButton;
@@ -108,13 +105,6 @@ function validateMinimalCameraConfig(
     throw new Error(
       "Minimal camera requires a valid activityHighlightMode setting.",
     );
-  }
-  if (
-    source.rotateAction !== "none" &&
-    source.rotateAction !== "double_column" &&
-    source.rotateAction !== "fullscreen_live_video"
-  ) {
-    throw new Error("Minimal camera requires a valid rotateAction setting.");
   }
   if (
     source.menuPosition !== "top_left" &&

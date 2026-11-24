@@ -34,7 +34,6 @@ describe("CameraOptics card configuration", () => {
       camera_shadows: true,
       camera_shadows_phone: false,
       camera_switcher_overlay: false,
-      companion_rotate_action: "double_column",
       card_height_mode: "auto",
       card_height_mode_phone: "auto",
       display_event_type_badges: true,
@@ -111,17 +110,12 @@ describe("CameraOptics card configuration", () => {
     );
   });
 
-  it("normalizes the Companion rotate action", () => {
+  it("discards the removed Companion rotate preference", () => {
     expect(
       normalizeCardConfig({
         companion_rotate_action: "fullscreen_live_video",
-      }).companion_rotate_action,
-    ).toBe("fullscreen_live_video");
-    expect(() =>
-      normalizeCardConfig({ companion_rotate_action: "fullscreen" }),
-    ).toThrow(
-      "companion_rotate_action must be none, double_column, or fullscreen_live_video",
-    );
+      }),
+    ).not.toHaveProperty("companion_rotate_action");
   });
 
   it("normalizes the recorded media player type", () => {

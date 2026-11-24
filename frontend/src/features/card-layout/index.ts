@@ -2,7 +2,6 @@ import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import { CLIENT_PROFILE } from "../../core/client-profile";
 import { activeCardHeightMode, type CardConfig } from "../../core/config";
-import { CAMERA_TAG } from "../../core/constants";
 import { PHONE_STAGE_MAX_INLINE_SIZE } from "../../stage/layout";
 import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
 import { ViewportFitController } from "./viewport-fit.controller";
@@ -18,9 +17,8 @@ const USE_MOBILE_HEIGHT_MODE =
   CLIENT_PROFILE.isPhone ||
   (CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isTablet);
 
-function stageInlineSize(inlineSize: number, landscape = false): number {
-  return CLIENT_PROFILE.isPhone &&
-    (!CLIENT_PROFILE.isCompanionApp || !landscape)
+function stageInlineSize(inlineSize: number): number {
+  return CLIENT_PROFILE.isPhone
     ? Math.min(inlineSize, PHONE_STAGE_MAX_INLINE_SIZE)
     : inlineSize;
 }
@@ -76,19 +74,6 @@ export class CardLayoutController implements ReactiveController {
     }
   }
 
-  public setCompanionLandscape(active: boolean): void {
-    if (active) {
-      for (const camera of this._host.renderRoot.querySelectorAll<
-        HTMLElement & { resetStageSize?: () => void }
-      >(CAMERA_TAG)) {
-        camera.resetStageSize?.();
-      }
-    }
-    this._setInlineSize(
-      active ? PHONE_STAGE_MAX_INLINE_SIZE + 1 : PHONE_STAGE_MAX_INLINE_SIZE,
-    );
-  }
-
   public hostUpdated(): void {
     const boundary =
       this._host.renderRoot.querySelector<HTMLElement>(".shell") ?? undefined;
@@ -113,12 +98,7 @@ export class CardLayoutController implements ReactiveController {
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = requestAnimationFrame(() => {
       this._resizeFrame = undefined;
-      this._setInlineSize(
-        stageInlineSize(
-          inlineSize,
-          this._host.classList.contains("companion-phone-landscape"),
-        ),
-      );
+      this._setInlineSize(stageInlineSize(inlineSize));
     });
   }
 }

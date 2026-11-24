@@ -7,20 +7,20 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `8196035`
-  (`v0.0.5-dev.36`).
-- Application version: `0.0.5-dev.37`.
+- HEAD before the current uncommitted change: `c34fe56`
+  (`v0.0.5-dev.42`).
+- Application version: `0.0.5-dev.43`.
 - Home Assistant config-entry schema: **2**.
-- The implementation has been restored to commit `cd96f87`, the last state
-  before the `dev.23` through `dev.25` browser-compatibility changes.
-- `dev.26` is the release identity for that restored implementation; history
-  was not rewritten and no commit was created by the agent.
-- The restored release was rebuilt and packaged successfully with a
-  61,420-byte eager graph, 20 bytes below the 61,440-byte release limit.
-- `dev.17` through `dev.22` did not solve the reported background recovery
-  failure and must not be treated as successful work.
-- `dev.30` through `dev.35` failed to solve the physical 15-second
-  foreground-return delay. Their recovery hypotheses remain removed.
+- The current uncommitted change removes the Companion-phone automatic
+  two-column and fullscreen-on-rotation subsystem, its editor setting, and its
+  Stage/Minimal Camera integration.
+- Phone orientation now leaves the mobile Stage in ordinary Home Assistant
+  flow. Browser-native fullscreen remains an explicit user action.
+- The next mobile redesign is recorded in `ROADMAP.md`: container-driven phone
+  layouts followed by a shared-Motion FLIP transition for the future
+  two-column variant.
+- The fresh `dev.43` release package validates with a 61,068-byte eager graph
+  and is available at `dist/camera-optics.zip`.
 
 ## Restored live baseline
 

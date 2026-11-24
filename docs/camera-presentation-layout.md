@@ -108,103 +108,11 @@ camera or make the media region unusable. Module minimums derive from current
 CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
-The built-in mobile Full Stage supports a configured Companion-phone rotate
-action. None leaves the ordinary phone presentation under Companion's rotated
-WebView. Double Column is the default separate landscape presentation. It
-occupies the fixed WebView, covers Home Assistant's dashboard chrome, and
-applies viewport safe-area padding. The leading 60% contains a
-16:9 camera plus camera navigation; the trailing 40% contains the active
-Reviews, Recordings, Exports, or PTZ stack. The independently placeable
-activity-navigation module sits above that stack inside the trailing surface.
-A top inset protects the camera, an expanded module gutter separates
-the columns, and a reduced form of the larger reported landscape safe-area
-inset is reserved symmetrically on both inline edges so either phone rotation
-direction protects both columns. Each active media list is capped at three
-complete tiles and remains the only scrolling surface; the PTZ panel uses its
-own responsive control layout. Review-state controls
-use a compact outlined icon without label text in this presentation, aligned
-on the tile footer with the AI-analysis and information controls. The camera
-uses rounded corners and hides its resize handle, independent of the ordinary
-phone Camera appearance setting. This overlay does not activate for browser
-phones, Companion tablets, or incompatible Stage types.
-Entering either Companion landscape presentation also restores the Camera
-module's shared stage-height ratio to its natural size. A portrait-only
-pull-down size must not survive after its resize handle is removed or push the
-landscape camera navigation outside the fixed WebView.
 
-Fullscreen Live Video starts from the same retained Full Stage and immediately
-opens its existing CameraOptics camera overlay to the viewport-covering state.
-It does not request browser-native video fullscreen, create another Camera
-module, or acquire another media session. The existing pull handle remains the
-owner of returning to the Double Column state. Camera Only exposes the same
-authoring choices for configuration consistency, but its current Stage has no
-Companion rotate presentation and therefore performs no rotate action.
-Minimal Camera Stage omits Double Column; Fullscreen Live Video opens its
-existing internal live dialog as a viewport-covering presentation and closes
-that automatically opened presentation when the phone returns to portrait.
-
-Configured Fullscreen Live Video does not wait behind the 60/40 orientation
-animation. CameraOptics commits that layout underneath, immediately places the
-retained Camera overlay over it, and leaves the pull handle able to reveal the
-settled columns while the phone remains rotated. Returning to portrait from an
-expanded overlay uses the Camera module's measured fullscreen bounds as the
-start of the shared Motion transition; it does not abruptly discard the
-overlay before the portrait destination exists.
-The expanded target is the layout viewport itself, expressed relative to the
-Stage grid. It does not inherit the grid's safe-area inset or a transient
-pre-settlement offset reported by the card host during mobile rotation.
-CameraOptics covers the pending landscape frames with the semantic Camera-stage
-background while the committed Stage grid, safe-area origin, and Camera
-carousel complete their frame-coalesced layout work, then exposes the Camera
-once at its final viewport target. It never presents an intermediate Camera
-position or derives a correction from the Camera's prior screen rectangle
-because mobile WebKit may still report portrait geometry during the
-orientation boundary. The pending backdrop paints beyond the transient card
-containing block so no Home Assistant surface is exposed at a viewport edge.
-The landscape card surface does not clip the covering overlay at its own edge.
-Its semantic Camera-stage backdrop is tied to actual full-cover progress, so
-beginning a pull toward Double Column restores the ordinary card surface even
-if WebKit delays the Motion completion callback.
-
-Browser-native media fullscreen is a separate state. While it owns the live
-video, Companion rotation and Swiper geometry remain frozen. After native
-fullscreen exits, the same active video is rebound and resumed before the
-current orientation preference is applied.
-
-Orientation retains the same Stage nodes and live sessions. The Stage owns two
-real nested containers: Camera plus camera navigation, and activity navigation
-plus the active Activity stack. Companion rotates the complete WebView. On the
-first aspect-ratio change CameraOptics commits the final 60/40 layout and starts
-one Motion timeline immediately, translating and scaling those two containers
-from their rotated prior geometry into the new destinations. It does not add
-another rotation, fade detached navigation, render duplicate media, wait for a
-viewport-settle timer, or defer Motion to a later animation frame.
-The pull handle is not exposed until its final gutter position has been
-measured and it remeasures automatically when either surface changes size. The
-landscape overlay continues to cover Home Assistant's top navigation. On the
-first portrait resize, CameraOptics releases that fixed overlay immediately so
-the card returns directly to Home Assistant flow. The actual flow position is
-authoritative: a visible Home Assistant header naturally places the card below
-it, while a hidden or disabled header introduces no synthetic offset.
-
-A separate vertical pull handle is centered in the actual gutter at the
-Camera's trailing edge in this presentation. Its borderless three-pixel line
-uses the semantic secondary text color and keeps a tall visual indicator inside
-a larger transparent touch target. Camera alert and detection state remains
-active during a pull, but its inner activity outline is suppressed while the
-Camera is resizing and restored after settling so the border is not
-re-rasterized on every drag frame.
-Horizontal pointer capture maps the handle's travel directly to a
-camera-overlay progress value while preserving the mounted Camera module,
-retained live session, and both navigation-row positions. The Camera grows
-above the unchanged activity column; activity selection and scroll position do
-not move into the overlay.
-Releasing before 50% returns to the 60/40 layout, while releasing at or beyond
-50% uses one Motion settlement into a viewport-covering Camera with its complete composed control
-surface. The expanded handle remains inside the safe trailing edge and can be
-dragged left to restore the split layout. Arrow keys, Home/End, Enter/Space,
-and Escape expose the same two states, and reduced-motion preference makes the
-settlement immediate.
+Phone orientation does not activate a separate CameraOptics layout or
+fullscreen presentation. The mobile Stage remains in normal Home Assistant
+flow and responds only to its measured card container. Browser-native media
+fullscreen remains an explicit user action and is independent of orientation.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an
