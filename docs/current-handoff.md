@@ -7,17 +7,16 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `7625a7d`
-  (`v0.0.5-dev.43`).
-- Application version: `0.0.5-dev.44`.
+- HEAD before the current uncommitted change: `236300f`
+  (`v0.0.5-dev.44`).
+- Application version: `0.0.5-dev.45`.
 - Home Assistant config-entry schema: **2**.
-- The current uncommitted change introduces a shared two-dimensional Stage
-  presentation profile and a static compact-to-wide-short mobile Full Stage.
-- Both variants preserve two stable groups: Camera plus Camera Navigation, and
-  Control Bar plus the active Activity stack.
-- The wide-short destination remains in ordinary Home Assistant card flow.
-  Fullscreen and FLIP motion are intentionally not part of this foundation.
-- The fresh `dev.44` release package validates with a 61,267-byte eager graph
+- The current uncommitted change removes the provisional wide Stage that could
+  paint before a portrait card received its first container measurement.
+- An unmeasured Stage mounts no responsive variant. The card measures its shell
+  on the first scheduled layout measurement, then mounts the correct compact or
+  wide variant once.
+- The fresh `dev.45` release package validates with a 61,286-byte eager graph
   and is available at `dist/camera-optics.zip`.
 
 ## Restored live baseline

@@ -96,6 +96,9 @@ auto-height card's rendered content height, so desired height cannot feed back
 into variant selection. Wider presentations below the canonical `600px`
 block-size point are classified as `wide-short`; this classification may
 select density or arrangement but does not claim viewport ownership.
+The Stage does not mount a provisional responsive variant before its first
+container measurement. Initial measurement occurs as soon as the rendered card
+shell exists, preventing a wide-to-compact or compact-to-wide first-paint flash.
 
 Input capability is an independent dimension. The profile records primary
 pointer accuracy, primary and available hover, touch availability, and a

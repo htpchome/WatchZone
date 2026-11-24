@@ -10121,6 +10121,30 @@ test("selects the static short-wide mobile Stage without leaving card flow", asy
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
+    const variants: string[] = [];
+    Object.defineProperty(window, "__wzcStageVariants", {
+      configurable: true,
+      value: variants,
+    });
+    const attachShadow = Element.prototype.attachShadow;
+    Element.prototype.attachShadow = function (init) {
+      const root = attachShadow.call(this, init);
+      const recordVariants = () => {
+        for (const stage of root.querySelectorAll<HTMLElement>(
+          ".stage-grid[data-stage-variant]",
+        )) {
+          const variant = stage.dataset.stageVariant;
+          if (variant && variants.at(-1) !== variant) variants.push(variant);
+        }
+      };
+      new MutationObserver(recordVariants).observe(root, {
+        attributeFilter: ["data-stage-variant"],
+        attributes: true,
+        childList: true,
+        subtree: true,
+      });
+      return root;
+    };
     Object.defineProperty(navigator, "userAgent", {
       configurable: true,
       get: () =>
@@ -10143,6 +10167,13 @@ test("selects the static short-wide mobile Stage without leaving card flow", asy
   const stage = card.locator(".stage-grid");
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  const initialVariants = await page.evaluate(
+    () =>
+      (window as typeof window & { __wzcStageVariants?: string[] })
+        .__wzcStageVariants ?? [],
+  );
+  expect(initialVariants).toContain("phone");
+  expect(initialVariants).not.toContain("default");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(stage).toHaveAttribute("data-stage-variant", "default");
   await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");

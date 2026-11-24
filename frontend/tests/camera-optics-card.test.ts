@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import "../src/main";
 import { DashboardCard } from "../src/card/camera-optics-card";
@@ -40,8 +40,23 @@ function createHass(
 }
 
 describe("camera-optics-card", () => {
+  beforeEach(() => {
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 768,
+      height: 768,
+      left: 0,
+      right: 1024,
+      top: 0,
+      width: 1024,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+  });
+
   afterEach(() => {
     document.body.replaceChildren();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
@@ -218,8 +233,10 @@ describe("camera-optics-card", () => {
 
     expect(customElements.get("wzc-camera")).toBeUndefined();
     expect(element.shadowRoot?.querySelector("wzc-camera")).toBeNull();
-    expect(element.shadowRoot?.textContent).toContain(
-      "No modules are configured.",
+    await vi.waitFor(() =>
+      expect(element.shadowRoot?.textContent).toContain(
+        "No modules are configured.",
+      ),
     );
   });
 

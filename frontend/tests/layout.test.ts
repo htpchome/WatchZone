@@ -751,6 +751,10 @@ describe("layout composition", () => {
       phone: [second.id, first.id],
     });
     render(runtime.render(), container);
+    expect(container.querySelector(".stage-grid")).toBeNull();
+
+    runtime.setLayoutProfile(stageLayoutProfile(1024, 768));
+    render(runtime.render(), container);
     expect(
       container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
     ).toBe(first.id);
@@ -1080,6 +1084,7 @@ function setRuntimeStage(
   runtime: LayoutRuntime,
   design: StageDesignDocument,
 ): void {
+  runtime.setLayoutProfile(stageLayoutProfile(1024, 768));
   runtime.setStageSet([design], {
     default: [design.id],
     phone: [design.id],

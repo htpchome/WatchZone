@@ -257,6 +257,8 @@ headings.
   shared profile separately classifies wider layouts with less than `600px` of
   available block size as `wide-short`; rendered content height never selects
   its own variant.
+- No Stage variant mounts before the first real layout-profile measurement;
+  the runtime has no provisional default geometry.
 - The built-in mobile Full Stage keeps two stable nested surfaces across its
   variants: Camera plus Camera Navigation, and Control Bar plus the active
   Reviews, Recordings, Exports, or PTZ stack.

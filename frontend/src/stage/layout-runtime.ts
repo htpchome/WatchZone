@@ -19,7 +19,6 @@ import type {
   HomeAssistantEntity,
 } from "../core/home-assistant";
 import {
-  stageLayoutProfile,
   validateStageCatalog,
   validateStageFlow,
   type StageCatalog,
@@ -102,10 +101,7 @@ export class LayoutRuntime implements ReactiveController {
   private _designError?: string;
   private _flow?: StageFlow;
   private _flowName: StageVariantName = "default";
-  private _layoutProfile: StageLayoutProfile = stageLayoutProfile(
-    Number.POSITIVE_INFINITY,
-    Number.POSITIVE_INFINITY,
-  );
+  private _layoutProfile?: StageLayoutProfile;
   private readonly _records = new Map<string, PlaceableRecord>();
   private readonly _activeStackModules = new Map<string, string>();
   private _variantName: StageVariantName = "default";
@@ -141,13 +137,14 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   public setLayoutProfile(profile: StageLayoutProfile): void {
+    const firstMeasurement = !this._layoutProfile;
     const variantChanged = profile.variantName !== this._variantName;
     const presentationChanged =
-      profile.presentation !== this._layoutProfile.presentation;
+      profile.presentation !== this._layoutProfile?.presentation;
     this._layoutProfile = profile;
-    if (!variantChanged && !presentationChanged) return;
+    if (!firstMeasurement && !variantChanged && !presentationChanged) return;
     this._variantName = profile.variantName;
-    if (variantChanged) this._syncActiveVariant();
+    if (firstMeasurement || variantChanged) this._syncActiveVariant();
     else this._host.requestUpdate();
   }
 
@@ -164,7 +161,8 @@ export class LayoutRuntime implements ReactiveController {
       this._catalog = catalog;
       this._flow = validatedFlow;
       this._designError = undefined;
-      this._variantName = this._layoutProfile.variantName;
+      if (this._layoutProfile)
+        this._variantName = this._layoutProfile.variantName;
       for (const name of ["default", "phone"] as const) {
         const current = this._activeStageIds[name];
         if (!current || !validatedFlow[name].includes(current)) {
@@ -236,6 +234,7 @@ export class LayoutRuntime implements ReactiveController {
     if (this._designError) {
       return nothing;
     }
+    if (!this._layoutProfile) return nothing;
     const variant = this._activeVariant();
     if (!variant || variant.root.children.length === 0) {
       return html`<div class="layout-empty">
@@ -266,6 +265,7 @@ export class LayoutRuntime implements ReactiveController {
   }
 
   private _activeVariant() {
+    if (!this._layoutProfile) return undefined;
     return this._activeDesign()?.variants[this._variantName];
   }
 
