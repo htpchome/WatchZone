@@ -1,12 +1,13 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
-import { CLIENT_PROFILE, usesMobileStage } from "../../core/client-profile";
+import { CLIENT_PROFILE } from "../../core/client-profile";
 import {
   activeCardHeightMode,
   type CardConfig,
   type CardHeightMode,
 } from "../../core/config";
 import {
+  PHONE_STAGE_MAX_INLINE_SIZE,
   STAGE_LAYOUT_COMPANION_MOBILE,
   STAGE_LAYOUT_CONTAINER,
   STAGE_LAYOUT_PHONE_BROWSER,
@@ -23,13 +24,18 @@ interface CardLayoutHost extends ReactiveControllerHost, HTMLElement {
   readonly renderRoot: DocumentFragment | HTMLElement;
 }
 
-const USE_MOBILE_HEIGHT_MODE = usesMobileStage(CLIENT_PROFILE);
 const STAGE_LAYOUT_CLIENT_MODE =
   CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isMobile
     ? STAGE_LAYOUT_COMPANION_MOBILE
-    : CLIENT_PROFILE.application === "browser" && CLIENT_PROFILE.isPhone
+    : CLIENT_PROFILE.isPhone ||
+        (CLIENT_PROFILE.hasTouch &&
+          (screen.width <= PHONE_STAGE_MAX_INLINE_SIZE ||
+            screen.height <= PHONE_STAGE_MAX_INLINE_SIZE))
       ? STAGE_LAYOUT_PHONE_BROWSER
       : STAGE_LAYOUT_CONTAINER;
+export const USES_MOBILE_STAGE =
+  STAGE_LAYOUT_CLIENT_MODE !== STAGE_LAYOUT_CONTAINER;
+const USE_MOBILE_HEIGHT_MODE = USES_MOBILE_STAGE;
 
 /** Owns card sizing and the feature-detected Home Assistant layout bridge. */
 export class CardLayoutController implements ReactiveController {

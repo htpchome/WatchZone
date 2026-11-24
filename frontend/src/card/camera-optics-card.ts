@@ -10,8 +10,9 @@ import {
 import {
   activeDeviceAppearanceConfig,
   CardLayoutController,
+  USES_MOBILE_STAGE,
 } from "../features/card-layout";
-import { CLIENT_PROFILE, usesMobileStage } from "../core/client-profile";
+import { CLIENT_PROFILE } from "../core/client-profile";
 import {
   APP_NAME,
   APP_VERSION,
@@ -529,9 +530,7 @@ export class DashboardCard extends LitElement {
   }
 
   private _syncLayout(config: CardConfig): void {
-    this._layoutRuntime.setFlowProfile(
-      usesMobileStage(CLIENT_PROFILE) ? "phone" : "default",
-    );
+    this._layoutRuntime.setFlowProfile(USES_MOBILE_STAGE ? "phone" : "default");
     const { designs, flow } = createBuiltInStageSet(
       activeDeviceAppearanceConfig(config, CLIENT_PROFILE.isPhone),
     );

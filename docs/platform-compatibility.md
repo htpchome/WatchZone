@@ -121,6 +121,10 @@ platform markers with touch capability for iPadOS and Android-tablet
 disambiguation. Client identity never derives from viewport, screen, card, or
 container width.
 
+Companion App identity accepts either Home Assistant's injected native bridge
+or its branded user-agent marker. The bridge covers WebViews that omit the
+marker; the marker remains the compatibility fallback.
+
 An explicit card configuration may select a presentation preference by this
 physical client class when the user intentionally enables a phone-only
 override. This narrow exception is used for mobile edge-to-edge layout and the
@@ -142,6 +146,12 @@ mobile Stage in both orientations because CameraOptics cannot own their browser
 chrome. Tablet browsers, desktop browsers, and Catalyst remain
 container-responsive. This policy does not enter native fullscreen or remove
 Home Assistant chrome.
+
+For the browser-only Stage policy, a touch device whose physical CSS display
+has a short edge below the canonical `600px` Stage boundary is treated as a
+phone even when desktop-site mode removes phone markers from its user agent.
+This fallback selects presentation only; it does not redefine shared physical
+client identity or media policy.
 
 Both mobile variants remain in ordinary Home Assistant card flow and reuse the
 same Camera and Activity surfaces. A future transition between them must use

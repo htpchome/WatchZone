@@ -9,7 +9,7 @@ precedence.
 - Branch: `main`.
 - HEAD before the current uncommitted change: `236300f`
   (`v0.0.5-dev.44`).
-- Application version: `0.0.5-dev.46`.
+- Application version: `0.0.5-dev.47`.
 - Home Assistant config-entry schema: **2**.
 - The current uncommitted change removes the provisional wide Stage that could
   paint before a portrait card received its first container measurement.
@@ -20,7 +20,13 @@ precedence.
   orientations. Companion App phones and tablets use the compact Stage in
   portrait and the wide-short Stage in landscape. Tablet and desktop browsers
   remain container-responsive; no path enters native fullscreen.
-- The fresh `dev.46` release package validates with a 61,354-byte eager graph
+- Phone-browser Stage selection also recognizes a touch display with a physical
+  CSS short edge below `600px`, covering mobile browsers that present a desktop
+  user agent.
+- Mobile Stage lineup selection and compact/wide variant selection now consume
+  the same client-mode policy; they cannot disagree about whether the active
+  card is using the mobile Stage.
+- The fresh `dev.47` release package validates with a 61,381-byte eager graph
   and is available at `dist/camera-optics.zip`.
 
 ## Restored live baseline

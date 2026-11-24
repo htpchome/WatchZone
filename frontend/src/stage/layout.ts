@@ -7,8 +7,8 @@ export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 export type StageVariantName = "default" | "phone";
 export type StagePresentationClass = "compact" | "regular" | "wide-short";
 export const STAGE_LAYOUT_CONTAINER = 0;
-export const STAGE_LAYOUT_COMPANION_MOBILE = 1;
-export const STAGE_LAYOUT_PHONE_BROWSER = 2;
+export const STAGE_LAYOUT_PHONE_BROWSER = 1;
+export const STAGE_LAYOUT_COMPANION_MOBILE = 2;
 export type StageLayoutClientMode =
   | typeof STAGE_LAYOUT_COMPANION_MOBILE
   | typeof STAGE_LAYOUT_CONTAINER
@@ -104,12 +104,11 @@ export function stageLayoutProfile(
 ): StageLayoutProfile {
   if (
     clientMode === STAGE_LAYOUT_PHONE_BROWSER ||
-    (clientMode === STAGE_LAYOUT_COMPANION_MOBILE &&
-      inlineSize <= availableBlockSize)
+    (clientMode !== STAGE_LAYOUT_CONTAINER && inlineSize <= availableBlockSize)
   ) {
     return { presentation: "compact", variantName: "phone" };
   }
-  if (clientMode === STAGE_LAYOUT_COMPANION_MOBILE) {
+  if (clientMode !== STAGE_LAYOUT_CONTAINER) {
     return { presentation: "wide-short", variantName: "default" };
   }
   const variantName = stageVariantNameForInlineSize(inlineSize);

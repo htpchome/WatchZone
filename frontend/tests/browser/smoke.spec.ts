@@ -10220,7 +10220,19 @@ test("keeps a phone browser on the compact Stage in landscape", async ({
     Object.defineProperty(navigator, "userAgent", {
       configurable: true,
       get: () =>
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+    });
+    Object.defineProperty(navigator, "maxTouchPoints", {
+      configurable: true,
+      get: () => 5,
+    });
+    Object.defineProperty(screen, "width", {
+      configurable: true,
+      get: () => 844,
+    });
+    Object.defineProperty(screen, "height", {
+      configurable: true,
+      get: () => 390,
     });
   });
   await page.goto("/");
@@ -10240,6 +10252,26 @@ test("keeps a phone browser on the compact Stage in landscape", async ({
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  const surfaces = await stage.evaluate((element) => {
+    const camera = element.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-surface"]',
+    );
+    const activity = element.querySelector<HTMLElement>(
+      '[data-layout-node$="default-activity-surface"]',
+    );
+    if (!camera || !activity)
+      throw new Error("Stage surfaces were not rendered");
+    const cameraBounds = camera.getBoundingClientRect();
+    const activityBounds = activity.getBoundingClientRect();
+    return {
+      activityLeft: activityBounds.left,
+      activityTop: activityBounds.top,
+      cameraBottom: cameraBounds.bottom,
+      cameraLeft: cameraBounds.left,
+    };
+  });
+  expect(surfaces.activityTop).toBeGreaterThanOrEqual(surfaces.cameraBottom);
+  expect(surfaces.activityLeft).toBeCloseTo(surfaces.cameraLeft, 0);
 });
 
 test("restores the active Swiper video after WebKit native fullscreen exits", async ({

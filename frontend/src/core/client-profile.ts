@@ -21,7 +21,14 @@ interface MediaQueryListLike {
 }
 
 interface ClientWindow {
+  readonly externalApp?: unknown;
+  readonly externalAppV2?: unknown;
   matchMedia?(query: string): MediaQueryListLike;
+  readonly webkit?: {
+    readonly messageHandlers?: {
+      readonly externalBus?: unknown;
+    };
+  };
 }
 
 export interface ClientProfileEnvironment {
@@ -44,11 +51,6 @@ export interface ClientProfile {
   readonly isPhone: boolean;
   readonly isTablet: boolean;
   readonly operatingSystem: ClientOperatingSystem;
-}
-
-/** Selects the mobile Stage without redefining physical device classes. */
-export function usesMobileStage(profile: ClientProfile): boolean {
-  return profile.isPhone || (profile.isCompanionApp && profile.isTablet);
 }
 
 function mediaMatches(windowObject: ClientWindow, query: string): boolean {
@@ -83,18 +85,21 @@ export function detectClientProfile(
   const hasTouch = maxTouchPoints > 0 || hasPrimaryTouch || hasAnyTouch;
   const isAndroid =
     platform.includes("android") || userAgent.includes("android");
-  const isCompanionApp =
-    /home assistant\//.test(userAgent) ||
-    /homeassistant\/|mobile\/homeassistant/.test(userAgent);
+  const isCompanionApp = !!(
+    windowObject.externalAppV2 ||
+    windowObject.externalApp ||
+    windowObject.webkit?.messageHandlers?.externalBus ||
+    /home assistant/i.test(userAgent)
+  );
   const isCatalyst =
     (platform.includes("mac") || userAgent.includes("macintosh")) &&
-    /mobile\/homeassistant|home assistant\//.test(userAgent) &&
+    isCompanionApp &&
     maxTouchPoints === 0;
   const isIPhone = userAgent.includes("iphone");
   const isIPod = userAgent.includes("ipod");
   const isMobileHint =
     navigatorObject.userAgentData?.mobile ??
-    /mobile|mobi/.test(userAgent.replace("mobile/homeassistant", ""));
+    /mobi/.test(userAgent.replace("mobile/homeassistant", ""));
   const isIPad =
     userAgent.includes("ipad") ||
     (platform.includes("mac") && maxTouchPoints > 1 && hasTouch);
