@@ -3966,6 +3966,10 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(mediumTileLayout.titleVisible).not.toBe("none");
 
   await page.setViewportSize({ height: 844, width: 615 });
+  await expect(page.locator("camera-optics-card .stage-grid")).toHaveAttribute(
+    "data-stage-presentation",
+    "compact",
+  );
   const narrowTileLayout = await analysisTitle.evaluate((element) => {
     const tile = element.closest(".tile");
     const actions = tile?.querySelector<HTMLElement>(".actions");
@@ -4000,7 +4004,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   });
   expect(narrowTileLayout.containerWidth).toBeGreaterThan(480);
   expect(narrowTileLayout.containerWidth).toBeLessThanOrEqual(600);
-  expect(narrowTileLayout.actionDisplay).toBe("flex");
+  expect(narrowTileLayout.actionDisplay).toBe("none");
   expect(narrowTileLayout.background).toBe("rgba(0, 0, 0, 0)");
   expect(narrowTileLayout.borderWidth).toBe("0px");
   expect(narrowTileLayout.analysisIconSize).toBe("1.25rem");
@@ -4142,6 +4146,58 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const activityList = (element.getRootNode() as ShadowRoot)
       .host as HTMLElement;
     activityList.style.removeProperty("inline-size");
+  });
+  await page.setViewportSize({ height: 844, width: 940 });
+  const denseTileLayout = await analysisTitle.evaluate(async (element) => {
+    const activityList = (element.getRootNode() as ShadowRoot)
+      .host as HTMLElement & {
+      presentation: "compact-dense" | "standard";
+      updateComplete: Promise<unknown>;
+    };
+    activityList.presentation = "compact-dense";
+    await activityList.updateComplete;
+    const tile = element.closest<HTMLElement>(".tile");
+    const thumbnail = tile?.querySelector<HTMLElement>(".thumbnail-wrap");
+    const actions = tile?.querySelector<HTMLElement>(".actions");
+    const information = tile?.querySelector<HTMLElement>(".review-info");
+    const reviewState = tile?.querySelector<HTMLElement>(".review-state");
+    if (!tile || !thumbnail || !actions || !information || !reviewState) {
+      throw new Error("Expected the complete dense activity-tile grid.");
+    }
+    const touchTargets = [element, information, reviewState].map((control) => {
+      const target = getComputedStyle(control, "::before");
+      return {
+        height: Number.parseFloat(target.minHeight),
+        width: Number.parseFloat(target.minWidth),
+      };
+    });
+    return {
+      actionDisplay: getComputedStyle(actions).display,
+      height: tile.getBoundingClientRect().height,
+      thumbnailWidth: thumbnail.getBoundingClientRect().width,
+      touchTargets,
+      viewportDense: Boolean(
+        activityList.shadowRoot?.querySelector(".viewport.compact-dense"),
+      ),
+    };
+  });
+  expect(denseTileLayout.actionDisplay).toBe("none");
+  expect(denseTileLayout.height).toBeLessThan(compactTileLayout.height);
+  expect(denseTileLayout.thumbnailWidth).toBeLessThan(204);
+  expect(
+    denseTileLayout.touchTargets.every(
+      ({ height, width }) => height >= 44 && width >= 44,
+    ),
+  ).toBe(true);
+  expect(denseTileLayout.viewportDense).toBe(true);
+  await analysisTitle.evaluate(async (element) => {
+    const activityList = (element.getRootNode() as ShadowRoot)
+      .host as HTMLElement & {
+      presentation: "compact-dense" | "standard";
+      updateComplete: Promise<unknown>;
+    };
+    activityList.presentation = "standard";
+    await activityList.updateComplete;
   });
   if (originalActivityViewport) {
     await page.setViewportSize(originalActivityViewport);

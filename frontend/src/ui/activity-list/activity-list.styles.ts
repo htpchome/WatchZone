@@ -36,6 +36,65 @@ export const activityListStyles = css`
     overflow: hidden;
   }
 
+  .viewport.compact,
+  .viewport.compact-dense {
+    --wzc-activity-actions-display: none;
+    --wzc-activity-badge-grid-column: 2 / 4;
+    --wzc-activity-review-aside-grid-column: 3;
+    --wzc-activity-tile-grid-columns: var(--wzc-event-thumbnail-inline-size)
+      minmax(0, max-content) minmax(0, 1fr) 0;
+  }
+
+  .viewport.compact-dense {
+    --wzc-event-thumbnail-inline-size: 9.6rem;
+    --wzc-event-tile-block-size: 5.4rem;
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense) .analysis-title {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    block-size: 1.5rem;
+    bottom: 0.12rem;
+    inline-size: 1.5rem;
+    inset-inline-end: calc(var(--wzc-event-action-margin) + 1.5rem + 0.25rem);
+    justify-content: center;
+    padding: 0;
+    position: absolute;
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense) .analysis-title ha-icon {
+    --mdc-icon-size: 1.25rem;
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense) .analysis-title::before {
+    inset: 50% auto auto 50%;
+    min-inline-size: 2.75rem;
+    transform: translate(-50%, -50%);
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense) .analysis-title span {
+    display: none;
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense)
+    .review-aside:has(.analysis-title)
+    :is(.export-status, .export-progress-value) {
+    align-self: center;
+    grid-row: 2;
+    margin-block-start: 0;
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense) .badges wzc-badge {
+    flex: 0 0 auto;
+  }
+
+  :is(.viewport.compact, .viewport.compact-dense) .review-aside {
+    grid-row: 2;
+    justify-self: end;
+    max-inline-size: 100%;
+  }
+
   .scroller {
     min-block-size: 0;
     overflow-y: auto;
@@ -109,10 +168,11 @@ export const activityListStyles = css`
     box-sizing: border-box;
     display: grid;
     column-gap: var(--wzc-event-tile-gap);
-    grid-template-columns:
+    grid-template-columns: var(
+      --wzc-activity-tile-grid-columns,
       var(--wzc-event-thumbnail-inline-size)
-      var(--wzc-event-metadata-column-size) minmax(0, 1fr)
-      auto;
+        var(--wzc-event-metadata-column-size) minmax(0, 1fr) auto
+    );
     grid-template-rows: max-content minmax(0, 1fr);
     row-gap: 0.15rem;
     block-size: var(--wzc-event-tile-block-size);
@@ -375,7 +435,7 @@ export const activityListStyles = css`
   .review-aside {
     align-content: stretch;
     display: grid;
-    grid-column: 3;
+    grid-column: var(--wzc-activity-review-aside-grid-column, 3);
     grid-row: 1 / -1;
     grid-template-rows: 1fr var(--wzc-event-action-size) 1fr;
     min-inline-size: 0;
@@ -511,7 +571,7 @@ export const activityListStyles = css`
     display: flex;
     flex-wrap: nowrap;
     gap: 0.25rem;
-    grid-column: 2 / 4;
+    grid-column: var(--wzc-activity-badge-grid-column, 2 / 4);
     grid-row: 1;
     min-inline-size: 0;
     overflow: hidden;
@@ -561,7 +621,7 @@ export const activityListStyles = css`
 
   .actions {
     align-self: center;
-    display: flex;
+    display: var(--wzc-activity-actions-display, flex);
     gap: var(--wzc-media-action-gap);
     grid-column: 4;
     grid-row: 1 / -1;
@@ -690,18 +750,12 @@ export const activityListStyles = css`
   }
 
   @container (max-width: ${responsiveWidths.compact}) {
-    .tile {
-      grid-template-columns:
-        var(--wzc-event-thumbnail-inline-size) minmax(0, max-content)
-        minmax(0, 1fr) 0;
-    }
-
-    .actions {
-      display: none;
-    }
-
-    .badges {
-      grid-column: 2 / 4;
+    .viewport {
+      --wzc-activity-actions-display: none;
+      --wzc-activity-badge-grid-column: 2 / 4;
+      --wzc-activity-review-aside-grid-column: 3;
+      --wzc-activity-tile-grid-columns: var(--wzc-event-thumbnail-inline-size)
+        minmax(0, max-content) minmax(0, 1fr) 0;
     }
 
     .badges wzc-badge {
@@ -709,7 +763,6 @@ export const activityListStyles = css`
     }
 
     .review-aside {
-      grid-column: 3;
       grid-row: 2;
       justify-self: end;
       max-inline-size: 100%;

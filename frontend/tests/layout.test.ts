@@ -856,6 +856,40 @@ describe("layout composition", () => {
     ]);
   });
 
+  it("publishes Stage presentation changes to loaded placeables", async () => {
+    const definition: ModuleDefinition<Record<string, string>> = {
+      type: "test",
+      createElement: () => document.createElement("article"),
+      define: async () => undefined,
+      getEntityIds: () => [],
+      updateElement: (element, _config, context) => {
+        element.dataset.presentation = context.stagePresentation ?? "";
+      },
+      validateConfig: (value) => value as Record<string, string>,
+    };
+    const loader = new PlaceableLoader({
+      test: { load: async () => definition },
+    });
+    const host = new RuntimeHost();
+    const runtime = new LayoutRuntime(host, loader);
+    const container = document.createElement("div");
+    host.connect();
+    setRuntimeStage(runtime, layoutWithModules("first"));
+
+    await vi.waitFor(() => {
+      render(runtime.render(), container);
+      expect(container.querySelector("article")?.dataset.presentation).toBe(
+        "regular",
+      );
+    });
+
+    runtime.setLayoutProfile(stageLayoutProfile(1024, 500));
+    render(runtime.render(), container);
+    expect(container.querySelector("article")?.dataset.presentation).toBe(
+      "wide-short",
+    );
+  });
+
   it("shows one stacked module at a time and preserves visited elements", async () => {
     const createDefinition = (type: string): ModuleDefinition<unknown> => ({
       type,

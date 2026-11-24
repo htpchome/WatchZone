@@ -42,6 +42,7 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import type {
+  ActivityListPresentation,
   ActivityListIntent,
   ActivityListItem,
 } from "../../../ui/activity-list";
@@ -80,6 +81,7 @@ export class ReviewsModule extends LitElement {
     hoverPreviewEnabled: { attribute: false, type: Boolean },
     localize: { attribute: false },
     mediaDate: { attribute: false },
+    presentation: { reflect: true },
     roundedCorners: { attribute: false, type: Boolean },
     shadows: { attribute: false, type: Boolean },
     targetModuleId: { attribute: false },
@@ -96,6 +98,7 @@ export class ReviewsModule extends LitElement {
   public hoverPreviewEnabled = true;
   public localize: LocalizeFunction = englishLocalize;
   public mediaDate?: MediaDateContext;
+  public presentation: ActivityListPresentation = "standard";
   public roundedCorners = true;
   public shadows = true;
   public targetModuleId = "";
@@ -344,6 +347,7 @@ export class ReviewsModule extends LitElement {
         .loadingKey=${"reviews.loading"}
         .locale=${this.api?.locale}
         .localize=${this.localize}
+        .presentation=${this.presentation}
         .resolveUrl=${this.api?.resolveUrl}
         .roundedCorners=${this.roundedCorners}
         .selectedDate=${this._filter.selectedDate()}

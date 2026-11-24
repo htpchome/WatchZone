@@ -145,7 +145,12 @@ export class LayoutRuntime implements ReactiveController {
     if (!firstMeasurement && !variantChanged && !presentationChanged) return;
     this._variantName = profile.variantName;
     if (firstMeasurement || variantChanged) this._syncActiveVariant();
-    else this._host.requestUpdate();
+    else {
+      for (const record of this._records.values()) {
+        if (record.status === "ready") this._updateRecord(record, true);
+      }
+      this._host.requestUpdate();
+    }
   }
 
   public setFlowProfile(profile: StageVariantName): void {
@@ -700,6 +705,7 @@ export class LayoutRuntime implements ReactiveController {
       ...this._context,
       ...selected,
       placeableId: record.node.id,
+      stagePresentation: this._layoutProfile?.presentation,
     } as PlaceableRuntimeContext;
   }
 

@@ -7,7 +7,16 @@ import {
 import { englishLocalize } from "../../../core/localization";
 import type { ActivityClassificationMode } from "../../../core/config";
 import type { ModuleDefinition } from "../../placeable";
+import type { StagePresentationClass } from "../../layout";
 import type { ReviewsModule } from "./reviews";
+
+function reviewPresentation(
+  stagePresentation: StagePresentationClass | undefined,
+): "compact" | "compact-dense" | "standard" {
+  if (stagePresentation === "compact") return "compact";
+  if (stagePresentation === "wide-short") return "compact-dense";
+  return "standard";
+}
 
 export interface ReviewsModuleConfig {
   readonly activityThumbnailOutlineMode: ActivityClassificationMode;
@@ -115,6 +124,7 @@ export const moduleDefinition: ModuleDefinition<
     reviews.hoverPreviewEnabled = config.hoverPreviewEnabled;
     reviews.localize = context.localize ?? englishLocalize;
     reviews.mediaDate = context.mediaDate;
+    reviews.presentation = reviewPresentation(context.stagePresentation);
     reviews.roundedCorners = config.roundedCorners;
     reviews.shadows = config.shadows;
     reviews.targetModuleId = config.targetModuleId;

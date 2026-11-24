@@ -88,6 +88,8 @@ export interface ActivityListItem {
   readonly zones: readonly string[];
 }
 
+export type ActivityListPresentation = "compact" | "compact-dense" | "standard";
+
 export type ActivityListIntent =
   | {
       readonly kind: "load_more";
@@ -149,6 +151,7 @@ export class ActivityList extends LitElement {
     loadingKey: { attribute: false },
     locale: { attribute: false },
     localize: { attribute: false },
+    presentation: { reflect: true },
     resolveUrl: { attribute: false },
     roundedCorners: { attribute: false, type: Boolean },
     selectedDate: { attribute: false },
@@ -168,6 +171,7 @@ export class ActivityList extends LitElement {
   public loadingKey: TranslationKey = "events.loading";
   public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
+  public presentation: ActivityListPresentation = "standard";
   public resolveUrl?: (path: string) => string;
   public roundedCorners = true;
   public selectedDate?: string;
@@ -269,6 +273,7 @@ export class ActivityList extends LitElement {
     return html`<section
       class=${[
         "viewport",
+        this.presentation,
         this.roundedCorners ? "" : "square",
         this.shadows ? "" : "no-shadows",
       ]

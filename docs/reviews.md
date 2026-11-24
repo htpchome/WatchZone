@@ -48,12 +48,19 @@
 - Review and Event tiles use the shared media-tile surface tokens. Fine-pointer
   hover darkens the active theme surface slightly without changing touch or
   keyboard behavior.
-- The initial standard activity-tile presentation uses one shared grid for
+- The standard activity-tile presentation uses one shared grid for
   Reviews and Events: the thumbnail spans both rows, badges occupy the top
   strip, and metadata, optional analysis/export state, and actions occupy
   independent columns below. Optional Review content must not displace the
-  metadata column. Future compact presentations change only placement and
-  visibility while retaining the same item model and typed intents.
+  metadata column. Reviews maps the measured Stage presentation to three tile
+  presentations while retaining the same item model and typed intents:
+  `regular` uses Standard, `compact` uses Compact, and `wide-short` uses Compact
+  Dense. Compact formalizes the existing sub-480px placement and hides direct
+  export, download, and snapshot actions because those actions remain available
+  in the recorded-media drawer. Compact Dense retains that placement with a
+  smaller 16:9 thumbnail and tile height so the short landscape activity rail
+  can expose more Reviews. A narrow tile container may still apply Compact
+  placement as a responsive fallback regardless of its Stage presentation.
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles
   scroll beneath it; the next heading pushes it away at the group boundary.

@@ -10,6 +10,7 @@ import type {
   ModuleStackNavigationContext,
   StageStackAccessoryConfiguration,
 } from "./module-stack-navigation-context";
+import type { StagePresentationClass } from "./layout";
 
 export interface PlaceableBaseRuntimeContext {
   readonly api?: HomeAssistantApi;
@@ -18,6 +19,7 @@ export interface PlaceableBaseRuntimeContext {
   readonly placeableId: string;
   /** True when Home Assistant is rendering the disposable editor preview. */
   readonly preview?: boolean;
+  readonly stagePresentation?: StagePresentationClass;
 }
 
 export interface PlaceableContextBindings {

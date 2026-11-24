@@ -34,6 +34,18 @@ function item(revision: string): ActivityListItem {
 describe("activity list media failures", () => {
   afterEach(() => document.body.replaceChildren());
 
+  it("exposes the selected tile presentation on its viewport", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.presentation = "compact-dense";
+    list.items = [item("dense")];
+    document.body.append(list);
+    await list.updateComplete;
+
+    expect(
+      list.shadowRoot?.querySelector(".viewport.compact-dense"),
+    ).not.toBeNull();
+  });
+
   it("clears stale Top visibility when a retained list reconnects at the beginning", async () => {
     const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
     list.items = Array.from({ length: 4 }, (_, index) => ({
