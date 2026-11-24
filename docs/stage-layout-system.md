@@ -44,10 +44,12 @@ A Stage Design contains a stable ID, name, schema version, optimistic revision,
 a `stageType` classification, one or more physical-client `profiles`, and at
 least one responsive variant: `default` for wider containers, `phone` for
 narrower containers, or both. `profiles` contains `standard`, `mobile`, or
-both and controls which card lineup may select the design. Responsive variants
-are independent presentation layouts selected by the shared responsive
-profile; rotating a physical phone does not move it out of the mobile Stage
-lineup or trigger a viewport-level presentation. `stageType` is one of `full`, `camera_only`, or
+both and controls which card lineup may select the design. A phone browser or
+PWA always selects the compact `phone` variant. A Companion App phone or tablet
+selects `phone` for portrait or square measured geometry and `default` with the
+wide-short presentation for landscape measured geometry. Tablet and desktop
+browsers remain container-responsive. Rotation never changes the selected
+mobile Stage lineup or enters native fullscreen. `stageType` is one of `full`, `camera_only`, or
 `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
 so its standard and mobile lineups are not exposed in the card editor. Each variant

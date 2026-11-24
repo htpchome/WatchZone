@@ -10116,7 +10116,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("selects the static short-wide mobile Stage without leaving card flow", async ({
+test("selects the Companion short-wide mobile Stage without leaving card flow", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -10210,6 +10210,36 @@ test("selects the static short-wide mobile Stage without leaving card flow", asy
     cameraHasCamera: true,
     cameraHasNavigation: true,
   });
+});
+
+test("keeps a phone browser on the compact Stage in landscape", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1",
+    });
+  });
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & { setConfig(config: unknown): void };
+    host.setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      type: "custom:camera-optics-card",
+    });
+  });
+
+  const stage = card.locator(".stage-grid");
+  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
 });
 
 test("restores the active Swiper video after WebKit native fullscreen exits", async ({

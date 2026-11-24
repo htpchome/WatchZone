@@ -27,6 +27,8 @@ import {
   STANDARD_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
+  STAGE_LAYOUT_COMPANION_MOBILE,
+  STAGE_LAYOUT_PHONE_BROWSER,
   stageLayoutProfile,
   validateStageCatalog,
   validateStageDesign,
@@ -78,6 +80,37 @@ describe("layout composition", () => {
     });
     expect(stageLayoutProfile(1024, 768)).toEqual({
       presentation: "regular",
+      variantName: "default",
+    });
+  });
+
+  it("separates phone-browser and Companion mobile Stage policy", () => {
+    expect(stageLayoutProfile(844, 390, STAGE_LAYOUT_PHONE_BROWSER)).toEqual({
+      presentation: "compact",
+      variantName: "phone",
+    });
+    expect(stageLayoutProfile(390, 844, STAGE_LAYOUT_COMPANION_MOBILE)).toEqual(
+      {
+        presentation: "compact",
+        variantName: "phone",
+      },
+    );
+    expect(
+      stageLayoutProfile(768, 1024, STAGE_LAYOUT_COMPANION_MOBILE),
+    ).toEqual({
+      presentation: "compact",
+      variantName: "phone",
+    });
+    expect(stageLayoutProfile(844, 390, STAGE_LAYOUT_COMPANION_MOBILE)).toEqual(
+      {
+        presentation: "wide-short",
+        variantName: "default",
+      },
+    );
+    expect(
+      stageLayoutProfile(1024, 768, STAGE_LAYOUT_COMPANION_MOBILE),
+    ).toEqual({
+      presentation: "wide-short",
       variantName: "default",
     });
   });

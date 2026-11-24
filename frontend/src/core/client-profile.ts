@@ -46,6 +46,11 @@ export interface ClientProfile {
   readonly operatingSystem: ClientOperatingSystem;
 }
 
+/** Selects the mobile Stage without redefining physical device classes. */
+export function usesMobileStage(profile: ClientProfile): boolean {
+  return profile.isPhone || (profile.isCompanionApp && profile.isTablet);
+}
+
 function mediaMatches(windowObject: ClientWindow, query: string): boolean {
   return windowObject.matchMedia?.(query).matches === true;
 }
@@ -88,8 +93,8 @@ export function detectClientProfile(
   const isIPhone = userAgent.includes("iphone");
   const isIPod = userAgent.includes("ipod");
   const isMobileHint =
-    navigatorObject.userAgentData?.mobile === true ||
-    /mobile|mobi/.test(userAgent);
+    navigatorObject.userAgentData?.mobile ??
+    /mobile|mobi/.test(userAgent.replace("mobile/homeassistant", ""));
   const isIPad =
     userAgent.includes("ipad") ||
     (platform.includes("mac") && maxTouchPoints > 1 && hasTouch);

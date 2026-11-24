@@ -143,9 +143,11 @@ an omitted value normalizes to `both`, and normalized YAML uses only the new
 key.
 
 The Mobile and Touch disclosure owns physical-client and touch-oriented card
-preferences. It currently contains Mobile Data Saving. Phone orientation is
-not a configurable action and does not automatically select a two-column or
-fullscreen presentation.
+preferences. It currently contains Mobile Data Saving. Orientation is not a
+configurable action and never enters native fullscreen. Phone browsers keep the
+compact single-column Stage in both orientations; Companion phones and tablets
+automatically select compact or wide-short Stage geometry from the measured
+card orientation.
 
 The Recorded Media Player disclosure owns the presentation used by every
 recorded-media request, including Reviews, Events, Recordings, Exports, and

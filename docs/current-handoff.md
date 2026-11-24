@@ -9,14 +9,18 @@ precedence.
 - Branch: `main`.
 - HEAD before the current uncommitted change: `236300f`
   (`v0.0.5-dev.44`).
-- Application version: `0.0.5-dev.45`.
+- Application version: `0.0.5-dev.46`.
 - Home Assistant config-entry schema: **2**.
 - The current uncommitted change removes the provisional wide Stage that could
   paint before a portrait card received its first container measurement.
 - An unmeasured Stage mounts no responsive variant. The card measures its shell
   on the first scheduled layout measurement, then mounts the correct compact or
   wide variant once.
-- The fresh `dev.45` release package validates with a 61,286-byte eager graph
+- Phone browsers and PWAs now retain the compact, single-column Stage in both
+  orientations. Companion App phones and tablets use the compact Stage in
+  portrait and the wide-short Stage in landscape. Tablet and desktop browsers
+  remain container-responsive; no path enters native fullscreen.
+- The fresh `dev.46` release package validates with a 61,354-byte eager graph
   and is available at `dist/camera-optics.zip`.
 
 ## Restored live baseline

@@ -6,6 +6,13 @@ export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
 export type StagePresentationClass = "compact" | "regular" | "wide-short";
+export const STAGE_LAYOUT_CONTAINER = 0;
+export const STAGE_LAYOUT_COMPANION_MOBILE = 1;
+export const STAGE_LAYOUT_PHONE_BROWSER = 2;
+export type StageLayoutClientMode =
+  | typeof STAGE_LAYOUT_COMPANION_MOBILE
+  | typeof STAGE_LAYOUT_CONTAINER
+  | typeof STAGE_LAYOUT_PHONE_BROWSER;
 export type StageProfile = "mobile" | "standard";
 export type StageSlotName = "content" | "controls" | "footer" | "overlay";
 export type StageControlRegion = "leading" | "center" | "trailing";
@@ -93,7 +100,18 @@ export function stageVariantNameForInlineSize(
 export function stageLayoutProfile(
   inlineSize: number,
   availableBlockSize: number,
+  clientMode: StageLayoutClientMode = STAGE_LAYOUT_CONTAINER,
 ): StageLayoutProfile {
+  if (
+    clientMode === STAGE_LAYOUT_PHONE_BROWSER ||
+    (clientMode === STAGE_LAYOUT_COMPANION_MOBILE &&
+      inlineSize <= availableBlockSize)
+  ) {
+    return { presentation: "compact", variantName: "phone" };
+  }
+  if (clientMode === STAGE_LAYOUT_COMPANION_MOBILE) {
+    return { presentation: "wide-short", variantName: "default" };
+  }
   const variantName = stageVariantNameForInlineSize(inlineSize);
   return {
     presentation:

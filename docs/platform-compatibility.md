@@ -130,23 +130,23 @@ Container-responsive Stage arrangement and control geometry remain separate.
 
 The client identity profile may select policies that genuinely depend on the
 physical client or host application, including mobile connection retention and
-phone-specific startup audio. Outside an explicit user-configured client-class
-override, it does not select responsive layout, control geometry, or input
-behavior. Those remain owned by the container-responsive and input-capability
-profile above. User-agent and platform parsing remains prohibited for
-automatic presentation decisions.
+phone-specific startup audio. Outside the mobile Stage policy below, it does
+not select responsive layout, control geometry, or input behavior. Those remain
+owned by the container-responsive and input-capability profile above.
 
-Companion's fixed-window height sizing applies to both phones and tablets.
-This host-application sizing policy is independent from phone-only Stage,
-appearance, and edge-to-edge selection; a Companion tablet retains the
-standard presentation while using the mobile viewport-height mode.
+Companion's fixed-window height sizing and mobile Stage apply to both phones
+and tablets. A Companion mobile client selects the compact variant when its
+measured card is portrait or square, and the wide-short variant when it is
+landscape. Phone browsers and phone PWAs remain on the compact, single-column
+mobile Stage in both orientations because CameraOptics cannot own their browser
+chrome. Tablet browsers, desktop browsers, and Catalyst remain
+container-responsive. This policy does not enter native fullscreen or remove
+Home Assistant chrome.
 
-Phone orientation is not a host-specific presentation trigger. CameraOptics
-keeps the mobile Stage in ordinary Home Assistant flow and selects responsive
-variants from the shared presentation profile. The compact and wide-short
-variants reuse the same Camera and Activity surfaces; a future transition
-between them must use the shared Motion boundary without introducing another
-layout or animation engine.
+Both mobile variants remain in ordinary Home Assistant card flow and reuse the
+same Camera and Activity surfaces. A future transition between them must use
+the shared Motion boundary without introducing another layout or animation
+engine.
 
 ### 2.3 Theme profile
 

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { detectClientProfile } from "../src/core/client-profile";
+import {
+  detectClientProfile,
+  usesMobileStage,
+} from "../src/core/client-profile";
 
 function matchMedia(matches: readonly string[] = []) {
   return (query: string) => ({ matches: matches.includes(query) });
@@ -8,23 +11,22 @@ function matchMedia(matches: readonly string[] = []) {
 
 describe("client profile", () => {
   it("detects an iPhone Companion client independently of width", () => {
-    expect(
-      detectClientProfile({
-        navigator: {
-          maxTouchPoints: 5,
-          platform: "iPhone",
-          userAgent:
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
-        },
-        window: {
-          matchMedia: matchMedia([
-            "(pointer: coarse)",
-            "(any-pointer: coarse)",
-            "(hover: none)",
-          ]),
-        },
-      }),
-    ).toMatchObject({
+    const profile = detectClientProfile({
+      navigator: {
+        maxTouchPoints: 5,
+        platform: "iPhone",
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+      },
+      window: {
+        matchMedia: matchMedia([
+          "(pointer: coarse)",
+          "(any-pointer: coarse)",
+          "(hover: none)",
+        ]),
+      },
+    });
+    expect(profile).toMatchObject({
       application: "home_assistant_companion",
       deviceClass: "phone",
       isCompanionApp: true,
@@ -32,6 +34,7 @@ describe("client profile", () => {
       isPhone: true,
       operatingSystem: "ios",
     });
+    expect(usesMobileStage(profile)).toBe(true);
   });
 
   it("detects Android phones from Client Hints", () => {
@@ -56,22 +59,44 @@ describe("client profile", () => {
   });
 
   it("distinguishes Android tablets from phones", () => {
-    expect(
-      detectClientProfile({
-        navigator: {
-          maxTouchPoints: 5,
-          userAgent: "Mozilla/5.0 (Linux; Android 15) Chrome/126 Safari/537.36",
-          userAgentData: { mobile: false, platform: "Android" },
-        },
-        window: {
-          matchMedia: matchMedia(["(pointer: coarse)"]),
-        },
-      }),
-    ).toMatchObject({
+    const profile = detectClientProfile({
+      navigator: {
+        maxTouchPoints: 5,
+        userAgent: "Mozilla/5.0 (Linux; Android 15) Chrome/126 Safari/537.36",
+        userAgentData: { mobile: false, platform: "Android" },
+      },
+      window: {
+        matchMedia: matchMedia(["(pointer: coarse)"]),
+      },
+    });
+    expect(profile).toMatchObject({
+      application: "browser",
       deviceClass: "tablet",
       isPhone: false,
       isTablet: true,
     });
+    expect(usesMobileStage(profile)).toBe(false);
+  });
+
+  it("uses the mobile Stage for Android Companion tablets", () => {
+    const profile = detectClientProfile({
+      navigator: {
+        maxTouchPoints: 5,
+        userAgent:
+          "Mozilla/5.0 (Linux; Android 15) Chrome/126 Safari/537.36 Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+      },
+      window: {
+        matchMedia: matchMedia(["(pointer: coarse)"]),
+      },
+    });
+
+    expect(profile).toMatchObject({
+      application: "home_assistant_companion",
+      deviceClass: "tablet",
+      isCompanionApp: true,
+      isTablet: true,
+    });
+    expect(usesMobileStage(profile)).toBe(true);
   });
 
   it("detects the iPadOS Mac platform spoof as a tablet", () => {
