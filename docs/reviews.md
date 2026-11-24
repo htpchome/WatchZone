@@ -59,7 +59,9 @@
   export, download, and snapshot actions because those actions remain available
   in the recorded-media drawer. Compact Dense retains that placement with a
   smaller 16:9 thumbnail and tile height so the short landscape activity rail
-  can expose more Reviews. A narrow tile container may still apply Compact
+  can expose more Reviews. It omits zone metadata and presents reviewed state
+  as an icon-only circular control while preserving its accessible action name
+  and 44-pixel touch target. A narrow tile container may still apply Compact
   placement as a responsive fallback regardless of its Stage presentation.
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles

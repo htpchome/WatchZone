@@ -742,7 +742,7 @@ export class ActivityList extends LitElement {
       </div>
       ${
         this.displayZone && item.zones.length > 0
-          ? html`<div class="metadata">
+          ? html`<div class="metadata zone">
               <span class="metadata-icon">${renderIcon("mapMarker")}</span>
               <span>${item.zones.join(", ")}</span>
             </div>`

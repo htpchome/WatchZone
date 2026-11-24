@@ -48,6 +48,19 @@ export const activityListStyles = css`
   .viewport.compact-dense {
     --wzc-event-thumbnail-inline-size: 9.6rem;
     --wzc-event-tile-block-size: 5.4rem;
+    --wzc-review-state-block-size: 1.5rem;
+    --wzc-review-state-border-radius: var(--wzc-radius-pill);
+    --wzc-review-state-gap: 0;
+    --wzc-review-state-inline-size: 1.5rem;
+    --wzc-review-state-justify-content: center;
+    --wzc-review-state-label-display: none;
+    --wzc-review-state-margin-block-start: 0.15rem;
+    --wzc-review-state-min-block-size: 1.5rem;
+    --wzc-review-state-padding: 0;
+  }
+
+  .viewport.compact-dense .metadata.zone {
+    display: none;
   }
 
   :is(.viewport.compact, .viewport.compact-dense) .analysis-title {

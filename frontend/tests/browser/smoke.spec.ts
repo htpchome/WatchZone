@@ -4161,7 +4161,19 @@ test("keeps activity content in an independently scrolling viewport", async ({
     const actions = tile?.querySelector<HTMLElement>(".actions");
     const information = tile?.querySelector<HTMLElement>(".review-info");
     const reviewState = tile?.querySelector<HTMLElement>(".review-state");
-    if (!tile || !thumbnail || !actions || !information || !reviewState) {
+    const reviewLabel = reviewState?.querySelector<HTMLElement>(
+      ".review-state-label",
+    );
+    const zone = tile?.querySelector<HTMLElement>(".metadata.zone");
+    if (
+      !tile ||
+      !thumbnail ||
+      !actions ||
+      !information ||
+      !reviewState ||
+      !reviewLabel ||
+      !zone
+    ) {
       throw new Error("Expected the complete dense activity-tile grid.");
     }
     const touchTargets = [element, information, reviewState].map((control) => {
@@ -4174,15 +4186,20 @@ test("keeps activity content in an independently scrolling viewport", async ({
     return {
       actionDisplay: getComputedStyle(actions).display,
       height: tile.getBoundingClientRect().height,
+      reviewLabelDisplay: getComputedStyle(reviewLabel).display,
+      reviewShape: getComputedStyle(reviewState).borderRadius,
       thumbnailWidth: thumbnail.getBoundingClientRect().width,
       touchTargets,
       viewportDense: Boolean(
         activityList.shadowRoot?.querySelector(".viewport.compact-dense"),
       ),
+      zoneDisplay: getComputedStyle(zone).display,
     };
   });
   expect(denseTileLayout.actionDisplay).toBe("none");
   expect(denseTileLayout.height).toBeLessThan(compactTileLayout.height);
+  expect(denseTileLayout.reviewLabelDisplay).toBe("none");
+  expect(denseTileLayout.reviewShape).toBe("999px");
   expect(denseTileLayout.thumbnailWidth).toBeLessThan(204);
   expect(
     denseTileLayout.touchTargets.every(
@@ -4190,6 +4207,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
     ),
   ).toBe(true);
   expect(denseTileLayout.viewportDense).toBe(true);
+  expect(denseTileLayout.zoneDisplay).toBe("none");
   await analysisTitle.evaluate(async (element) => {
     const activityList = (element.getRootNode() as ShadowRoot)
       .host as HTMLElement & {
