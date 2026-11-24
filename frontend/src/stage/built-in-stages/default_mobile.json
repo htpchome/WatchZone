@@ -53,6 +53,24 @@
                       ],
                       "controls": [
                         {
+                          "componentType": "light_control",
+                          "config": {
+                            "presentation": "overlay"
+                          },
+                          "controlRegion": "leading",
+                          "id": "default-light-component",
+                          "kind": "component"
+                        },
+                        {
+                          "componentType": "two_way_talk",
+                          "config": {
+                            "presentation": "overlay"
+                          },
+                          "controlRegion": "center",
+                          "id": "default-talk-component",
+                          "kind": "component"
+                        },
+                        {
                           "componentType": "ptz",
                           "config": {},
                           "controlRegion": "trailing",
@@ -109,27 +127,7 @@
                     },
                     "id": "default-activity-navigation-module",
                     "kind": "module",
-                    "moduleType": "activity-navigation",
-                    "slots": {
-                      "content": [
-                        {
-                          "componentType": "light_control",
-                          "config": {
-                            "presentation": "standard"
-                          },
-                          "id": "default-light-component",
-                          "kind": "component"
-                        },
-                        {
-                          "componentType": "two_way_talk",
-                          "config": {
-                            "presentation": "standard"
-                          },
-                          "id": "default-talk-component",
-                          "kind": "component"
-                        }
-                      ]
-                    }
+                    "moduleType": "activity-navigation"
                   }
                 },
                 {
@@ -252,6 +250,24 @@
                       ],
                       "controls": [
                         {
+                          "componentType": "light_control",
+                          "config": {
+                            "presentation": "overlay"
+                          },
+                          "controlRegion": "leading",
+                          "id": "default-light-component",
+                          "kind": "component"
+                        },
+                        {
+                          "componentType": "two_way_talk",
+                          "config": {
+                            "presentation": "overlay"
+                          },
+                          "controlRegion": "center",
+                          "id": "default-talk-component",
+                          "kind": "component"
+                        },
+                        {
                           "componentType": "ptz",
                           "config": {},
                           "controlRegion": "trailing",
@@ -308,27 +324,7 @@
                     },
                     "id": "default-activity-navigation-module",
                     "kind": "module",
-                    "moduleType": "activity-navigation",
-                    "slots": {
-                      "content": [
-                        {
-                          "componentType": "light_control",
-                          "config": {
-                            "presentation": "standard"
-                          },
-                          "id": "default-light-component",
-                          "kind": "component"
-                        },
-                        {
-                          "componentType": "two_way_talk",
-                          "config": {
-                            "presentation": "standard"
-                          },
-                          "id": "default-talk-component",
-                          "kind": "component"
-                        }
-                      ]
-                    }
+                    "moduleType": "activity-navigation"
                   }
                 },
                 {

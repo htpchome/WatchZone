@@ -11,13 +11,14 @@ boundaries. It supplements `architecture.md`, which remains authoritative.
   not a Stage module, component, slot, or designer-placeable. It becomes
   available automatically after a talk session connects and renders only when
   no connected CameraOptics surface is presenting that session's camera.
-- Below the 600px container breakpoint, the built-in Full Stage presents it in
-  Camera's responsive controls slot. At 600px and wider, the Stage variant
-  moves the same stable component node into activity-navigation's centered
-  content slot with `standard` presentation. Camera Only retains the controls
-  placement at every size. The selected slot owns placement and collision-free
-  spacing; the component renders only its intrinsic one-button or active
-  three-button control surface.
+- Below the 600px container breakpoint, the standard built-in Full Stage
+  presents it in Camera's responsive controls slot. At 600px and wider, that
+  Stage variant moves the same stable component node into
+  activity-navigation's centered content slot with `standard` presentation.
+  The mobile built-in Full Stage and Camera Only retain the Camera controls
+  placement at every size, including a physical phone rotated to landscape.
+  The selected slot owns placement and collision-free spacing; the component
+  renders only its intrinsic one-button or active three-button control surface.
 - The wide Full Stage reserves the complete active-talk width on the
   activity-navigation centerline. The inactive microphone stays centered in
   that reservation, while linked-light controls remain immediately before the

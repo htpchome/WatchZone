@@ -578,6 +578,54 @@ describe("layout composition", () => {
     ]);
   });
 
+  it("keeps light and talk on the Camera overlay in every mobile Stage variant", () => {
+    const layout = mobileBuiltInStage(
+      normalizeCardConfig({
+        cameras: [
+          {
+            entity_id: "camera.front",
+            lights: [{ entity_id: "light.porch" }],
+            two_way_talk_enabled: true,
+          },
+        ],
+      }),
+    );
+
+    for (const variantName of ["default", "phone"] as const) {
+      const variant = layout.variants[variantName];
+      if (!variant) throw new Error(`Expected the ${variantName} variant.`);
+      const camera = findModule(variant.root, "camera");
+      const navigation = findModule(
+        variant.root,
+        ACTIVITY_NAVIGATION_MODULE_TYPE,
+      );
+      expect(navigation.slots?.content).toBeUndefined();
+      expect(
+        camera.slots?.controls?.map(
+          ({ componentType, config, controlRegion, id }) => ({
+            componentType,
+            config,
+            controlRegion,
+            id,
+          }),
+        ),
+      ).toMatchObject([
+        {
+          componentType: "light_control",
+          config: { presentation: "overlay" },
+          controlRegion: "leading",
+          id: DEFAULT_LIGHT_COMPONENT_NODE_ID,
+        },
+        {
+          componentType: "two_way_talk",
+          config: { presentation: "overlay" },
+          controlRegion: "center",
+          id: DEFAULT_TALK_COMPONENT_NODE_ID,
+        },
+      ]);
+    }
+  });
+
   it("composes provider-resolved PTZ in the trailing controls region", () => {
     const layout = builtInStage(
       normalizeCardConfig({
@@ -1060,6 +1108,14 @@ describe("layout composition", () => {
 function builtInStage(config: ReturnType<typeof normalizeCardConfig>) {
   const stage = createBuiltInStageSet(config).designs[0];
   if (!stage) throw new Error("Expected the built-in stage.");
+  return stage;
+}
+
+function mobileBuiltInStage(config: ReturnType<typeof normalizeCardConfig>) {
+  const stage = createBuiltInStageSet(config).designs.find(({ id }) =>
+    id.endsWith(":default-mobile-stage"),
+  );
+  if (!stage) throw new Error("Expected the built-in mobile stage.");
   return stage;
 }
 

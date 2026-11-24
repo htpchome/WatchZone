@@ -152,15 +152,18 @@ root grid
                 └── PTZ component in panel presentation
 ```
 
-At 600px and wider, the same stable linked-light and two-way-talk component
-nodes move declaratively from Camera's `controls` slot into the
-activity-navigation module's centered `content` slot. That module placement
-uses each component's `standard` presentation and is
-independent from Camera's media-overlay visibility timer. PTZ
-remains in Camera's trailing controls region. This responsive relocation is a
-Stage-variant decision: neither component chooses the breakpoint, imports its
-host module, or discovers a sibling. Future Stage Designs may place either
-component in any compatible slot and select its presentation explicitly.
+In the standard built-in Full Stage, containers 600px and wider move the same
+stable linked-light and two-way-talk component nodes declaratively from
+Camera's `controls` slot into the activity-navigation module's centered
+`content` slot. The mobile built-in Full Stage keeps both components in
+Camera's `controls` slot in portrait and landscape, so rotating a physical
+phone never relocates them into the activity toolbar. The activity-toolbar
+placement uses each component's `standard` presentation and is independent
+from Camera's media-overlay visibility timer. PTZ remains in Camera's trailing
+controls region. This responsive relocation is a Stage-variant decision:
+neither component chooses the breakpoint, imports its host module, or
+discovers a sibling. Future Stage Designs may place either component in any
+compatible slot and select its presentation explicitly.
 The activity-navigation content slot reserves the complete active-talk width
 on its centerline. The inactive microphone remains centered in that reserved
 width, while linked-light controls align immediately before the active pill

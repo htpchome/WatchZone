@@ -10261,14 +10261,38 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
       setConfig(config: unknown): void;
     };
     host.setConfig({
-      cameras: [{ entity_id: "camera.front" }],
+      cameras: [
+        {
+          entity_id: "camera.front",
+          lights: [{ entity_id: "light.porch" }],
+          two_way_talk_enabled: true,
+        },
+      ],
       type: "custom:camera-optics-card",
     });
   });
 
   const stage = card.locator(".stage-grid");
+  const cameraComposition = card.locator(
+    '.module-composition[data-module-type="camera"]',
+  );
+  const activityNavigationComposition = card.locator(
+    '.module-composition[data-module-type="activity-navigation"]',
+  );
+  const talk = card.locator("wzc-two-way-talk");
+  const light = card.locator("wzc-light-control");
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  await expect(talk).toHaveAttribute("presentation", "overlay");
+  await expect(light).toHaveAttribute("presentation", "overlay");
+  await expect(cameraComposition.locator("wzc-two-way-talk")).toHaveCount(1);
+  await expect(cameraComposition.locator("wzc-light-control")).toHaveCount(1);
+  await expect(
+    activityNavigationComposition.locator("wzc-two-way-talk"),
+  ).toHaveCount(0);
+  await expect(
+    activityNavigationComposition.locator("wzc-light-control"),
+  ).toHaveCount(0);
   const initialVariants = await page.evaluate(
     () =>
       (window as typeof window & { __wzcStageVariants?: string[] })
@@ -10279,6 +10303,16 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(stage).toHaveAttribute("data-stage-variant", "default");
   await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
+  await expect(talk).toHaveAttribute("presentation", "overlay");
+  await expect(light).toHaveAttribute("presentation", "overlay");
+  await expect(cameraComposition.locator("wzc-two-way-talk")).toHaveCount(1);
+  await expect(cameraComposition.locator("wzc-light-control")).toHaveCount(1);
+  await expect(
+    activityNavigationComposition.locator("wzc-two-way-talk"),
+  ).toHaveCount(0);
+  await expect(
+    activityNavigationComposition.locator("wzc-light-control"),
+  ).toHaveCount(0);
   await expect(card).not.toHaveCSS("position", "fixed");
   const grouping = await stage.evaluate((element) => {
     const camera = element.querySelector<HTMLElement>(
