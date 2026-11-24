@@ -46,6 +46,7 @@ function trailingLayoutSpace(host: HTMLElement): number {
 
 /** Keeps the card inside the visible viewport from its real HA layout offset. */
 export class ViewportFitController implements ReactiveController {
+  private _blockSize?: number;
   private _compensateBrowserChrome = false;
   private _enabled = false;
   private _connected = false;
@@ -57,8 +58,13 @@ export class ViewportFitController implements ReactiveController {
 
   public constructor(
     private readonly _host: ReactiveControllerHost & HTMLElement,
+    private readonly _onMeasure?: () => void,
   ) {
     _host.addController(this);
+  }
+
+  public get blockSize(): number | undefined {
+    return this._blockSize;
   }
 
   public configure(enabled: boolean, compensateBrowserChrome = false): void {
@@ -123,7 +129,9 @@ export class ViewportFitController implements ReactiveController {
           browserChromeCompensation,
       ),
     );
+    this._blockSize = blockSize;
     this._host.style.setProperty(FIT_BLOCK_SIZE_PROPERTY, `${blockSize}px`);
+    this._onMeasure?.();
   }
 
   private _observe(): void {
@@ -146,6 +154,7 @@ export class ViewportFitController implements ReactiveController {
       cancelAnimationFrame(this._frame);
       this._frame = undefined;
     }
+    this._blockSize = undefined;
     this._host.style.removeProperty(FIT_BLOCK_SIZE_PROPERTY);
   }
 }

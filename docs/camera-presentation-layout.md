@@ -109,10 +109,14 @@ CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
 
-Phone orientation does not activate a separate CameraOptics layout or
-fullscreen presentation. The mobile Stage remains in normal Home Assistant
-flow and responds only to its measured card container. Browser-native media
-fullscreen remains an explicit user action and is independent of orientation.
+Phone orientation does not activate a viewport overlay or fullscreen
+presentation. The mobile Stage remains in normal Home Assistant flow. Narrow
+containers use the compact stacked variant; a container at least `600px` wide
+may use the static wide variant, with short available height identified by the
+shared `wide-short` presentation profile. Both variants preserve a Camera plus
+Camera Navigation surface and a Control Bar plus Activity surface.
+Browser-native media fullscreen remains an explicit user action and is
+independent of orientation.
 
 Card, Camera, camera-navigation, and activity-tile appearance likewise store
 independent standard-device and physical-phone values. Phone defaults use an

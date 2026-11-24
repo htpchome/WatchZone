@@ -45,9 +45,9 @@ a `stageType` classification, one or more physical-client `profiles`, and at
 least one responsive variant: `default` for wider containers, `phone` for
 narrower containers, or both. `profiles` contains `standard`, `mobile`, or
 both and controls which card lineup may select the design. Responsive variants
-are independent presentation layouts selected by container width; rotating a
-physical phone does not move it out of the mobile Stage lineup or trigger a
-viewport-level presentation. `stageType` is one of `full`, `camera_only`, or
+are independent presentation layouts selected by the shared responsive
+profile; rotating a physical phone does not move it out of the mobile Stage
+lineup or trigger a viewport-level presentation. `stageType` is one of `full`, `camera_only`, or
 `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
 so its standard and mobile lineups are not exposed in the card editor. Each variant
@@ -253,7 +253,13 @@ headings.
   responsive variant changes do not switch flows.
 - Each placeable validates its own config at its lazy boundary.
 - Unknown or failed placeables fail locally and do not block siblings.
-- Responsive variant selection uses the card container's inline size.
+- Responsive variant selection uses the card container's inline size. The
+  shared profile separately classifies wider layouts with less than `600px` of
+  available block size as `wide-short`; rendered content height never selects
+  its own variant.
+- The built-in mobile Full Stage keeps two stable nested surfaces across its
+  variants: Camera plus Camera Navigation, and Control Bar plus the active
+  Reviews, Recordings, Exports, or PTZ stack.
 - Variant changes reuse records by stable node ID and compatible type.
 - Module-stack selection is local runtime interaction state and is not written
   into the saved Stage Design.

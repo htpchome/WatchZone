@@ -19,13 +19,14 @@ import type {
   HomeAssistantEntity,
 } from "../core/home-assistant";
 import {
-  stageVariantNameForInlineSize,
+  stageLayoutProfile,
   validateStageCatalog,
   validateStageFlow,
   type StageCatalog,
   type StageComponentNode,
   type StageContainerNode,
   type StageFlow,
+  type StageLayoutProfile,
   type StageModuleNode,
   type StagePlacement,
   type StageSlotName,
@@ -101,7 +102,10 @@ export class LayoutRuntime implements ReactiveController {
   private _designError?: string;
   private _flow?: StageFlow;
   private _flowName: StageVariantName = "default";
-  private _inlineSize = Number.POSITIVE_INFINITY;
+  private _layoutProfile: StageLayoutProfile = stageLayoutProfile(
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  );
   private readonly _records = new Map<string, PlaceableRecord>();
   private readonly _activeStackModules = new Map<string, string>();
   private _variantName: StageVariantName = "default";
@@ -136,13 +140,15 @@ export class LayoutRuntime implements ReactiveController {
     }
   }
 
-  public setInlineSize(inlineSize: number): void {
-    if (!Number.isFinite(inlineSize) || inlineSize <= 0) return;
-    this._inlineSize = inlineSize;
-    const next = stageVariantNameForInlineSize(inlineSize);
-    if (next === this._variantName) return;
-    this._variantName = next;
-    this._syncActiveVariant();
+  public setLayoutProfile(profile: StageLayoutProfile): void {
+    const variantChanged = profile.variantName !== this._variantName;
+    const presentationChanged =
+      profile.presentation !== this._layoutProfile.presentation;
+    this._layoutProfile = profile;
+    if (!variantChanged && !presentationChanged) return;
+    this._variantName = profile.variantName;
+    if (variantChanged) this._syncActiveVariant();
+    else this._host.requestUpdate();
   }
 
   public setFlowProfile(profile: StageVariantName): void {
@@ -158,7 +164,7 @@ export class LayoutRuntime implements ReactiveController {
       this._catalog = catalog;
       this._flow = validatedFlow;
       this._designError = undefined;
-      this._variantName = stageVariantNameForInlineSize(this._inlineSize);
+      this._variantName = this._layoutProfile.variantName;
       for (const name of ["default", "phone"] as const) {
         const current = this._activeStageIds[name];
         if (!current || !validatedFlow[name].includes(current)) {
@@ -247,6 +253,7 @@ export class LayoutRuntime implements ReactiveController {
       class="stage-grid"
       data-layout-node=${variant.root.id}
       data-stage-design=${this._activeStageId() ?? nothing}
+      data-stage-presentation=${this._layoutProfile.presentation}
       data-stage-variant=${this._variantName}
       style=${`--wzc-stage-grid-columns:${variant.root.columns};--wzc-stage-grid-rows:${rows}`}
     >

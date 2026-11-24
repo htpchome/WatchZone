@@ -10116,7 +10116,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("keeps Companion phone rotation in the ordinary mobile Stage", async ({
+test("selects the static short-wide mobile Stage without leaving card flow", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -10142,9 +10142,43 @@ test("keeps Companion phone rotation in the ordinary mobile Stage", async ({
 
   const stage = card.locator(".stage-grid");
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await expect(stage).toHaveAttribute("data-stage-variant", "default");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
   await expect(card).not.toHaveCSS("position", "fixed");
+  const grouping = await stage.evaluate((element) => {
+    const camera = element.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-surface"]',
+    );
+    const activity = element.querySelector<HTMLElement>(
+      '[data-layout-node$="default-activity-surface"]',
+    );
+    return {
+      activityHasControlBar: Boolean(
+        activity?.querySelector(
+          '[data-layout-node$="default-activity-navigation-module"]',
+        ),
+      ),
+      activityHasStack: Boolean(
+        activity?.querySelector('[data-layout-node$="default-activity-stack"]'),
+      ),
+      cameraHasCamera: Boolean(
+        camera?.querySelector('[data-layout-node$="default-camera-module"]'),
+      ),
+      cameraHasNavigation: Boolean(
+        camera?.querySelector(
+          '[data-layout-node$="default-camera-navigation-module"]',
+        ),
+      ),
+    };
+  });
+  expect(grouping).toEqual({
+    activityHasControlBar: true,
+    activityHasStack: true,
+    cameraHasCamera: true,
+    cameraHasNavigation: true,
+  });
 });
 
 test("restores the active Swiper video after WebKit native fullscreen exits", async ({

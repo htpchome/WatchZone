@@ -1,8 +1,15 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 
 import { CLIENT_PROFILE } from "../../core/client-profile";
-import { activeCardHeightMode, type CardConfig } from "../../core/config";
-import { PHONE_STAGE_MAX_INLINE_SIZE } from "../../stage/layout";
+import {
+  activeCardHeightMode,
+  type CardConfig,
+  type CardHeightMode,
+} from "../../core/config";
+import {
+  stageLayoutProfile,
+  type StageLayoutProfile,
+} from "../../stage/layout";
 import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
 import { ViewportFitController } from "./viewport-fit.controller";
 
@@ -17,42 +24,34 @@ const USE_MOBILE_HEIGHT_MODE =
   CLIENT_PROFILE.isPhone ||
   (CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isTablet);
 
-function stageInlineSize(inlineSize: number): number {
-  return CLIENT_PROFILE.isPhone
-    ? Math.min(inlineSize, PHONE_STAGE_MAX_INLINE_SIZE)
-    : inlineSize;
-}
-
 /** Owns card sizing and the feature-detected Home Assistant layout bridge. */
 export class CardLayoutController implements ReactiveController {
   private readonly _haLayout: HomeAssistantLayoutBridge;
+  private _heightMode: CardHeightMode = "auto";
   private _resizeFrame?: number;
   private readonly _resizeObserver =
     typeof ResizeObserver === "undefined"
       ? undefined
       : new ResizeObserver(([entry]) => {
           if (!entry) return;
-          const contentBox = Array.isArray(entry.contentBoxSize)
-            ? entry.contentBoxSize[0]
-            : entry.contentBoxSize;
-          const inlineSize = contentBox?.inlineSize ?? entry.contentRect.width;
-          this._scheduleInlineSize(inlineSize);
+          this._scheduleMeasure();
         });
   private _sizeBoundary?: HTMLElement;
   private readonly _viewportFit: ViewportFitController;
 
   public constructor(
     private readonly _host: CardLayoutHost,
-    private readonly _setInlineSize: (inlineSize: number) => void,
+    private readonly _setLayoutProfile: (profile: StageLayoutProfile) => void,
   ) {
     this._haLayout = new HomeAssistantLayoutBridge(_host);
-    this._viewportFit = new ViewportFitController(_host);
+    this._viewportFit = new ViewportFitController(_host, this._scheduleMeasure);
     _host.addController(this);
   }
 
   public configure(config: CardConfig): void {
     const edgeToEdge = config.edge_to_edge_phone && CLIENT_PROFILE.isPhone;
     const mode = activeCardHeightMode(config, USE_MOBILE_HEIGHT_MODE);
+    this._heightMode = mode;
     const fitViewport = mode === "fit_viewport";
     const companionFitViewport =
       edgeToEdge && CLIENT_PROFILE.isCompanionApp && fitViewport;
@@ -72,6 +71,12 @@ export class CardLayoutController implements ReactiveController {
         value === mode.replaceAll("_", "-"),
       );
     }
+    this._scheduleMeasure();
+  }
+
+  public hostConnected(): void {
+    window.addEventListener("resize", this._scheduleMeasure);
+    window.visualViewport?.addEventListener("resize", this._scheduleMeasure);
   }
 
   public hostUpdated(): void {
@@ -81,10 +86,12 @@ export class CardLayoutController implements ReactiveController {
     this._resizeObserver?.disconnect();
     this._sizeBoundary = boundary;
     this._resizeObserver?.observe(boundary);
-    this._scheduleInlineSize(boundary.getBoundingClientRect().width);
+    this._scheduleMeasure();
   }
 
   public hostDisconnected(): void {
+    window.removeEventListener("resize", this._scheduleMeasure);
+    window.visualViewport?.removeEventListener("resize", this._scheduleMeasure);
     this._resizeObserver?.disconnect();
     this._sizeBoundary = undefined;
     if (this._resizeFrame !== undefined)
@@ -93,14 +100,32 @@ export class CardLayoutController implements ReactiveController {
     this._haLayout.release();
   }
 
-  private _scheduleInlineSize(inlineSize: number): void {
+  private readonly _scheduleMeasure = (): void => {
     if (this._resizeFrame !== undefined)
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = requestAnimationFrame(() => {
       this._resizeFrame = undefined;
-      this._setInlineSize(stageInlineSize(inlineSize));
+      const boundary = this._sizeBoundary;
+      if (!boundary) return;
+      const bounds = boundary.getBoundingClientRect();
+      const viewportBlockSize =
+        window.visualViewport?.height ?? window.innerHeight;
+      const constrainedBlockSize =
+        this._heightMode === "fit_viewport"
+          ? this._viewportFit.blockSize
+          : this._heightMode === "fill_container" && bounds.height > 0
+            ? bounds.height
+            : undefined;
+      const availableBlockSize = Math.min(
+        constrainedBlockSize ?? viewportBlockSize,
+        viewportBlockSize,
+      );
+      if (bounds.width <= 0 || availableBlockSize <= 0) return;
+      this._setLayoutProfile(
+        stageLayoutProfile(bounds.width, availableBlockSize),
+      );
     });
-  }
+  };
 }
 
 /** Projects device-specific appearance onto the stable presentation fields. */

@@ -88,6 +88,15 @@ require viewport queries where a container query correctly owns the decision.
 These categories may select behavior from a typed device matrix. Purely visual
 size changes remain CSS container-query responsibilities.
 
+Stage composition uses a separate two-dimensional presentation profile. The
+card container's inline size selects the compact or wider structural variant.
+Available block size comes from an explicit container/fit allocation when one
+exists and otherwise from the visible viewport. It never comes from an
+auto-height card's rendered content height, so desired height cannot feed back
+into variant selection. Wider presentations below the canonical `600px`
+block-size point are classified as `wide-short`; this classification may
+select density or arrangement but does not claim viewport ownership.
+
 Input capability is an independent dimension. The profile records primary
 pointer accuracy, primary and available hover, touch availability, and a
 derived `touch`, `pointer`, `hybrid`, or `none` input mode using standardized
@@ -131,9 +140,10 @@ standard presentation while using the mobile viewport-height mode.
 
 Phone orientation is not a host-specific presentation trigger. CameraOptics
 keeps the mobile Stage in ordinary Home Assistant flow and selects responsive
-variants from measured card-container width. A future landscape composition
-must use the same retained Stage nodes and shared Motion boundary without
-introducing a second layout or animation engine.
+variants from the shared presentation profile. The compact and wide-short
+variants reuse the same Camera and Activity surfaces; a future transition
+between them must use the shared Motion boundary without introducing another
+layout or animation engine.
 
 ### 2.3 Theme profile
 

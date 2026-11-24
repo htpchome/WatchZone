@@ -7,19 +7,17 @@ precedence.
 ## Current state
 
 - Branch: `main`.
-- HEAD before the current uncommitted change: `c34fe56`
-  (`v0.0.5-dev.42`).
-- Application version: `0.0.5-dev.43`.
+- HEAD before the current uncommitted change: `7625a7d`
+  (`v0.0.5-dev.43`).
+- Application version: `0.0.5-dev.44`.
 - Home Assistant config-entry schema: **2**.
-- The current uncommitted change removes the Companion-phone automatic
-  two-column and fullscreen-on-rotation subsystem, its editor setting, and its
-  Stage/Minimal Camera integration.
-- Phone orientation now leaves the mobile Stage in ordinary Home Assistant
-  flow. Browser-native fullscreen remains an explicit user action.
-- The next mobile redesign is recorded in `ROADMAP.md`: container-driven phone
-  layouts followed by a shared-Motion FLIP transition for the future
-  two-column variant.
-- The fresh `dev.43` release package validates with a 61,068-byte eager graph
+- The current uncommitted change introduces a shared two-dimensional Stage
+  presentation profile and a static compact-to-wide-short mobile Full Stage.
+- Both variants preserve two stable groups: Camera plus Camera Navigation, and
+  Control Bar plus the active Activity stack.
+- The wide-short destination remains in ordinary Home Assistant card flow.
+  Fullscreen and FLIP motion are intentionally not part of this foundation.
+- The fresh `dev.44` release package validates with a 61,267-byte eager graph
   and is available at `dist/camera-optics.zip`.
 
 ## Restored live baseline

@@ -27,6 +27,7 @@ import {
   STANDARD_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
+  stageLayoutProfile,
   validateStageCatalog,
   validateStageDesign,
   validateStageFlow,
@@ -66,6 +67,21 @@ class RuntimeHost {
 }
 
 describe("layout composition", () => {
+  it("classifies compact, regular, and short-wide Stage presentations", () => {
+    expect(stageLayoutProfile(390, 844)).toEqual({
+      presentation: "compact",
+      variantName: "phone",
+    });
+    expect(stageLayoutProfile(844, 390)).toEqual({
+      presentation: "wide-short",
+      variantName: "default",
+    });
+    expect(stageLayoutProfile(1024, 768)).toEqual({
+      presentation: "regular",
+      variantName: "default",
+    });
+  });
+
   it("builds an empty layout without a privileged camera node", () => {
     const layout = builtInStage(normalizeCardConfig({}));
 
@@ -750,7 +766,7 @@ describe("layout composition", () => {
     expect(
       container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),
     ).toBe(second.id);
-    runtime.setInlineSize(500);
+    runtime.setLayoutProfile(stageLayoutProfile(500, 800));
     render(runtime.render(), container);
     expect(
       container.querySelector(".stage-grid")?.getAttribute("data-stage-design"),

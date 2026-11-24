@@ -853,6 +853,10 @@ a saved layout contains:
   not change when its container widens on rotation. Orientation does not
   activate a viewport-level layout or change the mobile flow.
 - Responsive variants whose corresponding nodes reuse stable IDs.
+- Responsive selection is two-dimensional without becoming device-specific:
+  container inline size selects structural variants, while bounded available
+  block size classifies short-wide presentation. Rendered content height does
+  not feed back into structural selection.
 - Creation and modification metadata where useful.
 
 The root is a typed grid container whose placements contain module nodes or

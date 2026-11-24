@@ -119,8 +119,8 @@ export class DashboardCard extends LitElement {
     undefined,
     (message, key) => this._toasts.error(message, { key }),
   );
-  private readonly _cardLayout = new CardLayoutController(this, (inlineSize) =>
-    this._layoutRuntime.setInlineSize(inlineSize),
+  private readonly _cardLayout = new CardLayoutController(this, (profile) =>
+    this._layoutRuntime.setLayoutProfile(profile),
   );
   private readonly _cardHostAppearance = new CardHostAppearanceController(this);
 

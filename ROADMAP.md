@@ -333,6 +333,9 @@ designer UI so saved layouts are declarative and testable.
 
 ### 17. Mobile presentation redesign
 
+- The shared two-dimensional responsive profile and static compact/wide-short
+  Full Stage destinations are the foundation; animation is added only after
+  both destinations preserve stable node and media-session identity.
 - Rebuild phone layouts from container measurements and intrinsic content
   constraints across narrow portrait and short landscape viewports.
 - Define the future two-column landscape composition as a mobile Stage variant,

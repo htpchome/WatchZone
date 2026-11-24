@@ -1,9 +1,11 @@
 import type { StageType } from "../core/stage";
+import { RESPONSIVE_WIDTHS } from "../core/responsive-widths";
 
 export const STAGE_SCHEMA_VERSION = 4;
 export const PHONE_STAGE_MAX_INLINE_SIZE = 599;
 
 export type StageVariantName = "default" | "phone";
+export type StagePresentationClass = "compact" | "regular" | "wide-short";
 export type StageProfile = "mobile" | "standard";
 export type StageSlotName = "content" | "controls" | "footer" | "overlay";
 export type StageControlRegion = "leading" | "center" | "trailing";
@@ -60,6 +62,11 @@ export interface StageVariant {
   readonly root: StageContainerNode;
 }
 
+export interface StageLayoutProfile {
+  readonly presentation: StagePresentationClass;
+  readonly variantName: StageVariantName;
+}
+
 export interface StageDesignDocument {
   readonly id: string;
   readonly name: string;
@@ -81,6 +88,22 @@ export function stageVariantNameForInlineSize(
   inlineSize: number,
 ): StageVariantName {
   return inlineSize <= PHONE_STAGE_MAX_INLINE_SIZE ? "phone" : "default";
+}
+
+export function stageLayoutProfile(
+  inlineSize: number,
+  availableBlockSize: number,
+): StageLayoutProfile {
+  const variantName = stageVariantNameForInlineSize(inlineSize);
+  return {
+    presentation:
+      variantName === "phone"
+        ? "compact"
+        : availableBlockSize < RESPONSIVE_WIDTHS.narrow
+          ? "wide-short"
+          : "regular",
+    variantName,
+  };
 }
 
 export function validateStageDesign(value: unknown): StageDesignDocument {
