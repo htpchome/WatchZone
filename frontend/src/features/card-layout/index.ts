@@ -66,6 +66,10 @@ export class CardLayoutController implements ReactiveController {
   private _immersiveEligible = false;
   private _companionLandscapePending = false;
   private _companionSettlement?: Promise<CompanionRotationSettlement>;
+  private _companionTransaction = 0;
+  private _stageDialog?: HTMLDialogElement;
+  private _stageDialogModal = false;
+  private _dialogWarningReported = false;
   private _resizeFrame?: number;
   private readonly _resizeObserver =
     typeof ResizeObserver === "undefined"
@@ -103,7 +107,7 @@ export class CardLayoutController implements ReactiveController {
     this._haLayout.configure(edgeToEdge);
     this._viewportFit.configure(fitViewport, browserEdgeToEdge);
     if (!this._immersiveEligible) {
-      this._releaseCompanionImmersiveShell();
+      this._releaseCompanionTopLayer();
     } else if (
       !wasImmersiveEligible &&
       this._committedCompanionPortrait === false
@@ -134,6 +138,26 @@ export class CardLayoutController implements ReactiveController {
   }
 
   public hostUpdated(): void {
+    const stageDialog =
+      this._host.renderRoot.querySelector<HTMLDialogElement>(
+        ".companion-stage-dialog",
+      ) ?? undefined;
+    if (stageDialog !== this._stageDialog) {
+      this._stageDialog?.removeEventListener(
+        "cancel",
+        this._preventDialogClose,
+      );
+      this._stageDialog = stageDialog;
+      this._stageDialog?.addEventListener("cancel", this._preventDialogClose);
+      if (
+        this._stageDialog &&
+        (this._companionLandscapePending ||
+          this._committedCompanionPortrait === false) &&
+        this._canUseCompanionTopLayer()
+      ) {
+        this._enterCompanionTopLayer();
+      }
+    }
     const boundary =
       this._host.renderRoot.querySelector<HTMLElement>(".shell") ?? undefined;
     if (!boundary || boundary === this._sizeBoundary) return;
@@ -152,11 +176,15 @@ export class CardLayoutController implements ReactiveController {
     window.visualViewport?.removeEventListener("resize", this._scheduleMeasure);
     this._resizeObserver?.disconnect();
     this._sizeBoundary = undefined;
+    this._stageDialog?.removeEventListener("cancel", this._preventDialogClose);
+    if (this._stageDialog?.open) this._stageDialog.close();
+    this._stageDialog = undefined;
+    this._stageDialogModal = false;
     if (this._resizeFrame !== undefined)
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = undefined;
     this._cancelCompanionLandscapeSettlement();
-    this._releaseCompanionImmersiveShell();
+    this._releaseCompanionTopLayer();
     this._haLayout.release();
   }
 
@@ -165,6 +193,8 @@ export class CardLayoutController implements ReactiveController {
   ): void => {
     if (event.matches) {
       this._cancelCompanionLandscapeSettlement();
+      if (this._stageDialogModal)
+        this._host.classList.add("companion-rotation-settling");
       this._commitCompanionProfile(true);
     } else {
       this._beginCompanionLandscapeSettlement();
@@ -223,6 +253,13 @@ export class CardLayoutController implements ReactiveController {
 
   private _beginCompanionLandscapeSettlement(): void {
     this._companionLandscapePending = true;
+    if (this._canUseCompanionTopLayer()) {
+      this._host.classList.add(
+        "companion-landscape-immersive",
+        "companion-rotation-settling",
+      );
+      this._enterCompanionTopLayer();
+    }
     const settlement = (this._companionSettlement ??=
       import("./companion-rotation-settlement").then(
         ({ CompanionRotationSettlement }) =>
@@ -246,16 +283,27 @@ export class CardLayoutController implements ReactiveController {
     portrait: boolean,
     geometry?: CompanionLandscapeGeometry,
   ): void {
-    if (portrait || !geometry || !this._canUseCompanionImmersiveShell()) {
-      this._releaseCompanionImmersiveShell();
-    } else {
-      this._applyCompanionImmersiveShell(geometry);
-    }
+    const immersive =
+      !portrait && Boolean(geometry) && this._canUseCompanionTopLayer();
+    const transaction = ++this._companionTransaction;
+    if (immersive && geometry) this._applyCompanionImmersiveGeometry(geometry);
     this._committedCompanionPortrait = portrait;
     this._setLayoutProfile(companionStageLayoutProfile(portrait));
+    void this._finishCompanionProfileCommit(transaction, immersive);
   }
 
-  private _canUseCompanionImmersiveShell(): boolean {
+  private async _finishCompanionProfileCommit(
+    transaction: number,
+    immersive: boolean,
+  ): Promise<void> {
+    await this._host.updateComplete;
+    if (transaction !== this._companionTransaction) return;
+    if (!immersive) this._releaseCompanionTopLayer();
+    this._host.classList.remove("companion-rotation-settling");
+    this._scheduleMeasure();
+  }
+
+  private _canUseCompanionTopLayer(): boolean {
     return (
       this._immersiveEligible &&
       !this._host.classList.contains("card-picker-preview-host") &&
@@ -263,7 +311,7 @@ export class CardLayoutController implements ReactiveController {
     );
   }
 
-  private _applyCompanionImmersiveShell(
+  private _applyCompanionImmersiveGeometry(
     geometry: CompanionLandscapeGeometry,
   ): void {
     const values: Readonly<
@@ -281,19 +329,58 @@ export class CardLayoutController implements ReactiveController {
     for (const property of IMMERSIVE_GEOMETRY_PROPERTIES) {
       this._host.style.setProperty(property, `${values[property]}px`);
     }
-    this._host.classList.add("companion-landscape-immersive");
   }
 
-  private _releaseCompanionImmersiveShell(): void {
-    this._host.classList.remove("companion-landscape-immersive");
+  private _releaseCompanionTopLayer(): void {
+    ++this._companionTransaction;
+    this._host.classList.remove(
+      "companion-landscape-immersive",
+      "companion-rotation-settling",
+    );
     for (const property of IMMERSIVE_GEOMETRY_PROPERTIES) {
       this._host.style.removeProperty(property);
     }
+    this._leaveCompanionTopLayer();
   }
 
   private _cancelCompanionLandscapeSettlement(): void {
     this._companionLandscapePending = false;
     void this._companionSettlement?.then((controller) => controller.cancel());
+  }
+
+  private readonly _preventDialogClose = (event: Event): void => {
+    event.preventDefault();
+  };
+
+  private _enterCompanionTopLayer(): void {
+    const dialog = this._stageDialog;
+    if (!dialog || this._stageDialogModal) return;
+    try {
+      if (dialog.open) dialog.close();
+      dialog.showModal();
+      dialog.setAttribute("aria-modal", "true");
+      dialog.setAttribute("role", "dialog");
+      this._stageDialogModal = true;
+    } catch (error) {
+      if (!dialog.open && dialog.isConnected) dialog.show();
+      if (!this._dialogWarningReported) {
+        this._dialogWarningReported = true;
+        console.warn(
+          "CameraOptics could not enter the Companion Stage top layer.",
+          error,
+        );
+      }
+    }
+  }
+
+  private _leaveCompanionTopLayer(): void {
+    const dialog = this._stageDialog;
+    if (!dialog) return;
+    if (dialog.open) dialog.close();
+    if (dialog.isConnected) dialog.show();
+    dialog.removeAttribute("aria-modal");
+    dialog.setAttribute("role", "region");
+    this._stageDialogModal = false;
   }
 }
 

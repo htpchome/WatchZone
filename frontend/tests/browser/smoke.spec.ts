@@ -10426,7 +10426,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("commits the Companion short-wide Stage inside its immersive shell", async ({
+test("commits the Companion short-wide Stage inside its top-layer surface", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -10529,19 +10529,22 @@ test("commits the Companion short-wide Stage inside its immersive shell", async 
   expect(initialVariants).toContain("phone");
   expect(initialVariants).not.toContain("default");
   await page.setViewportSize({ width: 844, height: 390 });
+  const stageDialog = card.locator(".companion-stage-dialog");
   await expect(stage).toHaveAttribute("data-stage-variant", "default");
   await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
   await expect(card).toHaveClass(/companion-landscape-immersive/);
-  await expect(card).toHaveCSS("position", "fixed");
-  await expect(card).toHaveCSS("padding-left", "18px");
-  await expect(card).toHaveCSS("padding-right", "20px");
-  const immersiveGeometry = await card.evaluate((element) => {
+  await expect(stageDialog).toHaveCSS("position", "fixed");
+  await expect(stageDialog).toHaveCSS("padding-left", "18px");
+  await expect(stageDialog).toHaveCSS("padding-right", "20px");
+  await expect
+    .poll(() => stageDialog.evaluate((dialog) => dialog.matches(":modal")))
+    .toBe(true);
+  const immersiveGeometry = await stageDialog.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
     return {
       blockSize: bounds.height,
       inlineSize: bounds.width,
       left: bounds.left,
-      ownsTopPoint: document.elementFromPoint(10, 10) === element,
       top: bounds.top,
     };
   });
@@ -10549,7 +10552,6 @@ test("commits the Companion short-wide Stage inside its immersive shell", async 
     blockSize: 390,
     inlineSize: 844,
     left: 0,
-    ownsTopPoint: true,
     top: 0,
   });
   await expect(talk).toHaveAttribute("presentation", "overlay");
@@ -10655,7 +10657,9 @@ test("commits the Companion short-wide Stage inside its immersive shell", async 
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
   await expect(card).not.toHaveClass(/companion-landscape-immersive/);
-  await expect(card).not.toHaveCSS("position", "fixed");
+  await expect
+    .poll(() => stageDialog.evaluate((dialog) => dialog.matches(":modal")))
+    .toBe(false);
   const rotationFrames = await page.evaluate(async () => {
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -10718,8 +10722,9 @@ test("mirrors Android Companion landscape safe areas", async ({ page }) => {
   await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
   await expect(card).toHaveClass(/android-companion/);
   await expect(card).toHaveClass(/companion-landscape-immersive/);
-  await expect(card).toHaveCSS("padding-left", "24px");
-  await expect(card).toHaveCSS("padding-right", "24px");
+  const stageDialog = card.locator(".companion-stage-dialog");
+  await expect(stageDialog).toHaveCSS("padding-left", "24px");
+  await expect(stageDialog).toHaveCSS("padding-right", "24px");
 });
 
 test("commits delayed Android landscape safe area with the Stage", async ({
@@ -10751,6 +10756,15 @@ test("commits delayed Android landscape safe area with the Stage", async ({
   await page.setViewportSize({ width: 844, height: 390 });
   await page.waitForTimeout(80);
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  const stageDialog = card.locator(".companion-stage-dialog");
+  await expect
+    .poll(() => stageDialog.evaluate((dialog) => dialog.matches(":modal")))
+    .toBe(true);
+  await expect(card).toHaveClass(/companion-rotation-settling/);
+  await expect(card.locator(".companion-rotation-cover")).toHaveCSS(
+    "display",
+    "block",
+  );
   await card.evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--safe-area-inset-right", "26px");
@@ -10758,16 +10772,17 @@ test("commits delayed Android landscape safe area with the Stage", async ({
 
   await expect(stage).toHaveAttribute("data-stage-variant", "default");
   await expect(card).toHaveClass(/companion-landscape-immersive/);
-  await expect(card).toHaveCSS("padding-left", "26px");
-  await expect(card).toHaveCSS("padding-right", "26px");
+  await expect(card).not.toHaveClass(/companion-rotation-settling/);
+  await expect(stageDialog).toHaveCSS("padding-left", "26px");
+  await expect(stageDialog).toHaveCSS("padding-right", "26px");
 
   await card.evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--safe-area-inset-right", "34px");
   });
   await page.waitForTimeout(100);
-  await expect(card).toHaveCSS("padding-left", "26px");
-  await expect(card).toHaveCSS("padding-right", "26px");
+  await expect(stageDialog).toHaveCSS("padding-left", "26px");
+  await expect(stageDialog).toHaveCSS("padding-right", "26px");
 });
 
 test("keeps non-Full Companion Stages in Home Assistant flow", async ({
@@ -10797,7 +10812,13 @@ test("keeps non-Full Companion Stages in Home Assistant flow", async ({
     "wide-short",
   );
   await expect(card).not.toHaveClass(/companion-landscape-immersive/);
-  await expect(card).not.toHaveCSS("position", "fixed");
+  await expect
+    .poll(() =>
+      card
+        .locator(".companion-stage-dialog")
+        .evaluate((dialog) => dialog.matches(":modal")),
+    )
+    .toBe(false);
 });
 
 test("keeps a phone browser on the compact Stage in landscape", async ({

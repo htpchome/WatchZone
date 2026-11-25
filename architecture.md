@@ -852,9 +852,10 @@ a saved layout contains:
   `default` and `phone` responsive variants. Physical phone eligibility does
   not change when its container widens on rotation. Orientation does not change
   the mobile flow. The Full Stage has one host-owned viewport exception:
-  Companion mobile landscape may enter a CSS immersive shell that covers Home
-  Assistant chrome without invoking the browser Fullscreen API. Modules and
-  Stage slots remain container-owned inside that shell.
+  Companion mobile landscape may promote its existing Stage surface into the
+  browser top layer with a modal dialog that covers Home Assistant chrome
+  without invoking the browser Fullscreen API. The Stage DOM is never moved or
+  remounted; modules and Stage slots remain container-owned inside that surface.
 - Responsive variants whose corresponding nodes reuse stable IDs.
 - Responsive selection is two-dimensional without becoming device-specific:
   container inline size selects structural variants, while bounded available

@@ -67,6 +67,16 @@ be disabled. For the camera carousel, Swiper retains touch arbitration and
 slide geometry with `speed: 0`; CameraOptics Motion owns the configured slide or
 fade transition and its actual completion lifecycle.
 
+## Orientation transactions
+
+Companion orientation settlement is an atomic layout transaction, not an
+animation. The existing Stage surface enters the browser top layer, remains
+covered while its authoritative layout profile and safe-area geometry settle,
+and is exposed only after Lit finishes the target render. A FLIP transition may
+capture geometry only after that transaction has stable before and after
+states. It must not animate, reveal, or preserve an intermediate responsive
+layout.
+
 ## Validation
 
 Automated architecture checks reject CSS animation declarations and direct

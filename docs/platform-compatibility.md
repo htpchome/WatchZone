@@ -49,8 +49,8 @@ new browser API makes another platform easier or faster.
   without adding that inset to the card viewport height, so the outer window
   remains fixed; only the media viewport scrolls beneath the safe area.
   Companion Full Stage landscape is a second viewport-edge exception: its
-  CameraOptics-owned CSS immersive shell covers Home Assistant chrome, applies
-  all safe-area padding at the shell boundary, and prevents that geometry from
+  CameraOptics-owned top-layer Stage surface covers Home Assistant chrome,
+  applies all safe-area padding at the surface boundary, and prevents that geometry from
   entering Stage slots or Camera overlays. Android mirrors the larger inline
   inset onto both sides; iOS retains its reported left and right values. Home Assistant's
   Companion-aware safe-area custom property is authoritative and the browser
@@ -152,9 +152,11 @@ and safe-area geometry before that commit. A physically narrow card may leave
 the landscape structure immediately while the host's orientation media state
 catches up, preventing a stale two-column Stage from painting in portrait.
 Other transient window, visual-viewport, and container dimensions cannot enter
-the landscape variant. A Companion Full Stage covers Home Assistant chrome
-with a CameraOptics CSS immersive shell in the same settled commit; this is not
-the browser Fullscreen API. Phone browsers and phone PWAs remain on the compact,
+the landscape variant. A Companion Full Stage covers Home Assistant chrome by
+promoting its existing Stage surface into a modal dialog in the browser top
+layer; this is not the browser Fullscreen API. The same Stage DOM remains
+mounted while a temporary cover hides intermediate geometry until the layout
+profile and safe areas commit together. Phone browsers and phone PWAs remain on the compact,
 single-column mobile Stage in both orientations because CameraOptics cannot own
 their browser chrome. Tablet browsers, desktop browsers, and Catalyst remain
 container-responsive.
@@ -165,8 +167,9 @@ phone even when desktop-site mode removes phone markers from its user agent.
 This fallback selects presentation only; it does not redefine shared physical
 client identity or media policy.
 
-Both mobile variants remain in ordinary Home Assistant card flow and reuse the
-same Camera and Activity surfaces. A future transition between them must use
+Both mobile variants reuse the same Camera and Activity surfaces. Portrait
+remains in ordinary Home Assistant card flow; Companion Full Stage landscape
+promotes that same surface into the top layer. A future transition between them must use
 the authoritative orientation change as its transaction boundary and use the
 shared Motion boundary without introducing another layout or animation engine.
 

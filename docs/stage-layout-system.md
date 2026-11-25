@@ -216,9 +216,9 @@ physical-camera scope published through context; overlapping grouped
 recordings remain separate source rows. The independently loadable Events
 module remains available to user-created Stage Designs.
 Stage slots do not consume device safe-area insets. The Companion Full Stage
-has one host-owned landscape exception: its CSS immersive card shell meets the
+has one host-owned landscape exception: its top-layer Stage surface meets the
 physical viewport edge and therefore owns the viewport safe areas. On Android,
-that shell mirrors the larger system-UI inline inset onto both sides because
+that surface mirrors the larger system-UI inline inset onto both sides because
 the WebView may expose only the occupied edge. Insets never enter slot, module,
 or Camera-overlay geometry. Browser-native fullscreen remains independently
 owned by the media presentation.
@@ -271,9 +271,10 @@ headings.
   its own variant.
 - Companion mobile is the narrow host-policy exception: authoritative browser
   orientation enters its `default` variant only after host, visual-viewport,
-  and safe-area geometry settle. The Full Stage enters its viewport-covering
-  CSS immersive shell in that same commit. A physically narrow card exits a
-  stale `default` variant and immersive shell immediately; resize dimensions
+  and safe-area geometry settle. The Full Stage promotes its already-mounted
+  Stage surface into the browser top layer and exposes the final structure only
+  after the profile and geometry commit. A physically narrow card exits a
+  stale `default` variant and top-layer surface immediately; resize dimensions
   never enter either.
 - No Stage variant mounts before the first real layout-profile measurement;
   the runtime has no provisional default geometry.

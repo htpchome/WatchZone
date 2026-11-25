@@ -72,6 +72,8 @@ const recordedVideoViewerTag = unsafeStatic(RECORDED_VIDEO_VIEWER_TAG);
 const cardPickerPreviewTag = unsafeStatic(CARD_PICKER_PREVIEW_TAG);
 const exportNameDialogTag = unsafeStatic(EXPORT_NAME_DIALOG_TAG);
 let statusModule: Promise<typeof import("../api/status")> | undefined;
+const USES_COMPANION_STAGE_DIALOG =
+  CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isMobile;
 
 interface PreviewDraftDetail {
   readonly baselineSignature: string;
@@ -284,51 +286,78 @@ export class DashboardCard extends LitElement {
     ]
       .filter(Boolean)
       .join(" ");
-    return staticHtml`
-      <ha-card class=${cardClasses}>
-        <div class="shell" role="region" aria-label=${config.title}>
-          ${this._layoutRuntime.render()}
-          ${
-            this._backendIncident
-              ? (this._backendRecoveryRenderer?.(
-                  this._backendIncident,
-                  this._localization.localize,
-                  this._openIntegrations,
-                  this._retryBackend,
-                ) ?? this._renderBackendRecoveryFallback(this._backendIncident))
-              : null
-          }
-          ${
-            this._recordedVideoViewerReady && this._mediaRequest
-              ? staticHtml`<${recordedVideoViewerTag}
-                  .api=${this._haApi}
-                  .localize=${this._localization.localize}
-                  .initialSize=${this._mediaInitialSize}
-                  .playerType=${activeRecordedMediaPlayerType(
-                    config,
-                    CLIENT_PROFILE.isPhone,
-                  )}
-                  .request=${this._mediaRequest}
-                ></${recordedVideoViewerTag}>`
-              : null
-          }
-          ${
-            this._exportNameDialogReady
-              ? staticHtml`<${exportNameDialogTag}
-                  variant="segment"
-                  .draft=${this._pendingRecordedExport?.draft}
-                  .localize=${this._localization.localize}
-                ></${exportNameDialogTag}>`
-              : null
-          }
-          ${staticHtml`<${toastRegionTag}
-              class="card-toast"
-              mode="overlay"
-              .notices=${this._toasts.notices}
-            ></${toastRegionTag}>`}
-        </div>
-      </ha-card>
-    `;
+    const shell = this._renderStageShell(config);
+    return staticHtml`<ha-card class=${cardClasses}>
+      ${
+        USES_COMPANION_STAGE_DIALOG
+          ? staticHtml`<dialog
+              aria-label=${config.title}
+              class="companion-stage-dialog"
+              open
+              role="region"
+              tabindex="-1"
+            >
+              ${shell}
+            </dialog>`
+          : shell
+      }
+    </ha-card>`;
+  }
+
+  private _renderStageShell(config: CardConfig) {
+    return staticHtml`<div
+      class="shell"
+      role="region"
+      aria-label=${config.title}
+    >
+      ${this._layoutRuntime.render()}
+      ${
+        this._backendIncident
+          ? (this._backendRecoveryRenderer?.(
+              this._backendIncident,
+              this._localization.localize,
+              this._openIntegrations,
+              this._retryBackend,
+            ) ?? this._renderBackendRecoveryFallback(this._backendIncident))
+          : null
+      }
+      ${
+        this._recordedVideoViewerReady && this._mediaRequest
+          ? staticHtml`<${recordedVideoViewerTag}
+              .api=${this._haApi}
+              .localize=${this._localization.localize}
+              .initialSize=${this._mediaInitialSize}
+              .playerType=${activeRecordedMediaPlayerType(
+                config,
+                CLIENT_PROFILE.isPhone,
+              )}
+              .request=${this._mediaRequest}
+            ></${recordedVideoViewerTag}>`
+          : null
+      }
+      ${
+        this._exportNameDialogReady
+          ? staticHtml`<${exportNameDialogTag}
+              variant="segment"
+              .draft=${this._pendingRecordedExport?.draft}
+              .localize=${this._localization.localize}
+            ></${exportNameDialogTag}>`
+          : null
+      }
+      ${staticHtml`<${toastRegionTag}
+          class="card-toast"
+          mode="overlay"
+          .notices=${this._toasts.notices}
+        ></${toastRegionTag}>`}
+      ${
+        USES_COMPANION_STAGE_DIALOG
+          ? staticHtml`<div
+              aria-hidden="true"
+              class="companion-rotation-cover"
+            ></div>`
+          : null
+      }
+    </div>`;
   }
 
   private _renderBackendRecoveryFallback(

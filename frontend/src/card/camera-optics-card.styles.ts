@@ -148,41 +148,62 @@ export const cardStyles = css`
     container-type: inline-size;
   }
 
-  :host(.companion-landscape-immersive) {
-    position: fixed !important;
-    top: var(--wzc-immersive-viewport-top) !important;
-    left: var(--wzc-immersive-viewport-left) !important;
-    z-index: 2147483000;
-    isolation: isolate;
+  .companion-stage-dialog {
+    position: static;
     box-sizing: border-box;
-    inline-size: var(--wzc-immersive-viewport-width) !important;
-    max-inline-size: none !important;
-    block-size: var(--wzc-immersive-viewport-height) !important;
-    height: var(--wzc-immersive-viewport-height) !important;
-    margin: 0 !important;
-    overflow: hidden;
-    overscroll-behavior: none;
-    padding-block: var(--wzc-immersive-safe-top)
-      var(--wzc-immersive-safe-bottom);
-    padding-inline: var(--wzc-immersive-safe-left)
-      var(--wzc-immersive-safe-right);
+    display: block;
+    inline-size: 100%;
+    max-inline-size: none;
+    block-size: 100%;
+    max-block-size: none;
+    margin: 0;
+    overflow: visible;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+  }
+
+  .companion-stage-dialog::backdrop {
     background: var(--wzc-card-background);
   }
 
-  :host(.companion-landscape-immersive) :is(ha-card, .shell) {
+  :host(.companion-landscape-immersive) .companion-stage-dialog {
+    position: fixed !important;
+    top: var(--wzc-immersive-viewport-top, 0px) !important;
+    left: var(--wzc-immersive-viewport-left, 0px) !important;
+    box-sizing: border-box;
+    inline-size: var(--wzc-immersive-viewport-width, 100dvw) !important;
+    max-inline-size: none !important;
+    block-size: var(--wzc-immersive-viewport-height, 100dvh) !important;
+    height: var(--wzc-immersive-viewport-height, 100dvh) !important;
+    margin: 0 !important;
+    overflow: hidden;
+    overscroll-behavior: none;
+    padding-block: var(--wzc-immersive-safe-top, 0px)
+      var(--wzc-immersive-safe-bottom, 0px);
+    padding-inline: var(--wzc-immersive-safe-left, 0px)
+      var(--wzc-immersive-safe-right, 0px);
+    background: var(--wzc-card-background);
+  }
+
+  :host(.companion-landscape-immersive) .companion-stage-dialog > .shell {
     inline-size: 100%;
     block-size: 100% !important;
     height: 100% !important;
     min-block-size: 0;
   }
 
-  :host(.companion-landscape-immersive) ha-card {
-    overflow: hidden;
-    overscroll-behavior: contain;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+  .companion-rotation-cover {
+    display: none;
+  }
+
+  :host(.companion-rotation-settling) .companion-rotation-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 2147483000;
+    display: block;
+    background: var(--wzc-card-background);
   }
 
   .card-toast {
