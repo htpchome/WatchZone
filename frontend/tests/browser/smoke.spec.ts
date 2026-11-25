@@ -12806,7 +12806,37 @@ test("restores controls after pre-editor and retains a replaced live connection"
           }
         ).__wzcTestRetainedVideo,
     ),
-  ).toBe(true);
+  ).toBe(false);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __wzcTestWebRtcPauseCount: number })
+          .__wzcTestWebRtcPauseCount,
+    ),
+  ).toBe(1);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __wzcTestWebRtcRemoveCount: number })
+          .__wzcTestWebRtcRemoveCount,
+    ),
+  ).toBeGreaterThanOrEqual(1);
+  await video.evaluate((element) => {
+    const replacementVideo = element as HTMLVideoElement;
+    replacementVideo.requestPictureInPicture = async () => {
+      const testWindow = window as typeof window & {
+        __wzcTestPipCount: number;
+      };
+      testWindow.__wzcTestPipCount += 1;
+      (
+        document as Document & {
+          pictureInPictureElement: Element | null;
+        }
+      ).pictureInPictureElement = replacementVideo;
+      replacementVideo.dispatchEvent(new Event("enterpictureinpicture"));
+      return {} as PictureInPictureWindow;
+    };
+  });
   await expect(video).toHaveAttribute("disablepictureinpicture", "");
   await expect(video).toHaveAttribute("controlslist", /nopictureinpicture/);
   await expect(video).toHaveCSS("pointer-events", "none");

@@ -72,5 +72,5 @@ export async function createHomeAssistantWebRtcConnection(
     },
     timing,
   });
-  return attachWebRtcVideo(connection, options.initialMuted);
+  return attachWebRtcVideo(connection, options.initialMuted, options.onVideo);
 }

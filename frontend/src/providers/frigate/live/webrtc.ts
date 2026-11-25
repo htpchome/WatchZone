@@ -70,5 +70,5 @@ export async function createFrigateWebRtcConnection(
     },
     timing,
   });
-  return attachWebRtcVideo(connection, options.initialMuted);
+  return attachWebRtcVideo(connection, options.initialMuted, options.onVideo);
 }

@@ -58,33 +58,51 @@ export interface WebRtcTalkPeerConnectionOptions {
 export function attachWebRtcVideo(
   connection: MediaConnection,
   initialMuted: boolean,
+  onVideo?: (video: HTMLVideoElement) => void,
 ): MediaConnection {
-  const video = document.createElement("video");
-  video.autoplay = true;
-  video.playsInline = true;
-  setMediaElementMuted(video, initialMuted);
-  video.srcObject = connection.stream ?? null;
+  let muted = initialMuted;
+  const createVideo = (): HTMLVideoElement => {
+    const element = document.createElement("video");
+    element.autoplay = true;
+    element.playsInline = true;
+    setMediaElementMuted(element, muted);
+    element.srcObject = connection.stream ?? null;
+    return element;
+  };
+  const disposeVideo = (element: HTMLVideoElement): void => {
+    element.pause();
+    element.srcObject = null;
+    element.removeAttribute("src");
+    element.load();
+    element.remove();
+  };
+  let video = createVideo();
+  let parked = false;
 
   return {
     ...connection,
-    video,
+    get video() {
+      return video;
+    },
     park: () => {
-      video.pause();
-      video.srcObject = null;
-      // Reset the element's media pipeline while retaining the peer and its
-      // stream. Some Android WebViews do not release a hardware decoder when
-      // srcObject is cleared alone, preventing the next camera from decoding.
-      video.load();
+      if (parked) return;
+      parked = true;
+      muted = video.muted;
+      // Dispose the complete element pipeline while retaining the peer and
+      // stream. Older Android WebViews may keep a hardware decoder allocated
+      // when a parked element is merely reset and later reused.
+      disposeVideo(video);
     },
     resume: () => {
-      video.srcObject = connection.stream ?? null;
+      if (!parked) return resumeMediaElement(video);
+      video = createVideo();
+      parked = false;
+      onVideo?.(video);
       return resumeMediaElement(video);
     },
     close: () => {
-      video.pause();
-      video.srcObject = null;
-      video.load();
-      video.remove();
+      if (!parked) disposeVideo(video);
+      parked = true;
       connection.close();
     },
   };
