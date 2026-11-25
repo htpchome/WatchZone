@@ -11,7 +11,6 @@ import type { HomeAssistantApi } from "../../core/home-assistant";
 import type { LocalizeFunction } from "../../core/localization";
 import type { RecordedMediaRequest } from "../../core/recorded-media";
 import type { ToastNotice } from "../../ui/toast/manager";
-import "../../ui/toast/region";
 import type { RecordedVideoPlayer } from "./recorded-video-player";
 import {
   recordedMediaHeading,

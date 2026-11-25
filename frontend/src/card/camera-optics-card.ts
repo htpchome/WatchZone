@@ -51,9 +51,7 @@ import { CardHostAppearanceController } from "../styles/card-host-appearance.con
 import { themeTokens } from "../styles/theme-tokens";
 import { ThemeProfileController } from "../core/theme-profile";
 import { stageRuntimeStyles } from "../stage/layout-runtime.styles";
-import { roundButtonStyles } from "../ui/controls/overlay-control.styles";
 import { ToastManager } from "../ui/toast/manager";
-import "../ui/toast/region";
 import { createBuiltInStageSet } from "../stage/built-in-stages/catalog";
 import { LayoutRuntime } from "../stage/layout-runtime";
 import { cardStyles } from "./camera-optics-card.styles";
@@ -636,12 +634,7 @@ export class DashboardCard extends LitElement {
     );
   }
 
-  static styles = [
-    themeTokens,
-    roundButtonStyles,
-    stageRuntimeStyles,
-    cardStyles,
-  ];
+  static styles = [themeTokens, stageRuntimeStyles, cardStyles];
 }
 
 if (!customElements.get(CARD_TAG)) {

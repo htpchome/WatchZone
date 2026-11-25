@@ -11,6 +11,7 @@ const entry = manifest["src/main.ts"];
 const editor = manifest["src/editor/camera-optics-card-editor.ts"];
 const cameraCapability = manifest["src/editor/camera-capability.controller.ts"];
 const sortableList = manifest["src/ui/sortable-list/index.ts"];
+const toastRegion = manifest["src/ui/toast/region.ts"];
 const camera = manifest["src/stage/modules/camera/index.ts"];
 const provider = manifest["src/providers/home-assistant/live/index.ts"];
 const webRtcAdapter = manifest["src/providers/home-assistant/live/webrtc.ts"];
@@ -23,6 +24,7 @@ for (const [name, asset] of Object.entries({
   editor,
   cameraCapability,
   sortableList,
+  toastRegion,
   camera,
   provider,
   webRtcAdapter,
@@ -61,6 +63,7 @@ for (const [name, asset] of Object.entries({
   editor,
   cameraCapability,
   sortableList,
+  toastRegion,
   camera,
   provider,
   webRtcAdapter,
@@ -106,5 +109,5 @@ if (editorGzipBytes > editorGzipValidationLimitBytes) {
 }
 
 console.log(
-  `Validated lazy editor (${editorGzipBytes} bytes gzip), sortable list, camera module, provider, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
+  `Validated lazy editor (${editorGzipBytes} bytes gzip), sortable list, toast region, camera module, provider, and WebRTC/HLS adapters; eager graph is ${eagerGzipBytes} bytes gzip.`,
 );

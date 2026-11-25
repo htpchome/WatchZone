@@ -29,6 +29,17 @@ interface ToastTimers {
   remove?: ReturnType<typeof setTimeout>;
 }
 
+let regionDefinition: Promise<void> | undefined;
+
+function ensureToastRegion(): Promise<void> {
+  return (regionDefinition ??= import("./region")
+    .then(() => undefined)
+    .catch((error: unknown) => {
+      regionDefinition = undefined;
+      console.error("Failed to load toast region", error);
+    }));
+}
+
 /** Owns toast identity, replacement, timing, and lifecycle cleanup. */
 export class ToastManager implements ReactiveController {
   private _notices: readonly ToastNotice[] = [];
@@ -60,6 +71,7 @@ export class ToastManager implements ReactiveController {
     message: string,
     options: ToastOptions = {},
   ): string {
+    void ensureToastRegion().then(() => this._host.requestUpdate());
     const id = options.key ?? `${APP_ID}-toast-${++this._sequence}`;
     this._clearTimers(id);
     const notice: ToastNotice = {

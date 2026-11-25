@@ -20,7 +20,6 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { ToastManager } from "../../../ui/toast/manager";
-import "../../../ui/toast/region";
 import "../../../ui/two-way-talk/controls";
 import { OverlayInteractionController } from "../../overlay-interaction.controller";
 import { TalkSessionController } from "./session.controller";

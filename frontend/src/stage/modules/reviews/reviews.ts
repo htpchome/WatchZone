@@ -49,7 +49,6 @@ import type {
 import "../../../ui/activity-list";
 import { openRecordedMedia } from "../../../core/recorded-media";
 import { ToastManager } from "../../../ui/toast/manager";
-import "../../../ui/toast/region";
 import { reviewsStyles } from "./reviews.styles";
 import type { ReviewAnalysis } from "./review-analysis-dialog";
 import type { ReviewExportConfirmation } from "./review-export-dialog";

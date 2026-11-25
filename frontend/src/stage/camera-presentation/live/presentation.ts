@@ -23,7 +23,6 @@ import {
 import { DeviceProfileController } from "../../../core/device-profile";
 import type { ToastNotice, ToastSeverity } from "../../../ui/toast/manager";
 import "../../../ui/badge";
-import "../../../ui/toast/region";
 import type {
   CameraControlAction,
   CameraControlEventDetail,

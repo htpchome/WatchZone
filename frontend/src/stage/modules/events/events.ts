@@ -30,7 +30,6 @@ import type { ActivityListIntent } from "../../../ui/activity-list";
 import "../../../ui/activity-list";
 import { openRecordedMedia } from "../../../core/recorded-media";
 import { ToastManager } from "../../../ui/toast/manager";
-import "../../../ui/toast/region";
 import { eventsStyles } from "./events.styles";
 
 const activityListIntentEvent = unsafeStatic(ACTIVITY_LIST_INTENT_EVENT);
