@@ -46,8 +46,8 @@ least one responsive variant: `default` for wider containers, `phone` for
 narrower containers, or both. `profiles` contains `standard`, `mobile`, or
 both and controls which card lineup may select the design. A phone browser or
 PWA always selects the compact `phone` variant. A Companion App phone or tablet
-selects `phone` for portrait or square measured geometry and `default` with the
-wide-short presentation for landscape measured geometry. Tablet and desktop
+selects `phone` for a portrait or square app window and `default` with the
+wide-short presentation for a landscape app window. Tablet and desktop
 browsers remain container-responsive. Rotation never changes the selected
 mobile Stage lineup or enters native fullscreen. `stageType` is one of `full`, `camera_only`, or
 `minimal_camera_only`. The user-facing name of the last
@@ -211,10 +211,13 @@ Review and recording modules in the built-in Stage consume the active
 physical-camera scope published through context; overlapping grouped
 recordings remain separate source rows. The independently loadable Events
 module remains available to user-created Stage Designs.
-Neither Stage slot consumes
-device safe-area insets: a Stage is contained inside the Home Assistant card,
-not attached to a physical viewport edge. A true viewport-edge presentation
-such as fullscreen owns its own safe-area treatment.
+Stage slots do not consume device safe-area insets: a Stage is contained inside
+the Home Assistant card, not attached to a physical viewport edge. The outer
+mobile Stage has one host-owned exception in Android Companion landscape: it
+mirrors the larger system-UI inline inset onto both sides because that WebView
+may expose only the occupied edge. The value never enters slot, module, or
+Camera-overlay geometry. A true viewport-edge presentation such as fullscreen
+owns its own safe-area treatment.
 
 Module-stack selection state is owned by the Stage runtime and published through
 typed Stage context; it is not owned by any child module. An independently

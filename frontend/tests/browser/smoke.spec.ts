@@ -10517,6 +10517,87 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
     0,
   );
   expect(columnGeometry.activityContain).toBe("size");
+
+  await page.evaluate(() => {
+    const win = window as typeof window & {
+      __wzcRotationFrames?: Array<{ variant?: string; width: number }>;
+      __wzcStopRotationFrames?: () => void;
+    };
+    const frames: Array<{ variant?: string; width: number }> = [];
+    let running = true;
+    const sample = () => {
+      const card = document.querySelector("camera-optics-card");
+      const stage = card?.shadowRoot?.querySelector<HTMLElement>(".stage-grid");
+      if (stage) {
+        frames.push({
+          variant: stage.dataset.stageVariant,
+          width: stage.getBoundingClientRect().width,
+        });
+      }
+      if (running) requestAnimationFrame(sample);
+    };
+    win.__wzcRotationFrames = frames;
+    win.__wzcStopRotationFrames = () => {
+      running = false;
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  const rotationFrames = await page.evaluate(async () => {
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    const win = window as typeof window & {
+      __wzcRotationFrames?: Array<{ variant?: string; width: number }>;
+      __wzcStopRotationFrames?: () => void;
+    };
+    win.__wzcStopRotationFrames?.();
+    return win.__wzcRotationFrames ?? [];
+  });
+  expect(
+    rotationFrames.some(
+      ({ variant, width }) => width < 600 && variant === "default",
+    ),
+  ).toBe(false);
+});
+
+test("mirrors Android Companion landscape safe areas", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (Linux; Android 13; wv) AppleWebKit/537.36 Mobile Home Assistant/2026.9",
+    });
+  });
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & { setConfig(config: unknown): void };
+    host.style.setProperty("--safe-area-inset-left", "0px");
+    host.style.setProperty("--safe-area-inset-right", "24px");
+    host.setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      type: "custom:camera-optics-card",
+    });
+  });
+
+  const stage = card.locator(".stage-grid");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
+  await expect(card).toHaveClass(/android-companion/);
+  await expect(stage).toHaveCSS("padding-left", "24px");
+  await expect(stage).toHaveCSS("padding-right", "24px");
+
+  await card.evaluate((element) => {
+    const host = element as HTMLElement;
+    host.style.setProperty("--safe-area-inset-left", "18px");
+    host.style.setProperty("--safe-area-inset-right", "0px");
+  });
+  await expect(stage).toHaveCSS("padding-left", "18px");
+  await expect(stage).toHaveCSS("padding-right", "18px");
 });
 
 test("keeps a phone browser on the compact Stage in landscape", async ({

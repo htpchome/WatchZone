@@ -32,6 +32,14 @@ export default defineConfig(({ mode }) => ({
       output: {
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
+        manualChunks(id) {
+          if (
+            /\/src\/(?:core\/(?:client-profile|home-assistant|media-connection-error|plain-text|responsive-widths)|styles\/responsive-widths)\.ts$/u.test(
+              id,
+            )
+          )
+            return "core-runtime";
+        },
       },
     },
   },

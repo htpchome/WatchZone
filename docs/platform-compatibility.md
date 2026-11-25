@@ -44,7 +44,12 @@ new browser API makes another platform easier or faster.
   media tiles can travel behind host chrome. CameraOptics does not draw a cover
   surface over that content. The complete hardware inset remains retained for
   underlap and scroll clearance. Floating media-list controls are offset above
-  that complete inset and never occupy the unsafe band. In Companion, the edge-to-edge card overlaps Home
+  that complete inset and never occupy the unsafe band. Android Companion
+  landscape is a second narrow exception: the outer mobile Stage mirrors the
+  larger reported inline inset onto both sides because Android WebView may
+  report an inset only on the edge containing system UI. The mirrored value
+  does not enter Camera overlay or module-local geometry, and iOS retains its
+  native two-sided values. In Companion, the edge-to-edge card overlaps Home
   Assistant's equal trailing safe-area space without adding that inset to the
   card viewport height, so the outer window remains fixed; only the media
   viewport scrolls beneath the safe area. Home Assistant's
@@ -140,8 +145,10 @@ owned by the container-responsive and input-capability profile above.
 
 Companion's fixed-window height sizing and mobile Stage apply to both phones
 and tablets. A Companion mobile client selects the compact variant when its
-measured card is portrait or square, and the wide-short variant when it is
-landscape. Phone browsers and phone PWAs remain on the compact, single-column
+app window is portrait or square, and the wide-short variant when it is
+landscape. The paired window dimensions are authoritative so a delayed visual
+viewport update during rotation cannot briefly select stale landscape
+geometry. Phone browsers and phone PWAs remain on the compact, single-column
 mobile Stage in both orientations because CameraOptics cannot own their browser
 chrome. Tablet browsers, desktop browsers, and Catalyst remain
 container-responsive. This policy does not enter native fullscreen or remove

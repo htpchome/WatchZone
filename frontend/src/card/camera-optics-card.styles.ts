@@ -22,40 +22,29 @@ export const cardStyles = css`
     align-self: start;
   }
 
-  :host(.panel-view-natural-height) {
+  :host(:is(.panel-view-natural-height, .height-mode-auto)) {
     block-size: auto;
     height: auto;
     align-self: start;
   }
 
-  :host(.height-mode-auto) {
-    block-size: auto;
-    height: auto;
-    align-self: start;
+  :host(:is(.height-mode-fit-viewport, .height-mode-fill-container)) {
+    --wzc-stage-flex-track-min: var(--wzc-stage-flex-stack-min-block-size);
+    --wzc-stage-flex-stack-min: var(--wzc-stage-flex-stack-min-block-size);
+    --wzc-stage-flex-content-min: var(--wzc-stage-flex-media-min-block-size);
+    --wzc-stage-flex-containment: size;
+    --wzc-activity-list-max-block-size: none;
+    --wzc-recording-list-max-block-size: none;
+    --wzc-export-list-max-block-size: none;
+    min-block-size: 0;
   }
 
   :host(.height-mode-fit-viewport) {
-    --wzc-stage-flex-track-min: var(--wzc-stage-flex-stack-min-block-size);
-    --wzc-stage-flex-stack-min: var(--wzc-stage-flex-stack-min-block-size);
-    --wzc-stage-flex-content-min: var(--wzc-stage-flex-media-min-block-size);
-    --wzc-stage-flex-containment: size;
-    --wzc-activity-list-max-block-size: none;
-    --wzc-recording-list-max-block-size: none;
-    --wzc-export-list-max-block-size: none;
     block-size: auto;
-    min-block-size: 0;
   }
 
   :host(.height-mode-fill-container) {
-    --wzc-stage-flex-track-min: var(--wzc-stage-flex-stack-min-block-size);
-    --wzc-stage-flex-stack-min: var(--wzc-stage-flex-stack-min-block-size);
-    --wzc-stage-flex-content-min: var(--wzc-stage-flex-media-min-block-size);
-    --wzc-stage-flex-containment: size;
-    --wzc-activity-list-max-block-size: none;
-    --wzc-recording-list-max-block-size: none;
-    --wzc-export-list-max-block-size: none;
     block-size: 100%;
-    min-block-size: 0;
   }
 
   ha-card {
@@ -101,16 +90,13 @@ export const cardStyles = css`
     block-size: auto;
   }
 
-  :host(.panel-view-natural-height) ha-card,
-  :host(.panel-view-natural-height) .shell,
-  :host(.height-mode-auto) ha-card,
-  :host(.height-mode-auto) .shell {
+  :host(:is(.panel-view-natural-height, .height-mode-auto))
+    :is(ha-card, .shell) {
     block-size: auto;
     height: auto;
   }
 
-  :host(.height-mode-fit-viewport) ha-card,
-  :host(.height-mode-fill-container) ha-card {
+  :host(:is(.height-mode-fit-viewport, .height-mode-fill-container)) ha-card {
     display: grid;
     grid-template-rows: minmax(0, 1fr);
     min-block-size: min-content;
@@ -136,6 +122,13 @@ export const cardStyles = css`
   :host(.companion-edge-to-edge-fit-viewport.height-mode-fit-viewport) {
     --wzc-mobile-bottom-underlap: 0px;
     margin-block-end: calc(-1 * var(--wzc-safe-area-inset-bottom, 0px));
+  }
+
+  :host(.android-companion) .stage-grid[data-stage-presentation="wide-short"] {
+    padding-inline: max(
+      var(--wzc-safe-area-inset-left),
+      var(--wzc-safe-area-inset-right)
+    );
   }
 
   :host(.height-mode-fill-container) ha-card {

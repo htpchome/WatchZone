@@ -45,10 +45,7 @@ export class CardLayoutController implements ReactiveController {
   private readonly _resizeObserver =
     typeof ResizeObserver === "undefined"
       ? undefined
-      : new ResizeObserver(([entry]) => {
-          if (!entry) return;
-          this._scheduleMeasure();
-        });
+      : new ResizeObserver(() => this._scheduleMeasure());
   private _sizeBoundary?: HTMLElement;
   private readonly _viewportFit: ViewportFitController;
 
@@ -58,6 +55,11 @@ export class CardLayoutController implements ReactiveController {
   ) {
     this._haLayout = new HomeAssistantLayoutBridge(_host);
     this._viewportFit = new ViewportFitController(_host, this._scheduleMeasure);
+    if (
+      CLIENT_PROFILE.isAndroid &&
+      STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE
+    )
+      _host.classList.add("android-companion");
     _host.addController(this);
   }
 
@@ -113,7 +115,15 @@ export class CardLayoutController implements ReactiveController {
     this._haLayout.release();
   }
 
-  private readonly _scheduleMeasure = (): void => {
+  private readonly _scheduleMeasure = (event?: Event): void => {
+    if (event && STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE)
+      this._setLayoutProfile(
+        stageLayoutProfile(
+          window.innerWidth,
+          window.innerHeight,
+          STAGE_LAYOUT_CLIENT_MODE,
+        ),
+      );
     if (this._resizeFrame !== undefined)
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = requestAnimationFrame(() => {
@@ -134,10 +144,12 @@ export class CardLayoutController implements ReactiveController {
         viewportBlockSize,
       );
       if (bounds.width <= 0 || availableBlockSize <= 0) return;
+      const companionMobile =
+        STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE;
       this._setLayoutProfile(
         stageLayoutProfile(
-          bounds.width,
-          availableBlockSize,
+          companionMobile ? window.innerWidth : bounds.width,
+          companionMobile ? window.innerHeight : availableBlockSize,
           STAGE_LAYOUT_CLIENT_MODE,
         ),
       );

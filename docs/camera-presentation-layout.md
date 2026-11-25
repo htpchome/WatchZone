@@ -44,6 +44,11 @@ retained session, and respects reduced-motion preference.
   equal trailing layout overlap without adding that inset to the card viewport
   height. Home Assistant's own safe-area spacing therefore does not create
   outer-window scrolling; only the media viewport moves beneath the safe area.
+- In Android Companion landscape, the outer mobile Stage mirrors the larger
+  reported left/right system inset onto both inline sides. Android may expose
+  only the edge containing system UI; mirroring keeps the two-column Stage
+  balanced across either rotation direction. This host policy does not enter
+  Camera, carousel, control, or overlay geometry and does not alter iOS values.
 - The camera module owns the camera stage, including its clipping radius and
   stage shadow. Appearance is applied to that stable module boundary, not to an
   individual carousel slide.
