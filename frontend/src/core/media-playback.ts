@@ -52,7 +52,7 @@ export function observeMediaElementAdvance(
 
   media.addEventListener("timeupdate", handleTimeUpdate);
   if (typeof media.requestVideoFrameCallback === "function") requestFrame();
-  else if (allowReadinessFallback) {
+  if (allowReadinessFallback) {
     for (const eventName of ["canplay", "loadeddata", "playing"]) {
       media.addEventListener(eventName, finish, { once: true });
     }

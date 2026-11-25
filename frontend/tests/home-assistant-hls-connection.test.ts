@@ -297,7 +297,7 @@ describe("Home Assistant HLS connection", () => {
     connection.close();
   });
 
-  it("still confirms an HLS.js frame when frame callbacks are available", async () => {
+  it("does not block HLS.js when an exposed frame callback stalls", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("#EXTM3U\n#EXT-X-VERSION:3\n"),
     );
@@ -324,13 +324,9 @@ describe("Home Assistant HLS connection", () => {
     await vi.waitFor(() => expect(hlsMock.attachMedia).toHaveBeenCalled());
     const video = hlsMock.attachMedia.mock.calls[0][0] as HTMLVideoElement;
     video.dispatchEvent(new Event("loadeddata"));
-    await Promise.resolve();
-    expect(resolved).toBe(false);
-    expect(frameCallbacks.size).toBe(1);
-
-    const [callback] = frameCallbacks.values();
-    callback(performance.now(), {} as VideoFrameCallbackMetadata);
     const connection = await connecting;
+    expect(resolved).toBe(true);
+    expect(frameCallbacks.size).toBe(0);
     expect(connection.transport).toBe("hls_mse");
     connection.close();
   });

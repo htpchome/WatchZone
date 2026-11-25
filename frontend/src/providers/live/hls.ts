@@ -128,7 +128,6 @@ export async function createHlsConnection(
   let stopLiveEdgeMonitor: (() => void) | undefined;
   let transport: "hls_mse" | "hls_native" = "hls_native";
   let rejectPending: ((error: unknown) => void) | undefined;
-  let frameRequest: number | undefined;
 
   const close = (): void => {
     if (closed) {
@@ -138,10 +137,6 @@ export async function createHlsConnection(
     signal.removeEventListener("abort", handleAbort);
     stopLiveEdgeMonitor?.();
     stopLiveEdgeMonitor = undefined;
-    if (frameRequest !== undefined) {
-      video.cancelVideoFrameCallback?.(frameRequest);
-      frameRequest = undefined;
-    }
     hls?.destroy();
     hls = undefined;
     video.pause();
@@ -190,7 +185,6 @@ export async function createHlsConnection(
 
     const resolveReady = (): void => {
       if (closed || connected) return;
-      frameRequest = undefined;
       timing.mark("first_frame_decoded");
       connected = true;
       window.clearTimeout(timeout);
@@ -201,14 +195,7 @@ export async function createHlsConnection(
       "loadeddata",
       () => {
         if (closed || connected) return;
-        if (
-          transport !== "hls_native" &&
-          typeof video.requestVideoFrameCallback === "function"
-        ) {
-          frameRequest ??= video.requestVideoFrameCallback(resolveReady);
-        } else {
-          resolveReady();
-        }
+        resolveReady();
       },
       { once: true },
     );
