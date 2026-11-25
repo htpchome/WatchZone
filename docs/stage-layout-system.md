@@ -47,9 +47,11 @@ narrower containers, or both. `profiles` contains `standard`, `mobile`, or
 both and controls which card lineup may select the design. A phone browser or
 PWA always selects the compact `phone` variant. A Companion App phone or tablet
 selects `phone` for a portrait or square app window and `default` with the
-wide-short presentation for a landscape app window. Tablet and desktop
-browsers remain container-responsive. Rotation never changes the selected
-mobile Stage lineup or enters native fullscreen. `stageType` is one of `full`, `camera_only`, or
+wide-short presentation for a landscape app window. The browser orientation
+media state owns that structural selection; transient resize dimensions cannot
+select another variant while the WebView rotates. Tablet and desktop browsers
+remain container-responsive. Rotation never changes the selected mobile Stage
+lineup or enters native fullscreen. `stageType` is one of `full`, `camera_only`, or
 `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
 so its standard and mobile lineups are not exposed in the card editor. Each variant
@@ -265,6 +267,9 @@ headings.
   shared profile separately classifies wider layouts with less than `600px` of
   available block size as `wide-short`; rendered content height never selects
   its own variant.
+- Companion mobile is the narrow host-policy exception: authoritative browser
+  orientation selects its `phone` or `default` variant once per rotation, while
+  resize and visual-viewport signals only coalesce geometry measurement.
 - No Stage variant mounts before the first real layout-profile measurement;
   the runtime has no provisional default geometry.
 - The built-in mobile Full Stage keeps two stable nested surfaces across its

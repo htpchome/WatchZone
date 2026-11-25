@@ -74,6 +74,14 @@ export interface StageLayoutProfile {
   readonly variantName: StageVariantName;
 }
 
+export function companionStageLayoutProfile(
+  portrait: boolean,
+): StageLayoutProfile {
+  return portrait
+    ? { presentation: "compact", variantName: "phone" }
+    : { presentation: "wide-short", variantName: "default" };
+}
+
 export interface StageDesignDocument {
   readonly id: string;
   readonly name: string;

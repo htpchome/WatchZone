@@ -10561,6 +10561,16 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
       ({ variant, width }) => width < 600 && variant === "default",
     ),
   ).toBe(false);
+
+  await page.evaluate(() => {
+    Object.defineProperties(window, {
+      innerHeight: { configurable: true, get: () => 390 },
+      innerWidth: { configurable: true, get: () => 844 },
+    });
+    window.dispatchEvent(new Event("resize"));
+  });
+  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
 });
 
 test("mirrors Android Companion landscape safe areas", async ({ page }) => {

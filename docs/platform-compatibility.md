@@ -146,11 +146,14 @@ owned by the container-responsive and input-capability profile above.
 Companion's fixed-window height sizing and mobile Stage apply to both phones
 and tablets. A Companion mobile client selects the compact variant when its
 app window is portrait or square, and the wide-short variant when it is
-landscape. The paired window dimensions are authoritative so a delayed visual
-viewport update during rotation cannot briefly select stale landscape
-geometry. Phone browsers and phone PWAs remain on the compact, single-column
-mobile Stage in both orientations because CameraOptics cannot own their browser
-chrome. Tablet browsers, desktop browsers, and Catalyst remain
+landscape. The browser orientation media state is authoritative for this
+structural choice. Window, visual-viewport, and container resize signals may
+update geometry, but their transient dimension pairs cannot independently
+switch the Stage variant during rotation. This gives one semantic layout
+commit per orientation and prevents a landscape Stage from rendering inside
+portrait geometry. Phone browsers and phone PWAs remain on the compact,
+single-column mobile Stage in both orientations because CameraOptics cannot own
+their browser chrome. Tablet browsers, desktop browsers, and Catalyst remain
 container-responsive. This policy does not enter native fullscreen or remove
 Home Assistant chrome.
 
@@ -162,8 +165,8 @@ client identity or media policy.
 
 Both mobile variants remain in ordinary Home Assistant card flow and reuse the
 same Camera and Activity surfaces. A future transition between them must use
-the shared Motion boundary without introducing another layout or animation
-engine.
+the authoritative orientation change as its transaction boundary and use the
+shared Motion boundary without introducing another layout or animation engine.
 
 ### 2.3 Theme profile
 

@@ -7,6 +7,7 @@ import {
   type CardHeightMode,
 } from "../../core/config";
 import {
+  companionStageLayoutProfile,
   PHONE_STAGE_MAX_INLINE_SIZE,
   STAGE_LAYOUT_COMPANION_MOBILE,
   STAGE_LAYOUT_CONTAINER,
@@ -39,6 +40,10 @@ const USE_MOBILE_HEIGHT_MODE = USES_MOBILE_STAGE;
 
 /** Owns card sizing and the feature-detected Home Assistant layout bridge. */
 export class CardLayoutController implements ReactiveController {
+  private readonly _companionPortraitQuery =
+    STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE
+      ? window.matchMedia("(orientation: portrait)")
+      : undefined;
   private readonly _haLayout: HomeAssistantLayoutBridge;
   private _heightMode: CardHeightMode = "auto";
   private _resizeFrame?: number;
@@ -90,6 +95,10 @@ export class CardLayoutController implements ReactiveController {
       STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE
     )
       this._host.classList.add("android-companion");
+    this._companionPortraitQuery?.addEventListener(
+      "change",
+      this._handleCompanionOrientationChange,
+    );
     window.addEventListener("resize", this._scheduleMeasure);
     window.visualViewport?.addEventListener("resize", this._scheduleMeasure);
   }
@@ -105,6 +114,10 @@ export class CardLayoutController implements ReactiveController {
   }
 
   public hostDisconnected(): void {
+    this._companionPortraitQuery?.removeEventListener(
+      "change",
+      this._handleCompanionOrientationChange,
+    );
     window.removeEventListener("resize", this._scheduleMeasure);
     window.visualViewport?.removeEventListener("resize", this._scheduleMeasure);
     this._resizeObserver?.disconnect();
@@ -115,15 +128,14 @@ export class CardLayoutController implements ReactiveController {
     this._haLayout.release();
   }
 
-  private readonly _scheduleMeasure = (event?: Event): void => {
-    if (event && STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE)
-      this._setLayoutProfile(
-        stageLayoutProfile(
-          window.innerWidth,
-          window.innerHeight,
-          STAGE_LAYOUT_CLIENT_MODE,
-        ),
-      );
+  private readonly _handleCompanionOrientationChange = (
+    event: MediaQueryListEvent,
+  ): void => {
+    this._setLayoutProfile(companionStageLayoutProfile(event.matches));
+    this._scheduleMeasure();
+  };
+
+  private readonly _scheduleMeasure = (): void => {
     if (this._resizeFrame !== undefined)
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = requestAnimationFrame(() => {
@@ -144,14 +156,14 @@ export class CardLayoutController implements ReactiveController {
         viewportBlockSize,
       );
       if (bounds.width <= 0 || availableBlockSize <= 0) return;
-      const companionMobile =
-        STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE;
       this._setLayoutProfile(
-        stageLayoutProfile(
-          companionMobile ? window.innerWidth : bounds.width,
-          companionMobile ? window.innerHeight : availableBlockSize,
-          STAGE_LAYOUT_CLIENT_MODE,
-        ),
+        this._companionPortraitQuery
+          ? companionStageLayoutProfile(this._companionPortraitQuery.matches)
+          : stageLayoutProfile(
+              bounds.width,
+              availableBlockSize,
+              STAGE_LAYOUT_CLIENT_MODE,
+            ),
       );
     });
   };

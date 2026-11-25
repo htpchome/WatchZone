@@ -27,6 +27,7 @@ import {
   STANDARD_TALK_COMPONENT_NODE_ID,
 } from "../src/core/constants";
 import {
+  companionStageLayoutProfile,
   STAGE_LAYOUT_COMPANION_MOBILE,
   STAGE_LAYOUT_PHONE_BROWSER,
   stageLayoutProfile,
@@ -69,6 +70,17 @@ class RuntimeHost {
 }
 
 describe("layout composition", () => {
+  it("selects one Companion Stage profile from authoritative orientation", () => {
+    expect(companionStageLayoutProfile(true)).toEqual({
+      presentation: "compact",
+      variantName: "phone",
+    });
+    expect(companionStageLayoutProfile(false)).toEqual({
+      presentation: "wide-short",
+      variantName: "default",
+    });
+  });
+
   it("classifies compact, regular, and short-wide Stage presentations", () => {
     expect(stageLayoutProfile(390, 844)).toEqual({
       presentation: "compact",

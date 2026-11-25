@@ -116,10 +116,14 @@ minimum without a parallel pixel constant.
 
 Phone orientation does not activate a viewport overlay or fullscreen
 presentation. The mobile Stage remains in normal Home Assistant flow. Narrow
-containers use the compact stacked variant; a container at least `600px` wide
-may use the static wide variant, with short available height identified by the
-shared `wide-short` presentation profile. Both variants preserve a Camera plus
-Camera Navigation surface and a Control Bar plus Activity surface.
+containers use the compact stacked variant. Companion mobile instead makes one
+structural selection from authoritative browser orientation: compact in
+portrait or square and `wide-short` in landscape. Transient window,
+visual-viewport, and container dimensions cannot reverse that selection while
+the WebView rotates. Other containers at least `600px` wide may use the static
+wide variant, with short available height identified by the shared
+`wide-short` presentation profile. Both variants preserve a Camera plus Camera
+Navigation surface and a Control Bar plus Activity surface.
 Browser-native media fullscreen remains an explicit user action and is
 independent of orientation.
 
