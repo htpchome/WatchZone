@@ -234,6 +234,7 @@ export const themeTokens = css`
       --safe-area-inset-right,
       env(safe-area-inset-right, 0px)
     );
+    --wzc-stage-safe-inline: 0px;
     --wzc-media-safe-area-underlap: 0px;
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);

@@ -43,6 +43,14 @@ export const stageRuntimeStyles = css`
   [data-stage-presentation="wide-short"]
     > [data-layout-node$="activity-surface"] {
     contain: size;
+    min-block-size: 0;
+    overflow: hidden;
+    --wzc-stage-flex-track-min: 0px;
+    --wzc-stage-flex-stack-min: 0px;
+    --wzc-stage-flex-content-min: 0px;
+    --wzc-activity-list-min-block-size: 0px;
+    --wzc-recording-list-min-block-size: 0px;
+    --wzc-export-list-min-block-size: 0px;
   }
 
   [data-layout-node$="activity-navigation-module"] {

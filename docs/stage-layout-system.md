@@ -48,9 +48,11 @@ both and controls which card lineup may select the design. A phone browser or
 PWA always selects the compact `phone` variant. A Companion App phone or tablet
 selects `phone` for a portrait or square app window and `default` with the
 wide-short presentation for a landscape app window. The browser orientation
-media state owns that structural selection; transient resize dimensions cannot
-select another variant while the WebView rotates. Tablet and desktop browsers
-remain container-responsive. Rotation never changes the selected mobile Stage
+media state owns entry into that structural selection. The landscape commit
+waits for stable host, visual-viewport, and safe-area geometry. A physically
+narrow card may exit a stale landscape structure while the orientation signal
+catches up, but transient dimensions never enter the landscape variant. Tablet
+and desktop browsers remain container-responsive. Rotation never changes the selected mobile Stage
 lineup or enters native fullscreen. `stageType` is one of `full`, `camera_only`, or
 `minimal_camera_only`. The user-facing name of the last
 classification is Minimal Camera Stage; it has one implicit built-in design,
@@ -268,13 +270,17 @@ headings.
   available block size as `wide-short`; rendered content height never selects
   its own variant.
 - Companion mobile is the narrow host-policy exception: authoritative browser
-  orientation selects its `phone` or `default` variant once per rotation, while
-  resize and visual-viewport signals only coalesce geometry measurement.
+  orientation enters its `default` variant only after host, visual-viewport,
+  and safe-area geometry settle. A physically narrow card exits a stale
+  `default` variant immediately; resize dimensions never enter it.
 - No Stage variant mounts before the first real layout-profile measurement;
   the runtime has no provisional default geometry.
 - The built-in mobile Full Stage keeps two stable nested surfaces across its
   variants: Camera plus Camera Navigation, and Control Bar plus the active
   Reviews, Recordings, Exports, or PTZ stack.
+- In the `wide-short` presentation, the Activity surface is constrained to the
+  Camera plus Camera Navigation surface height; its active media list owns the
+  internal scrolling and cannot extend the Stage row.
 - Variant changes reuse records by stable node ID and compatible type.
 - Module-stack selection is local runtime interaction state and is not written
   into the saved Stage Design.

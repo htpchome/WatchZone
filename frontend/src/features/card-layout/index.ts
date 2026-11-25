@@ -16,6 +16,7 @@ import {
   type StageLayoutProfile,
 } from "../../stage/layout";
 import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
+import type { CompanionRotationSettlement } from "./companion-rotation-settlement";
 import { ViewportFitController } from "./viewport-fit.controller";
 
 export { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
@@ -46,6 +47,9 @@ export class CardLayoutController implements ReactiveController {
       : undefined;
   private readonly _haLayout: HomeAssistantLayoutBridge;
   private _heightMode: CardHeightMode = "auto";
+  private _committedCompanionPortrait?: boolean;
+  private _companionLandscapePending = false;
+  private _companionSettlement?: Promise<CompanionRotationSettlement>;
   private _resizeFrame?: number;
   private readonly _resizeObserver =
     typeof ResizeObserver === "undefined"
@@ -125,13 +129,19 @@ export class CardLayoutController implements ReactiveController {
     if (this._resizeFrame !== undefined)
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = undefined;
+    this._cancelCompanionLandscapeSettlement();
     this._haLayout.release();
   }
 
   private readonly _handleCompanionOrientationChange = (
     event: MediaQueryListEvent,
   ): void => {
-    this._setLayoutProfile(companionStageLayoutProfile(event.matches));
+    if (event.matches) {
+      this._cancelCompanionLandscapeSettlement();
+      this._commitCompanionProfile(true);
+    } else {
+      this._beginCompanionLandscapeSettlement();
+    }
     this._scheduleMeasure();
   };
 
@@ -156,17 +166,68 @@ export class CardLayoutController implements ReactiveController {
         viewportBlockSize,
       );
       if (bounds.width <= 0 || availableBlockSize <= 0) return;
+      if (this._companionPortraitQuery) {
+        // A stale landscape media query must never leave the two-column Stage
+        // inside a card that has already become physically narrow.
+        if (
+          this._companionPortraitQuery.matches ||
+          bounds.width <= PHONE_STAGE_MAX_INLINE_SIZE
+        ) {
+          this._cancelCompanionLandscapeSettlement();
+          if (this._committedCompanionPortrait !== true)
+            this._commitCompanionProfile(true);
+        } else if (
+          !this._companionLandscapePending &&
+          this._committedCompanionPortrait !== false
+        ) {
+          this._beginCompanionLandscapeSettlement();
+        }
+        return;
+      }
       this._setLayoutProfile(
-        this._companionPortraitQuery
-          ? companionStageLayoutProfile(this._companionPortraitQuery.matches)
-          : stageLayoutProfile(
-              bounds.width,
-              availableBlockSize,
-              STAGE_LAYOUT_CLIENT_MODE,
-            ),
+        stageLayoutProfile(
+          bounds.width,
+          availableBlockSize,
+          STAGE_LAYOUT_CLIENT_MODE,
+        ),
       );
     });
   };
+
+  private _beginCompanionLandscapeSettlement(): void {
+    this._companionLandscapePending = true;
+    const settlement = (this._companionSettlement ??=
+      import("./companion-rotation-settlement").then(
+        ({ CompanionRotationSettlement }) =>
+          new CompanionRotationSettlement(this._host),
+      ));
+    void settlement.then((controller) => {
+      const boundary = this._sizeBoundary;
+      if (!boundary || this._companionPortraitQuery?.matches) {
+        this._companionLandscapePending = false;
+        return;
+      }
+      controller.start(boundary, (inlineInset) => {
+        this._companionLandscapePending = false;
+        if (this._companionPortraitQuery?.matches) return;
+        this._commitCompanionProfile(
+          false,
+          CLIENT_PROFILE.isAndroid ? inlineInset : 0,
+        );
+      });
+    });
+  }
+
+  private _commitCompanionProfile(portrait: boolean, inlineInset = 0): void {
+    this._host.style.setProperty("--wzc-stage-safe-inline", `${inlineInset}px`);
+    this._committedCompanionPortrait = portrait;
+    this._setLayoutProfile(companionStageLayoutProfile(portrait));
+  }
+
+  private _cancelCompanionLandscapeSettlement(): void {
+    this._companionLandscapePending = false;
+    void this._companionSettlement?.then((controller) => controller.cancel());
+  }
 }
 
 /** Projects device-specific appearance onto the stable presentation fields. */

@@ -10509,6 +10509,8 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
     return {
       activityContain: getComputedStyle(activity).contain,
       activityHeight: activity.getBoundingClientRect().height,
+      activityOverflow: getComputedStyle(activity).overflow,
+      activityScrollHeight: activity.scrollHeight,
       cameraHeight: camera.getBoundingClientRect().height,
     };
   });
@@ -10517,6 +10519,10 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
     0,
   );
   expect(columnGeometry.activityContain).toBe("size");
+  expect(columnGeometry.activityOverflow).toBe("hidden");
+  expect(columnGeometry.activityScrollHeight).toBeLessThanOrEqual(
+    Math.ceil(columnGeometry.activityHeight),
+  );
 
   await page.evaluate(() => {
     const win = window as typeof window & {
@@ -10607,14 +10613,53 @@ test("mirrors Android Companion landscape safe areas", async ({ page }) => {
   await expect(card).toHaveClass(/android-companion/);
   await expect(stage).toHaveCSS("padding-left", "24px");
   await expect(stage).toHaveCSS("padding-right", "24px");
+});
+
+test("commits delayed Android landscape safe area with the Stage", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (Linux; Android 13; wv) AppleWebKit/537.36 Mobile Home Assistant/2026.9",
+    });
+  });
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement & { setConfig(config: unknown): void };
+    host.style.setProperty("--safe-area-inset-left", "0px");
+    host.style.setProperty("--safe-area-inset-right", "0px");
+    host.setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      type: "custom:camera-optics-card",
+    });
+  });
+  const stage = card.locator(".stage-grid");
+  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(80);
+  await expect(stage).toHaveAttribute("data-stage-variant", "phone");
+  await card.evaluate((element) => {
+    const host = element as HTMLElement;
+    host.style.setProperty("--safe-area-inset-right", "26px");
+  });
+
+  await expect(stage).toHaveAttribute("data-stage-variant", "default");
+  await expect(stage).toHaveCSS("padding-left", "26px");
+  await expect(stage).toHaveCSS("padding-right", "26px");
 
   await card.evaluate((element) => {
     const host = element as HTMLElement;
-    host.style.setProperty("--safe-area-inset-left", "18px");
-    host.style.setProperty("--safe-area-inset-right", "0px");
+    host.style.setProperty("--safe-area-inset-right", "34px");
   });
-  await expect(stage).toHaveCSS("padding-left", "18px");
-  await expect(stage).toHaveCSS("padding-right", "18px");
+  await page.waitForTimeout(100);
+  await expect(stage).toHaveCSS("padding-left", "26px");
+  await expect(stage).toHaveCSS("padding-right", "26px");
 });
 
 test("keeps a phone browser on the compact Stage in landscape", async ({

@@ -146,12 +146,13 @@ owned by the container-responsive and input-capability profile above.
 Companion's fixed-window height sizing and mobile Stage apply to both phones
 and tablets. A Companion mobile client selects the compact variant when its
 app window is portrait or square, and the wide-short variant when it is
-landscape. The browser orientation media state is authoritative for this
-structural choice. Window, visual-viewport, and container resize signals may
-update geometry, but their transient dimension pairs cannot independently
-switch the Stage variant during rotation. This gives one semantic layout
-commit per orientation and prevents a landscape Stage from rendering inside
-portrait geometry. Phone browsers and phone PWAs remain on the compact,
+landscape. The browser orientation media state is authoritative for entering
+the landscape structure. CameraOptics waits for stable host, visual-viewport,
+and safe-area geometry before that commit. A physically narrow card may leave
+the landscape structure immediately while the host's orientation media state
+catches up, preventing a stale two-column Stage from painting in portrait.
+Other transient window, visual-viewport, and container dimensions cannot enter
+the landscape variant. Phone browsers and phone PWAs remain on the compact,
 single-column mobile Stage in both orientations because CameraOptics cannot own
 their browser chrome. Tablet browsers, desktop browsers, and Catalyst remain
 container-responsive. This policy does not enter native fullscreen or remove
@@ -227,7 +228,7 @@ Use this matrix when selecting tokens for a new overlay surface:
 | ----------------- | ---------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | HA glass          | AI analysis, recorded-media viewers, minimal live viewer, informational dialogs    | `--wzc-dialog-background`        | `--wzc-dialog-backdrop-filter`                 | `--wzc-dialog-radius`, `--wzc-dialog-shadow`           | `--wzc-dialog-scrim-*` for ordinary modal dialogs; none for either recorded-media viewer |
 | Solid task        | Filter, calendar, Suspend Camera, recorded-media information, forms, confirmations | `--wzc-task-dialog-background`   | `--wzc-task-dialog-backdrop-filter` (`none`)   | `--wzc-task-dialog-radius`, `--wzc-task-dialog-shadow` | `--wzc-dialog-scrim-*` for modal tasks; none for popovers                                |
-| Editor shell      | Home Assistant card editor, CameraOptics editor content                               | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                                 |
+| Editor shell      | Home Assistant card editor, CameraOptics editor content                            | `--wzc-editor-dialog-background` | `--wzc-editor-dialog-backdrop-filter` (`none`) | Owned by the Home Assistant editor shell               | Owned by the Home Assistant editor shell                                                 |
 
 `--wzc-popover-*` is a compatibility alias of the solid-task family, not a
 fourth presentation. Filter and calendar components may consume that alias for

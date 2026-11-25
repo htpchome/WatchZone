@@ -125,10 +125,7 @@ export const cardStyles = css`
   }
 
   :host(.android-companion) .stage-grid[data-stage-presentation="wide-short"] {
-    padding-inline: max(
-      var(--wzc-safe-area-inset-left),
-      var(--wzc-safe-area-inset-right)
-    );
+    padding-inline: var(--wzc-stage-safe-inline);
   }
 
   :host(.height-mode-fill-container) ha-card {
