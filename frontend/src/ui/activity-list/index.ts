@@ -270,6 +270,11 @@ export class ActivityList extends LitElement {
       groups.find(({ dateKey }) => dateKey === this._activeDateKey)?.label ??
       groups[0]?.label ??
       this._fallbackDayLabel();
+    const naturalRows = Math.max(3, Math.min(5, this.items.length));
+    const naturalRowStyle =
+      this.presentation === "standard"
+        ? {}
+        : { "--wzc-activity-list-natural-rows": String(naturalRows) };
     return html`<section
       class=${[
         "viewport",
@@ -281,6 +286,7 @@ export class ActivityList extends LitElement {
         .join(" ")}
       aria-label=${this.localize(this.listKey)}
       aria-busy=${this.loading ? "true" : "false"}
+      style=${styleMap(naturalRowStyle)}
     >
       <wzc-media-day-header .label=${dayLabel}></wzc-media-day-header>
       <div class="scroller" @scroll=${this._handleScroll}>

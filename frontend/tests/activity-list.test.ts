@@ -47,6 +47,28 @@ describe("activity list media failures", () => {
     ).not.toBeNull();
   });
 
+  it("sizes its natural viewport between three and five loaded rows", async () => {
+    const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
+    list.presentation = "compact";
+    list.items = [item("short-list")];
+    document.body.append(list);
+    await list.updateComplete;
+
+    const viewport = list.shadowRoot?.querySelector<HTMLElement>(".viewport");
+    expect(
+      viewport?.style.getPropertyValue("--wzc-activity-list-natural-rows"),
+    ).toBe("3");
+
+    list.items = Array.from({ length: 8 }, (_, index) => ({
+      ...item(`long-list-${index}`),
+      id: `review-${index}`,
+    }));
+    await list.updateComplete;
+    expect(
+      viewport?.style.getPropertyValue("--wzc-activity-list-natural-rows"),
+    ).toBe("5");
+  });
+
   it("uses the canonical reviewed and unreviewed state icons", async () => {
     const list = document.createElement(ACTIVITY_LIST_TAG) as ActivityList;
     list.items = [{ ...item("reviewed-icon"), reviewed: true }];

@@ -29,8 +29,10 @@ export const activityListStyles = css`
     min-block-size: var(
       --wzc-activity-list-min-block-size,
       calc(
-        var(--wzc-media-day-header-block-size) + 3 *
-          var(--wzc-event-tile-block-size) + 3 * var(--wzc-event-list-gap) +
+        var(--wzc-media-day-header-block-size) +
+          var(--wzc-activity-list-natural-rows, 3) *
+          var(--wzc-event-tile-block-size) +
+          var(--wzc-activity-list-natural-rows, 3) * var(--wzc-event-list-gap) +
           var(--wzc-media-day-header-gap) + var(--wzc-event-list-padding)
       )
     );
