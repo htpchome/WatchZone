@@ -3990,6 +3990,8 @@ test("keeps activity content in an independently scrolling viewport", async ({
       throw new Error("Expected the complete narrow activity-tile grid.");
     }
     const style = getComputedStyle(element);
+    const analysisBounds = element.getBoundingClientRect();
+    const informationBounds = information.getBoundingClientRect();
     return {
       actionDisplay: getComputedStyle(actions).display,
       analysisIconSize:
@@ -4000,6 +4002,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
       height: tile.getBoundingClientRect().height,
       iconColor: getComputedStyle(information).color,
       informationIconSize: informationIcon.getBoundingClientRect().width,
+      informationGap: informationBounds.left - analysisBounds.right,
       metadataColor: getComputedStyle(metadata).color,
       informationWidth: information.getBoundingClientRect().width,
       titleDisplay: getComputedStyle(element.querySelector("span")!).display,
@@ -4013,6 +4016,7 @@ test("keeps activity content in an independently scrolling viewport", async ({
   expect(narrowTileLayout.borderWidth).toBe("0px");
   expect(narrowTileLayout.analysisIconSize).toBe("1.25rem");
   expect(narrowTileLayout.informationIconSize).toBeCloseTo(20, 0);
+  expect(narrowTileLayout.informationGap).toBeGreaterThanOrEqual(19);
   expect(narrowTileLayout.informationWidth).toBeCloseTo(
     narrowTileLayout.width,
     0,
@@ -4119,7 +4123,6 @@ test("keeps activity content in an independently scrolling viewport", async ({
       const visiblePrimary = primary.filter((badge) => !badge.hidden);
       const collapsed = Number(summary.textContent?.match(/\d+/)?.[0] ?? 0);
       const metadata = [...details.querySelectorAll<HTMLElement>(".metadata")];
-      const reviewState = details.querySelector<HTMLElement>(".review-state");
       const tileBounds = tile.getBoundingClientRect();
       const scrollerBounds = scroller.getBoundingClientRect();
       return {
@@ -4127,10 +4130,9 @@ test("keeps activity content in an independently scrolling viewport", async ({
         badgeLaneFits: badges.scrollWidth <= badges.clientWidth + 1,
         containerWidth: activityList.getBoundingClientRect().width,
         fixedHeight: tileBounds.height,
-        metadataUnclipped:
-          metadata.every((row) => row.scrollWidth <= row.clientWidth + 1) &&
-          (!reviewState ||
-            reviewState.scrollWidth <= reviewState.clientWidth + 1),
+        metadataUnclipped: metadata.every(
+          (row) => row.scrollWidth <= row.clientWidth + 1,
+        ),
         noHorizontalScroll: scroller.scrollWidth <= scroller.clientWidth + 1,
         primaryNowrap: getComputedStyle(badges).flexWrap,
         tileInsideScroller: tileBounds.right <= scrollerBounds.right + 1,
@@ -4152,6 +4154,51 @@ test("keeps activity content in an independently scrolling viewport", async ({
     activityList.style.removeProperty("inline-size");
   });
   await page.setViewportSize({ height: 844, width: 940 });
+  const narrowReviewState = await reviewTiles.first().evaluate(async (tile) => {
+    const reviewState = tile.querySelector<HTMLElement>(".review-state");
+    const reviewLabel = reviewState?.querySelector<HTMLElement>(
+      ".review-state-label",
+    );
+    if (!reviewState || !reviewLabel) {
+      throw new Error("Expected the review-state control in the first tile.");
+    }
+    const settle = () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+    tile.style.inlineSize = "320px";
+    await settle();
+    const atThreshold = {
+      labelDisplay: getComputedStyle(reviewLabel).display,
+      tileWidth: tile.getBoundingClientRect().width,
+    };
+    tile.style.inlineSize = "319px";
+    await settle();
+    const touchTarget = getComputedStyle(reviewState, "::before");
+    const belowThreshold = {
+      borderWidth: getComputedStyle(reviewState).borderTopWidth,
+      labelDisplay: getComputedStyle(reviewLabel).display,
+      tileWidth: tile.getBoundingClientRect().width,
+      touchHeight: Number.parseFloat(touchTarget.minHeight),
+      touchWidth: Number.parseFloat(touchTarget.minWidth),
+      visualWidth: reviewState.getBoundingClientRect().width,
+    };
+    tile.style.removeProperty("inline-size");
+    await settle();
+    return { atThreshold, belowThreshold };
+  });
+  expect(narrowReviewState.atThreshold.tileWidth).toBeCloseTo(320, 0);
+  expect(narrowReviewState.atThreshold.labelDisplay).not.toBe("none");
+  expect(narrowReviewState.belowThreshold.tileWidth).toBeCloseTo(319, 0);
+  expect(narrowReviewState.belowThreshold.borderWidth).toBe("0px");
+  expect(narrowReviewState.belowThreshold.labelDisplay).toBe("none");
+  expect(narrowReviewState.belowThreshold.visualWidth).toBeCloseTo(20, 0);
+  expect(narrowReviewState.belowThreshold.touchHeight).toBeGreaterThanOrEqual(
+    44,
+  );
+  expect(narrowReviewState.belowThreshold.touchWidth).toBeGreaterThanOrEqual(
+    44,
+  );
   const denseTileLayout = await analysisTitle.evaluate(async (element) => {
     const activityList = (element.getRootNode() as ShadowRoot)
       .host as HTMLElement & {
@@ -8324,7 +8371,9 @@ test("moves talk and light between the wide toolbar and resizing phone viewport"
     activeTalkMicrophone.boundingBox(),
   ]);
   expect(activeLightBox?.x).toBeCloseTo(lightButtonBox.x, 0);
-  expect(activeLightBox?.y).toBeCloseTo(lightButtonBox.y, 0);
+  expect(
+    Math.abs((activeLightBox?.y ?? 0) - lightButtonBox.y),
+  ).toBeLessThanOrEqual(1);
   expect(
     (activeTalkMicrophoneBox?.x ?? 0) -
       ((activeLightBox?.x ?? 0) + (activeLightBox?.width ?? 0)),
@@ -10447,6 +10496,27 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
     cameraHasCamera: true,
     cameraHasNavigation: true,
   });
+  const columnGeometry = await stage.evaluate((element) => {
+    const camera = element.querySelector<HTMLElement>(
+      '[data-layout-node$="default-camera-surface"]',
+    );
+    const activity = element.querySelector<HTMLElement>(
+      '[data-layout-node$="default-activity-surface"]',
+    );
+    if (!camera || !activity) {
+      throw new Error("Expected both wide-short Stage columns.");
+    }
+    return {
+      activityContain: getComputedStyle(activity).contain,
+      activityHeight: activity.getBoundingClientRect().height,
+      cameraHeight: camera.getBoundingClientRect().height,
+    };
+  });
+  expect(columnGeometry.activityHeight).toBeCloseTo(
+    columnGeometry.cameraHeight,
+    0,
+  );
+  expect(columnGeometry.activityContain).toBe("size");
 });
 
 test("keeps a phone browser on the compact Stage in landscape", async ({

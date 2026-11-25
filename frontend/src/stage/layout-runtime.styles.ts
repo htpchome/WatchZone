@@ -40,7 +40,12 @@ export const stageRuntimeStyles = css`
     gap: var(--wzc-stage-module-gap);
   }
 
-  .stage-placement[data-layout-node$="default-activity-navigation-module"] {
+  [data-stage-presentation="wide-short"]
+    > [data-layout-node$="activity-surface"] {
+    contain: size;
+  }
+
+  [data-layout-node$="activity-navigation-module"] {
     margin-block-end: calc(-1 * var(--wzc-stage-module-gap));
   }
 
@@ -72,20 +77,19 @@ export const stageRuntimeStyles = css`
     container-type: inline-size;
   }
 
-  .module-composition.has-components > .module-slot,
-  .module-composition.has-components > .component-slot-content {
+  .has-components > .module-slot,
+  .has-components > .component-slot-content {
     grid-column: 1 / -1;
     grid-row: 1 / -1;
   }
 
-  .module-composition[data-module-type="activity-navigation"] {
+  [data-module-type="activity-navigation"] {
     grid-template-areas: "content";
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
   }
 
-  .module-composition[data-module-type="activity-navigation"]
-    > .component-slot-content {
+  [data-module-type="activity-navigation"] > .component-slot-content {
     z-index: 1;
     display: grid;
     grid-template-columns:
@@ -96,7 +100,7 @@ export const stageRuntimeStyles = css`
     column-gap: var(--wzc-control-dock-gap);
   }
 
-  .module-composition[data-module-type="activity-navigation"]
+  [data-module-type="activity-navigation"]
     > .component-slot-content
     > .component-node {
     inline-size: max-content;
@@ -104,31 +108,25 @@ export const stageRuntimeStyles = css`
     align-self: center;
   }
 
-  .module-composition[data-module-type="activity-navigation"]
+  [data-module-type="activity-navigation"]
     > .component-slot-content
-    > .component-node[data-component-type="light_control"] {
+    > [data-component-type="light_control"] {
     grid-column: 1;
     justify-self: end;
   }
 
-  .module-composition[data-module-type="activity-navigation"]
+  [data-module-type="activity-navigation"]
     > .component-slot-content
-    > .component-node[data-component-type="two_way_talk"] {
+    > [data-component-type="two_way_talk"] {
     display: grid;
     grid-column: 2;
     inline-size: 100%;
     justify-items: center;
   }
 
-  .stage-stack-content > .module-composition[data-module-type="ptz-panel"],
-  .module-composition[data-module-type="ptz-panel"] > .component-slot-content,
-  .module-composition[data-module-type="ptz-panel"]
-    > .component-slot-content
-    > .component-node,
-  .module-composition[data-module-type="ptz-panel"]
-    > .component-slot-content
-    > .component-node.placeable-ready
-    > * {
+  .stage-stack-content > [data-module-type="ptz-panel"],
+  [data-module-type="ptz-panel"]
+    :is(.component-slot-content, .component-node, .placeable-ready > *) {
     block-size: 100%;
   }
 
@@ -172,7 +170,8 @@ export const stageRuntimeStyles = css`
     pointer-events: none;
   }
 
-  .camera-overlay-area > .component-node {
+  .camera-overlay-area > .component-node,
+  .lower-control-group > .component-node {
     inline-size: auto;
     block-size: auto;
   }
@@ -189,19 +188,17 @@ export const stageRuntimeStyles = css`
     padding-block: var(--wzc-camera-overlay-block-inset);
   }
 
-  .camera-overlay-area-top
-    > .component-node[data-component-type="camera_switcher"] {
+  .camera-overlay-area-top > [data-component-type="camera_switcher"] {
     grid-column: 4;
     justify-self: stretch;
   }
 
-  .camera-overlay-area-top > .component-node[data-component-type="slideshow"] {
+  .camera-overlay-area-top > [data-component-type="slideshow"] {
     grid-column: 2;
     justify-self: stretch;
   }
 
-  .camera-overlay-area-top
-    > .component-node[data-component-type="slideshow"]:only-child {
+  .camera-overlay-area-top > [data-component-type="slideshow"]:only-child {
     --wzc-slideshow-justify-items: center;
     grid-column: 1 / -1;
     justify-self: center;
@@ -217,12 +214,14 @@ export const stageRuntimeStyles = css`
 
   .camera-overlay-area-media {
     grid-area: media;
-    display: grid;
-    place-items: center;
   }
 
   .camera-overlay-area-right {
     grid-area: right;
+  }
+
+  .camera-overlay-area-media,
+  .camera-overlay-area-right {
     display: grid;
     place-items: center;
   }
@@ -245,11 +244,6 @@ export const stageRuntimeStyles = css`
     gap: var(--wzc-control-dock-gap);
     min-inline-size: 0;
     pointer-events: none;
-  }
-
-  .lower-control-group > .component-node {
-    inline-size: auto;
-    block-size: auto;
   }
 
   .lower-control-group.leading {

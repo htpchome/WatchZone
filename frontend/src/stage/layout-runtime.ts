@@ -57,19 +57,6 @@ const OVERLAY_AREAS = [
   "metadata",
 ] as const;
 
-type OverlayArea = (typeof OVERLAY_AREAS)[number];
-
-function overlayArea(component: StageComponentNode): OverlayArea {
-  return component.overlayRegion ?? "media";
-}
-
-function lowerRegion(
-  component: StageComponentNode,
-): "leading" | "center" | "trailing" {
-  if (component.controlRegion) return component.controlRegion;
-  return "center";
-}
-
 interface PlaceableRecord {
   config?: unknown;
   definition?: PlaceableDefinition<unknown>;
@@ -441,7 +428,9 @@ export class LayoutRuntime implements ReactiveController {
     return html`<div class="camera-overlay-grid" data-stage-slot="overlay">
       ${OVERLAY_AREAS.map((area) => {
         const components = [
-          ...overlays.filter((component) => overlayArea(component) === area),
+          ...overlays.filter(
+            (component) => (component.overlayRegion ?? "media") === area,
+          ),
           ...(area === "lower" ? controls : []),
         ];
         return html`<div
@@ -469,7 +458,9 @@ export class LayoutRuntime implements ReactiveController {
       (region) =>
         html`<div class=${`lower-control-group ${region}`}>
           ${repeat(
-            components.filter((component) => lowerRegion(component) === region),
+            components.filter(
+              (component) => (component.controlRegion ?? "center") === region,
+            ),
             ({ id }) => id,
             (component) => this._renderRecord(component),
           )}

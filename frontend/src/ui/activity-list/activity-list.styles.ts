@@ -4,6 +4,7 @@ import { responsiveWidths } from "../../styles/responsive-widths";
 
 export const activityListStyles = css`
   :host {
+    container-name: activity-list;
     container-type: inline-size;
     display: block;
     block-size: 100%;
@@ -83,7 +84,7 @@ export const activityListStyles = css`
     block-size: 1.5rem;
     bottom: 0.12rem;
     inline-size: 1.5rem;
-    inset-inline-end: calc(var(--wzc-event-action-margin) + 1.5rem + 0.25rem);
+    inset-inline-end: calc(var(--wzc-event-action-margin) + 1.5rem + 1.25rem);
     justify-content: center;
     padding: 0;
     position: absolute;
@@ -192,6 +193,7 @@ export const activityListStyles = css`
     border-radius: var(--wzc-event-tile-radius);
     box-shadow: var(--wzc-event-tile-shadow);
     box-sizing: border-box;
+    container: activity-tile / inline-size;
     display: grid;
     column-gap: var(--wzc-event-tile-gap);
     grid-template-columns: var(
@@ -711,7 +713,7 @@ export const activityListStyles = css`
     white-space: nowrap;
   }
 
-  @container (max-width: ${responsiveWidths.wide}) {
+  @container activity-list (max-width: ${responsiveWidths.wide}) {
     .tile {
       grid-template-columns:
         var(--wzc-event-thumbnail-inline-size)
@@ -724,7 +726,7 @@ export const activityListStyles = css`
     }
   }
 
-  @container (max-width: ${responsiveWidths.narrow}) {
+  @container activity-list (max-width: ${responsiveWidths.narrow}) {
     .analysis-title {
       align-items: center;
       background: transparent;
@@ -732,7 +734,7 @@ export const activityListStyles = css`
       block-size: 1.5rem;
       bottom: 0.12rem;
       inline-size: 1.5rem;
-      inset-inline-end: calc(var(--wzc-event-action-margin) + 1.5rem + 0.25rem);
+      inset-inline-end: calc(var(--wzc-event-action-margin) + 1.5rem + 1.25rem);
       justify-content: center;
       padding: 0;
       position: absolute;
@@ -767,7 +769,7 @@ export const activityListStyles = css`
     }
   }
 
-  @container (max-width: ${responsiveWidths.compact}) {
+  @container activity-list (max-width: ${responsiveWidths.compact}) {
     .viewport {
       --wzc-activity-actions-display: none;
       --wzc-activity-badge-grid-column: 2 / 4;
@@ -784,6 +786,26 @@ export const activityListStyles = css`
       grid-row: 2;
       justify-self: end;
       max-inline-size: 100%;
+    }
+  }
+
+  /* Two thirds of the canonical 480px compact width: tiles below 320px. */
+  @container activity-tile (max-width: calc(${responsiveWidths.compact} * 2 / 3 - 1px)) {
+    .review-state {
+      --wzc-review-state-block-size: 1.25rem;
+      --wzc-review-state-border-radius: var(--wzc-radius-pill);
+      --wzc-review-state-gap: 0;
+      --wzc-review-state-inline-size: 1.25rem;
+      --wzc-review-state-justify-content: center;
+      --wzc-review-state-label-display: none;
+      --wzc-review-state-min-block-size: 1.25rem;
+      --wzc-review-state-padding: 0;
+      border: 0;
+    }
+
+    .review-state-indicator {
+      block-size: 1.25rem;
+      inline-size: 1.25rem;
     }
   }
 `;

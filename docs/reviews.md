@@ -61,8 +61,12 @@
   smaller 16:9 thumbnail and tile height so the short landscape activity rail
   can expose more Reviews. It omits zone metadata and presents reviewed state
   as an icon-only circular control while preserving its accessible action name
-  and 44-pixel touch target. A narrow tile container may still apply Compact
-  placement as a responsive fallback regardless of its Stage presentation.
+  and 44-pixel touch target. Any individual Review tile narrower than 320 pixels
+  uses that same circular reviewed-state presentation, based on the tile rather
+  than the viewport. Icon-only AI and information actions retain distinct,
+  non-overlapping touch targets. A narrow tile container may still apply
+  Compact placement as a responsive fallback regardless of its Stage
+  presentation.
 - Reviews and Events group tiles by the Home Assistant-localized civil date.
   Each date heading remains at the top of the list viewport while its tiles
   scroll beneath it; the next heading pushes it away at the group boundary.
