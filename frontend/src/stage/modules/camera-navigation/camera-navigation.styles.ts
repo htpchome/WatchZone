@@ -65,7 +65,7 @@ export const cameraNavigationStyles = css`
   }
 
   .items::part(container) {
-    justify-content: center;
+    justify-content: flex-start;
     inline-size: 100%;
     block-size: 100%;
     overflow: hidden;

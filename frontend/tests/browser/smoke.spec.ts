@@ -1369,26 +1369,23 @@ test("keeps camera navigation module and carousel selection bidirectional", asyn
   await expect(buttons).toHaveCount(2);
   await expect(buttons.nth(0)).toHaveText("Front Door");
   await expect(buttons.nth(0)).toHaveAttribute("aria-selected", "true");
-  const navigationCentering = await navigation.evaluate((element) => {
+  const navigationAlignment = await navigation.evaluate((element) => {
     const root = element.shadowRoot;
     const items = root?.querySelector("wzc-segmented-control");
     const itemRoot = items?.shadowRoot;
     const viewport = itemRoot?.querySelector(".segmented-control");
     const options = itemRoot?.querySelectorAll("button");
     const first = options?.item(0).getBoundingClientRect();
-    const last = options
-      ?.item((options?.length ?? 1) - 1)
-      .getBoundingClientRect();
     const viewportRect = viewport?.getBoundingClientRect();
     return {
-      itemsCenter: first && last ? (first.left + last.right) / 2 : 0,
-      viewportCenter: viewportRect
-        ? (viewportRect.left + viewportRect.right) / 2
+      firstOffset: first && viewportRect ? first.left - viewportRect.left : 0,
+      padding: viewport
+        ? Number.parseFloat(getComputedStyle(viewport).paddingLeft)
         : 0,
     };
   });
-  expect(navigationCentering.itemsCenter).toBeCloseTo(
-    navigationCentering.viewportCenter,
+  expect(navigationAlignment.firstOffset).toBeCloseTo(
+    navigationAlignment.padding,
     1,
   );
   await page.locator("camera-optics-card").evaluate((element) => {
@@ -7585,6 +7582,26 @@ test("pages camera navigation without partial camera labels", async ({
   );
   expect(firstPageGeometry.every(({ fullyInside }) => fullyInside)).toBe(true);
   expect(firstPageGeometry.every(({ labelFits }) => labelFits)).toBe(true);
+  const pageAlignment = await navigation.evaluate((element) => {
+    const viewport =
+      element.shadowRoot?.querySelector<HTMLElement>(".viewport");
+    const items = element.shadowRoot?.querySelector("wzc-segmented-control");
+    const container =
+      items?.shadowRoot?.querySelector<HTMLElement>(".segmented-control");
+    const first = container?.querySelector<HTMLElement>(
+      ".segmented-control-option",
+    );
+    if (!viewport || !container || !first) {
+      throw new Error("Navigation page alignment is incomplete");
+    }
+    return {
+      firstOffset:
+        first.getBoundingClientRect().left -
+        viewport.getBoundingClientRect().left,
+      padding: Number.parseFloat(getComputedStyle(container).paddingLeft),
+    };
+  });
+  expect(pageAlignment.firstOffset).toBeCloseTo(pageAlignment.padding, 0);
   const initialNext = await next.evaluate((button) => ({
     count: Number(button.querySelector(".overflow-count")?.textContent),
     label: button.getAttribute("aria-label"),
