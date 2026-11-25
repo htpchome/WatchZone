@@ -364,8 +364,8 @@ export const exportsStyles = css`
     }
 
     .list .tile {
-      grid-template-columns: 6rem minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) 2.75rem;
+      grid-template-columns: 5rem minmax(0, 1fr);
+      grid-template-rows: 3rem 2.75rem;
       block-size: var(--wzc-export-tile-block-size);
     }
 
@@ -376,7 +376,21 @@ export const exportsStyles = css`
 
     .list .details {
       align-content: start;
-      padding: 0.5rem 0.65rem 0;
+      gap: 0;
+      overflow: hidden;
+      padding: 0.25rem 0.65rem;
+    }
+
+    .list .title {
+      line-height: 1.25;
+    }
+
+    .list .metadata {
+      min-inline-size: 0;
+      overflow: hidden;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .list .actions {

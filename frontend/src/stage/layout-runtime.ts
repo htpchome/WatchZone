@@ -704,6 +704,7 @@ export class LayoutRuntime implements ReactiveController {
     return {
       ...this._context,
       ...selected,
+      mobileStage: this._flowName === "phone",
       placeableId: record.node.id,
       stagePresentation: this._layoutProfile?.presentation,
     } as PlaceableRuntimeContext;

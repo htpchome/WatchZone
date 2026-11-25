@@ -39,6 +39,7 @@ export class ActivityNavigationModule extends LitElement {
     locale: { attribute: false },
     localize: { attribute: false },
     mediaDate: { attribute: false },
+    hideSlideshow: { attribute: false },
     navigationContext: { attribute: false },
     presentation: { reflect: true },
     targetStackId: { attribute: false },
@@ -50,6 +51,7 @@ export class ActivityNavigationModule extends LitElement {
   public locale?: HomeAssistantLocale;
   public localize: LocalizeFunction = englishLocalize;
   public mediaDate?: MediaDateContext;
+  public hideSlideshow = false;
   public navigationContext?: ModuleStackNavigationContext;
   public presentation: ActivityNavigationPresentation = "toolbar";
   public targetStackId = "";
@@ -124,11 +126,15 @@ export class ActivityNavigationModule extends LitElement {
     if (!accessories || !scopeId) return nothing;
     if (accessories.filter === "exports") void defineExportFilter();
     return html`<span class="stage-stack-accessories">
-      <wzc-activity-slideshow-toggle
-        .cameraSelection=${this.cameraSelection}
-        .localize=${this.localize}
-        .targetModuleId=${accessories.targetModuleId ?? ""}
-      ></wzc-activity-slideshow-toggle>
+      ${
+        this.hideSlideshow
+          ? nothing
+          : html`<wzc-activity-slideshow-toggle
+              .cameraSelection=${this.cameraSelection}
+              .localize=${this.localize}
+              .targetModuleId=${accessories.targetModuleId ?? ""}
+            ></wzc-activity-slideshow-toggle>`
+      }
       <wzc-activity-takeover-toggle
         .cameraSelection=${this.cameraSelection}
         .localize=${this.localize}

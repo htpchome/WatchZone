@@ -7012,8 +7012,8 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     exports.getByRole("button", { name: "Add to Case — coming soon" }).first(),
   ).toBeDisabled();
   await exports.evaluate((element) => {
-    (element as HTMLElement).style.inlineSize = "360px";
-    (element as HTMLElement).style.maxInlineSize = "360px";
+    (element as HTMLElement).style.inlineSize = "280px";
+    (element as HTMLElement).style.maxInlineSize = "280px";
   });
   await expect
     .poll(async () => (await exportTile.boundingBox())?.height)
@@ -7021,14 +7021,18 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   const compactGeometry = await exportTile.evaluate((tile) => {
     const thumbnail = tile.querySelector(".thumbnail");
     const details = tile.querySelector(".details");
+    const title = tile.querySelector(".title");
+    const metadata = tile.querySelector(".metadata");
     const actions = tile.querySelector(".actions");
     const action = tile.querySelector(".action");
-    if (!thumbnail || !details || !actions || !action) {
+    if (!thumbnail || !details || !title || !metadata || !actions || !action) {
       throw new Error("Compact export tile is incomplete");
     }
     const tileRect = tile.getBoundingClientRect();
     const thumbnailRect = thumbnail.getBoundingClientRect();
     const detailsRect = details.getBoundingClientRect();
+    const titleRect = title.getBoundingClientRect();
+    const metadataRect = metadata.getBoundingClientRect();
     const actionsRect = actions.getBoundingClientRect();
     const actionRect = action.getBoundingClientRect();
     return {
@@ -7037,8 +7041,13 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
       actionsBottom: actionsRect.bottom,
       actionsLeft: actionsRect.left,
       detailsLeft: detailsRect.left,
+      metadataBottom: metadataRect.bottom,
+      metadataWhiteSpace: getComputedStyle(metadata).whiteSpace,
       thumbnailHeight: thumbnailRect.height,
       thumbnailRight: thumbnailRect.right,
+      titleBottom: titleRect.bottom,
+      titleHeight: titleRect.height,
+      titleTop: titleRect.top,
       tileBottom: tileRect.bottom,
       tileHeight: tileRect.height,
     };
@@ -7057,6 +7066,17 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   expect(compactGeometry.actionsBottom).toBeLessThanOrEqual(
     compactGeometry.tileBottom + 0.5,
   );
+  expect(compactGeometry.titleTop).toBeGreaterThanOrEqual(
+    compactGeometry.tileBottom - compactGeometry.tileHeight,
+  );
+  expect(compactGeometry.titleHeight).toBeGreaterThan(0);
+  expect(compactGeometry.titleBottom).toBeLessThanOrEqual(
+    compactGeometry.metadataBottom,
+  );
+  expect(compactGeometry.metadataBottom).toBeLessThanOrEqual(
+    compactGeometry.actionsBottom - compactGeometry.actionHeight,
+  );
+  expect(compactGeometry.metadataWhiteSpace).toBe("nowrap");
   expect(compactGeometry.actionWidth).toBeGreaterThanOrEqual(44);
   expect(compactGeometry.actionHeight).toBeGreaterThanOrEqual(44);
   await exports.evaluate((element) => {
@@ -7073,8 +7093,8 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
     })
     .toBe(true);
   await exports.evaluate((element) => {
-    (element as HTMLElement).style.inlineSize = "360px";
-    (element as HTMLElement).style.maxInlineSize = "360px";
+    (element as HTMLElement).style.inlineSize = "280px";
+    (element as HTMLElement).style.maxInlineSize = "280px";
   });
   await expect
     .poll(async () => (await exportTile.boundingBox())?.height)
@@ -10339,6 +10359,7 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
           lights: [{ entity_id: "light.porch" }],
           two_way_talk_enabled: true,
         },
+        { entity_id: "camera.driveway" },
       ],
       type: "custom:camera-optics-card",
     });
@@ -10351,6 +10372,7 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   const activityNavigationComposition = card.locator(
     '.module-composition[data-module-type="activity-navigation"]',
   );
+  const activityNavigation = card.locator("wzc-activity-navigation");
   const talk = card.locator("wzc-two-way-talk");
   const light = card.locator("wzc-light-control");
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
@@ -10365,6 +10387,8 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   await expect(
     activityNavigationComposition.locator("wzc-light-control"),
   ).toHaveCount(0);
+  await expect(activityNavigation).toHaveJSProperty("hideSlideshow", false);
+  await expect(cameraComposition.locator("wzc-slideshow")).toHaveCount(1);
   const initialVariants = await page.evaluate(
     () =>
       (window as typeof window & { __wzcStageVariants?: string[] })
@@ -10385,6 +10409,11 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   await expect(
     activityNavigationComposition.locator("wzc-light-control"),
   ).toHaveCount(0);
+  await expect(
+    activityNavigation.locator("wzc-activity-slideshow-toggle"),
+  ).toHaveCount(0);
+  await expect(activityNavigation).toHaveJSProperty("hideSlideshow", true);
+  await expect(cameraComposition.locator("wzc-slideshow")).toHaveCount(1);
   await expect(card).not.toHaveCSS("position", "fixed");
   const grouping = await stage.evaluate((element) => {
     const camera = element.querySelector<HTMLElement>(
@@ -10449,7 +10478,10 @@ test("keeps a phone browser on the compact Stage in landscape", async ({
   await card.evaluate((element) => {
     const host = element as HTMLElement & { setConfig(config: unknown): void };
     host.setConfig({
-      cameras: [{ entity_id: "camera.front" }],
+      cameras: [
+        { entity_id: "camera.front" },
+        { entity_id: "camera.driveway" },
+      ],
       type: "custom:camera-optics-card",
     });
   });
@@ -10457,9 +10489,14 @@ test("keeps a phone browser on the compact Stage in landscape", async ({
   const stage = card.locator(".stage-grid");
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  const activityNavigation = card.locator("wzc-activity-navigation");
+  await expect(activityNavigation).toHaveJSProperty("hideSlideshow", false);
+  await expect(card.locator("wzc-slideshow")).toHaveCount(1);
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  await expect(activityNavigation).toHaveJSProperty("hideSlideshow", false);
+  await expect(card.locator("wzc-slideshow")).toHaveCount(1);
   const surfaces = await stage.evaluate((element) => {
     const camera = element.querySelector<HTMLElement>(
       '[data-layout-node$="default-camera-surface"]',

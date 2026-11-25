@@ -45,6 +45,9 @@ export const moduleDefinition: ModuleDefinition<
     navigation.locale = context.hass?.locale;
     navigation.localize = context.localize ?? englishLocalize;
     navigation.mediaDate = context.mediaDate;
+    navigation.hideSlideshow =
+      context.mobileStage === true &&
+      context.stagePresentation === "wide-short";
     navigation.navigationContext = context.moduleStackNavigation;
     navigation.presentation = config.presentation;
     navigation.targetStackId = config.targetStackId;
