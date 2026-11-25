@@ -7011,6 +7011,78 @@ test("shows and filters mixed-camera persistent exports", async ({ page }) => {
   await expect(
     exports.getByRole("button", { name: "Add to Case — coming soon" }).first(),
   ).toBeDisabled();
+  await exports.evaluate((element) => {
+    (element as HTMLElement).style.inlineSize = "360px";
+    (element as HTMLElement).style.maxInlineSize = "360px";
+  });
+  await expect
+    .poll(async () => (await exportTile.boundingBox())?.height)
+    .toBeLessThan(100);
+  const compactGeometry = await exportTile.evaluate((tile) => {
+    const thumbnail = tile.querySelector(".thumbnail");
+    const details = tile.querySelector(".details");
+    const actions = tile.querySelector(".actions");
+    const action = tile.querySelector(".action");
+    if (!thumbnail || !details || !actions || !action) {
+      throw new Error("Compact export tile is incomplete");
+    }
+    const tileRect = tile.getBoundingClientRect();
+    const thumbnailRect = thumbnail.getBoundingClientRect();
+    const detailsRect = details.getBoundingClientRect();
+    const actionsRect = actions.getBoundingClientRect();
+    const actionRect = action.getBoundingClientRect();
+    return {
+      actionHeight: actionRect.height,
+      actionWidth: actionRect.width,
+      actionsBottom: actionsRect.bottom,
+      actionsLeft: actionsRect.left,
+      detailsLeft: detailsRect.left,
+      thumbnailHeight: thumbnailRect.height,
+      thumbnailRight: thumbnailRect.right,
+      tileBottom: tileRect.bottom,
+      tileHeight: tileRect.height,
+    };
+  });
+  expect(compactGeometry.thumbnailHeight).toBeCloseTo(
+    compactGeometry.tileHeight,
+    0,
+  );
+  expect(compactGeometry.detailsLeft).toBeCloseTo(
+    compactGeometry.thumbnailRight,
+    0,
+  );
+  expect(compactGeometry.actionsLeft).toBeGreaterThanOrEqual(
+    compactGeometry.thumbnailRight,
+  );
+  expect(compactGeometry.actionsBottom).toBeLessThanOrEqual(
+    compactGeometry.tileBottom + 0.5,
+  );
+  expect(compactGeometry.actionWidth).toBeGreaterThanOrEqual(44);
+  expect(compactGeometry.actionHeight).toBeGreaterThanOrEqual(44);
+  await exports.evaluate((element) => {
+    (element as HTMLElement).style.inlineSize = "700px";
+    (element as HTMLElement).style.maxInlineSize = "700px";
+  });
+  await expect
+    .poll(async () => {
+      const thumbnail = await exportTile.locator(".thumbnail").boundingBox();
+      const details = await exportTile.locator(".details").boundingBox();
+      return Boolean(
+        thumbnail && details && details.x >= thumbnail.x + thumbnail.width,
+      );
+    })
+    .toBe(true);
+  await exports.evaluate((element) => {
+    (element as HTMLElement).style.inlineSize = "360px";
+    (element as HTMLElement).style.maxInlineSize = "360px";
+  });
+  await expect
+    .poll(async () => (await exportTile.boundingBox())?.height)
+    .toBeCloseTo(compactGeometry.tileHeight, 0);
+  await exports.evaluate((element) => {
+    (element as HTMLElement).style.removeProperty("inline-size");
+    (element as HTMLElement).style.removeProperty("max-inline-size");
+  });
   await exportTile.locator(".tile-player").hover({
     position: { x: 20, y: 20 },
   });

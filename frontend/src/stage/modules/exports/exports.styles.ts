@@ -16,6 +16,7 @@ export const exportsStyles = css`
 
   .viewport {
     position: relative;
+    container-type: inline-size;
     block-size: 100%;
     inline-size: 100%;
     display: grid;
@@ -257,8 +258,8 @@ export const exportsStyles = css`
   .action {
     display: grid;
     place-items: center;
-    inline-size: 2.5rem;
-    block-size: 2.5rem;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
     padding: 0;
     color: var(--wzc-color-text-2);
     background: transparent;
@@ -364,12 +365,34 @@ export const exportsStyles = css`
 
     .list .tile {
       grid-template-columns: 6rem minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) 2.75rem;
+      block-size: var(--wzc-export-tile-block-size);
+    }
+
+    .list .thumbnail {
+      grid-row: 1 / -1;
+      block-size: 100%;
+    }
+
+    .list .details {
+      align-content: start;
+      padding: 0.5rem 0.65rem 0;
     }
 
     .list .actions {
-      grid-column: 1 / -1;
+      grid-column: 2;
       justify-content: end;
-      padding-block-start: 0;
+      flex-wrap: nowrap;
+      gap: 0;
+      padding: 0 0.2rem;
+    }
+
+    .list .tile.draft {
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    .list .draft .actions {
+      display: none;
     }
   }
 `;

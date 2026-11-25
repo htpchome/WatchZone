@@ -21,6 +21,6 @@ runtime[RUNTIME_DIAGNOSTICS_KEY] = Object.freeze({
   version: APP_VERSION,
 });
 
-console.info(APP_NAME, APP_VERSION);
+console.info(APP_NAME, `v${APP_VERSION}`);
 
 export { DashboardCard } from "./card/camera-optics-card";
