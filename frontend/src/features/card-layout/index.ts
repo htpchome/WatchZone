@@ -55,11 +55,6 @@ export class CardLayoutController implements ReactiveController {
   ) {
     this._haLayout = new HomeAssistantLayoutBridge(_host);
     this._viewportFit = new ViewportFitController(_host, this._scheduleMeasure);
-    if (
-      CLIENT_PROFILE.isAndroid &&
-      STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE
-    )
-      _host.classList.add("android-companion");
     _host.addController(this);
   }
 
@@ -90,6 +85,11 @@ export class CardLayoutController implements ReactiveController {
   }
 
   public hostConnected(): void {
+    if (
+      CLIENT_PROFILE.isAndroid &&
+      STAGE_LAYOUT_CLIENT_MODE === STAGE_LAYOUT_COMPANION_MOBILE
+    )
+      this._host.classList.add("android-companion");
     window.addEventListener("resize", this._scheduleMeasure);
     window.visualViewport?.addEventListener("resize", this._scheduleMeasure);
   }

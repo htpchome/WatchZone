@@ -10574,6 +10574,13 @@ test("mirrors Android Companion landscape safe areas", async ({ page }) => {
   });
   await page.goto("/");
   await waitForCameraOpticsDefinition(page);
+  const constructedAttributes = await page.evaluate(() =>
+    Array.from(
+      document.createElement("camera-optics-card").attributes,
+      ({ name }) => name,
+    ),
+  );
+  expect(constructedAttributes).toEqual([]);
   const card = page.locator("camera-optics-card");
   await card.evaluate((element) => {
     const host = element as HTMLElement & { setConfig(config: unknown): void };
