@@ -71,6 +71,10 @@ export function attachWebRtcVideo(
     park: () => {
       video.pause();
       video.srcObject = null;
+      // Reset the element's media pipeline while retaining the peer and its
+      // stream. Some Android WebViews do not release a hardware decoder when
+      // srcObject is cleared alone, preventing the next camera from decoding.
+      video.load();
     },
     resume: () => {
       video.srcObject = connection.stream ?? null;
@@ -79,6 +83,7 @@ export function attachWebRtcVideo(
     close: () => {
       video.pause();
       video.srcObject = null;
+      video.load();
       video.remove();
       connection.close();
     },
