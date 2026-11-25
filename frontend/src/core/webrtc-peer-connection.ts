@@ -72,7 +72,6 @@ export function attachWebRtcVideo(
   const disposeVideo = (element: HTMLVideoElement): void => {
     element.pause();
     element.srcObject = null;
-    element.removeAttribute("src");
     element.load();
     element.remove();
   };

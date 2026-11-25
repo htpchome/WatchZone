@@ -822,7 +822,11 @@ export class CameraModule extends LitElement {
 
   private _syncCameraActivity(): void {
     const manager = getMediaSessionManager();
-    manager.setCameraActivity(this, this._activeEntityId);
+    manager.setCameraActivity(
+      this,
+      this._activeEntityId,
+      CLIENT_PROFILE.isAndroid,
+    );
     manager.setCameraRetentionPreference(
       this,
       this.cameras.map(({ entityId }) => entityId),

@@ -153,6 +153,38 @@ describe("MediaSessionManager", () => {
     manager.closeAll();
   });
 
+  it("closes only inactive WebRTC before an Android camera change", async () => {
+    const webRtcClose = vi.fn();
+    const hlsClose = vi.fn();
+    const webRtcFactory = vi.fn<ConnectionFactory>(async () => ({
+      close: webRtcClose,
+      stream: createStream(),
+      transport: "webrtc",
+    }));
+    const hlsFactory = vi.fn<ConnectionFactory>(async () => ({
+      close: hlsClose,
+      transport: "hls_mse",
+    }));
+    const manager = new MediaSessionManager(webRtcFactory, hlsFactory);
+    const api = createApi();
+    const owner = {};
+    manager.setCameraActivity(owner, "camera.front", true);
+    const webRtc = manager.acquireHomeAssistant(api, "camera.front");
+    const hls = manager.acquireHomeAssistantHls(api, "camera.front");
+    await vi.waitFor(() => expect(webRtc.getSnapshot().state).toBe("live"));
+    await vi.waitFor(() => expect(hls.getSnapshot().state).toBe("live"));
+
+    manager.setCameraActivity(owner, "camera.back", true);
+
+    expect(webRtcClose).toHaveBeenCalledOnce();
+    expect(webRtc.getSnapshot().state).toBe("closed");
+    expect(hlsClose).not.toHaveBeenCalled();
+    expect(hls.getSnapshot().state).toBe("live");
+    webRtc.release();
+    hls.release();
+    manager.closeAll();
+  });
+
   it("keeps desktop media running unchanged while hidden", async () => {
     vi.useFakeTimers();
     const close = vi.fn();
@@ -1280,7 +1312,7 @@ describe("MediaSessionManager", () => {
     ).toThrowError(
       expect.objectContaining({
         code: "capacity_exceeded",
-        message: "Session capacity reached",
+        message: "Capacity",
       }),
     );
     expect(factory).toHaveBeenCalledTimes(MAX_RETAINED_CAMERA_SESSIONS);

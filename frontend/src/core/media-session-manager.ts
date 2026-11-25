@@ -124,7 +124,7 @@ class ManagedMediaSession {
   private _connection?: MediaConnection;
   private _abort?: AbortController;
   private _generation = 0;
-  private _leaseCount = 0;
+  public leases = 0;
   private _options: MediaConnectionOptions = { initialMuted: true };
   private _documentHidden = false;
   private _hiddenUntil = 0;
@@ -174,7 +174,7 @@ class ManagedMediaSession {
       nativeHlsOnly: options.nativeHlsOnly,
     };
     this.lastUsed = performance.now();
-    this._leaseCount += 1;
+    this.leases += 1;
 
     if (transportChanged) {
       this._resetRetry();
@@ -194,7 +194,6 @@ class ManagedMediaSession {
       this._closeConnection();
       this._setSnapshot({
         state: "failed",
-        error: "HA reconnecting",
       });
     } else if (this._snapshot.state === "new") {
       void this._connect(options);
@@ -251,7 +250,7 @@ class ManagedMediaSession {
   }
 
   public isRetained(): boolean {
-    return this._leaseCount === 0;
+    return this.leases === 0;
   }
 
   public isUsable(api: HomeAssistantApi): boolean {
@@ -266,7 +265,7 @@ class ManagedMediaSession {
 
   public async retryFailed(): Promise<void> {
     if (
-      !this._leaseCount ||
+      !this.leases ||
       !["connecting", "failed"].includes(this._snapshot.state)
     )
       return;
@@ -275,7 +274,7 @@ class ManagedMediaSession {
 
   public wake(): void {
     if (
-      !this._leaseCount ||
+      !this.leases ||
       !["connecting", "failed"].includes(this._snapshot.state)
     )
       return;
@@ -297,7 +296,7 @@ class ManagedMediaSession {
       return;
     }
     this._resetRetry("home_assistant");
-    if (this._leaseCount === 0) return;
+    if (this.leases === 0) return;
     this._closeConnection();
     await this._connect();
   }
@@ -316,7 +315,6 @@ class ManagedMediaSession {
         this._closeConnection();
         this._setSnapshot({
           state: "failed",
-          error: "Media suspended",
         });
       }
       return;
@@ -331,7 +329,7 @@ class ManagedMediaSession {
     this._hiddenUntil = 0;
     this._clearHiddenTeardown();
     this._documentHidden = false;
-    if (this._snapshot.state === "closed" || this._leaseCount === 0) return;
+    if (this._snapshot.state === "closed" || this.leases === 0) return;
     // Actively leased HLS is not parked while hidden, but Chromium may still
     // suspend its loader or decoder. Its adapter resume proves media advances;
     // failure closes only that stale transport and queues a fresh connection.
@@ -387,7 +385,7 @@ class ManagedMediaSession {
         return;
       }
       this._connection = connection;
-      if (this._leaseCount === 0) connection.park?.();
+      if (this.leases === 0) connection.park?.();
       if (this._retryCount > 0) {
         this._stableTimer = setTimeout(() => {
           this._stableTimer = undefined;
@@ -397,7 +395,7 @@ class ManagedMediaSession {
         this._resetRetry();
       }
       this._setSnapshot({
-        state: this._leaseCount > 0 ? "live" : "parked",
+        state: this.leases > 0 ? "live" : "parked",
         stream: connection.stream,
         timing: connection.timing,
         transport: connection.transport,
@@ -412,7 +410,7 @@ class ManagedMediaSession {
       timing.setFailure(errorCode);
       this._setSnapshot({
         state: "failed",
-        error: error instanceof Error ? error.message : "Unable to connect",
+        error: error instanceof Error ? error.message : "Failed",
         errorCode,
         timing,
       });
@@ -497,16 +495,16 @@ class ManagedMediaSession {
     this._snapshot.timing?.setReconnect(attempt + 1, delay);
     this._retryTimer = setTimeout(() => {
       this._retryTimer = undefined;
-      if (this._leaseCount > 0 && this._snapshot.state === "failed") {
+      if (this.leases > 0 && this._snapshot.state === "failed") {
         this._queueRetry(this);
       }
     }, delay);
   }
 
   private _release(discard: boolean): void {
-    this._leaseCount = Math.max(0, this._leaseCount - 1);
+    this.leases = Math.max(0, this.leases - 1);
     this.lastUsed = performance.now();
-    if (this._leaseCount > 0) {
+    if (this.leases > 0) {
       // Element-backed transports can have only one DOM attachment. Republish
       // the retained snapshot so another active lease can reclaim it after a
       // preview/editor owner releases without creating a new connection.
@@ -552,13 +550,13 @@ class ManagedMediaSession {
         this._closeConnection();
         this._setSnapshot({ state: "failed" });
         this._retryCause = "media";
-        if (this._leaseCount > 0 && !this._documentHidden) void this._connect();
+        if (this.leases > 0 && !this._documentHidden) void this._connect();
         return;
       }
-      if (this._leaseCount === 0) connection.park?.();
+      if (this.leases === 0) connection.park?.();
       this._setSnapshot({
         ...this._snapshot,
-        state: this._leaseCount > 0 ? "live" : "parked",
+        state: this.leases > 0 ? "live" : "parked",
         usable: proven,
       });
     };
@@ -579,7 +577,7 @@ class ManagedMediaSession {
     this._clearHiddenTeardown();
     if (
       !this._documentHidden ||
-      this._leaseCount === 0 ||
+      this.leases === 0 ||
       !this._connection ||
       !this._snapshot.transport ||
       this._snapshot.transport === "webrtc"
@@ -593,7 +591,7 @@ class ManagedMediaSession {
   private _expireHiddenStream(): void {
     if (
       !this._documentHidden ||
-      this._leaseCount === 0 ||
+      this.leases === 0 ||
       !this._connection ||
       !this._snapshot.transport ||
       this._snapshot.transport === "webrtc"
@@ -664,12 +662,12 @@ export class MediaSessionManager {
   private readonly _retryQueue = new Set<ManagedMediaSession>();
   private _retryBatchTimer?: ReturnType<typeof setTimeout>;
   private _retryDrain?: Promise<void>;
-  private readonly _closeWhenHidden: boolean;
+  private readonly _closeHidden: boolean;
   private _documentHidden = document.visibilityState !== "visible";
   private readonly _retentionPolicy: MediaRetentionPolicy;
 
   public constructor(retentionEnvironment: MediaRetentionEnvironment = {}) {
-    this._closeWhenHidden =
+    this._closeHidden =
       (retentionEnvironment.clientDeviceClass ?? CLIENT_PROFILE.deviceClass) ===
       "phone";
     this._retentionPolicy = new MediaRetentionPolicy(
@@ -703,7 +701,7 @@ export class MediaSessionManager {
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
     if (this._documentHidden) {
-      session.handleDocumentHidden(this._closeWhenHidden);
+      session.handleDocumentHidden(this._closeHidden);
     }
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();
@@ -745,13 +743,27 @@ export class MediaSessionManager {
     return () => this._forcedMuteListeners.delete(listener);
   }
 
-  public setCameraActivity(owner: object, cameraKey: string | undefined): void {
+  public setCameraActivity(
+    owner: object,
+    cameraKey: string | undefined,
+    isAndroid?: boolean,
+  ): void {
     const current = this._activity.get(owner);
     if (current === cameraKey) return;
     if (cameraKey) {
       this._activity.set(owner, cameraKey);
     } else {
       this._activity.delete(owner);
+    }
+    if (current && isAndroid) {
+      for (const session of this._sessions.values()) {
+        if (
+          session.cameraKey === current &&
+          session.retention === "preferred" &&
+          session.leases === 1
+        )
+          session.close();
+      }
     }
     this._applyRetentionPolicy();
     this._pruneCameraRetentionMetadata();
@@ -812,10 +824,7 @@ export class MediaSessionManager {
     if (!session) {
       this._evictIfNeeded();
       if (this._sessions.size >= MAX_RETAINED_CAMERA_SESSIONS) {
-        throw new MediaConnectionError(
-          "capacity_exceeded",
-          "Session capacity reached",
-        );
+        throw new MediaConnectionError("capacity_exceeded", "Capacity");
       }
       session = new ManagedMediaSession(
         key,
@@ -841,7 +850,7 @@ export class MediaSessionManager {
     this._observeConnection(api.identity);
     const lease = session.acquire(api, options);
     if (this._documentHidden) {
-      session.handleDocumentHidden(this._closeWhenHidden);
+      session.handleDocumentHidden(this._closeHidden);
     }
     this._pruneConnectionObservers();
     this._applyRetentionPolicy();
@@ -878,7 +887,7 @@ export class MediaSessionManager {
     if (document.visibilityState !== "visible") {
       this._documentHidden = true;
       for (const session of this._sessions.values()) {
-        session.handleDocumentHidden(this._closeWhenHidden);
+        session.handleDocumentHidden(this._closeHidden);
       }
       return;
     }
