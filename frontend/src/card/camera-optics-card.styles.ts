@@ -154,7 +154,7 @@ export const cardStyles = css`
     display: block;
     inline-size: 100%;
     max-inline-size: none;
-    block-size: 100%;
+    block-size: auto;
     max-block-size: none;
     margin: 0;
     overflow: visible;
