@@ -16,15 +16,30 @@ import {
   type StageLayoutProfile,
 } from "../../stage/layout";
 import { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
-import type { CompanionRotationSettlement } from "./companion-rotation-settlement";
+import type {
+  CompanionLandscapeGeometry,
+  CompanionRotationSettlement,
+} from "./companion-rotation-settlement";
 import { ViewportFitController } from "./viewport-fit.controller";
 
 export { HomeAssistantLayoutBridge } from "./home-assistant-layout-bridge";
 export { ViewportFitController } from "./viewport-fit.controller";
 
 interface CardLayoutHost extends ReactiveControllerHost, HTMLElement {
+  readonly preview?: boolean;
   readonly renderRoot: DocumentFragment | HTMLElement;
 }
+
+const IMMERSIVE_GEOMETRY_PROPERTIES = [
+  "--wzc-immersive-safe-bottom",
+  "--wzc-immersive-safe-left",
+  "--wzc-immersive-safe-right",
+  "--wzc-immersive-safe-top",
+  "--wzc-immersive-viewport-height",
+  "--wzc-immersive-viewport-left",
+  "--wzc-immersive-viewport-top",
+  "--wzc-immersive-viewport-width",
+] as const;
 
 const STAGE_LAYOUT_CLIENT_MODE =
   CLIENT_PROFILE.isCompanionApp && CLIENT_PROFILE.isMobile
@@ -48,6 +63,7 @@ export class CardLayoutController implements ReactiveController {
   private readonly _haLayout: HomeAssistantLayoutBridge;
   private _heightMode: CardHeightMode = "auto";
   private _committedCompanionPortrait?: boolean;
+  private _immersiveEligible = false;
   private _companionLandscapePending = false;
   private _companionSettlement?: Promise<CompanionRotationSettlement>;
   private _resizeFrame?: number;
@@ -76,6 +92,8 @@ export class CardLayoutController implements ReactiveController {
       edgeToEdge && CLIENT_PROFILE.isCompanionApp && fitViewport;
     const browserEdgeToEdge =
       fitViewport && edgeToEdge && CLIENT_PROFILE.application === "browser";
+    const wasImmersiveEligible = this._immersiveEligible;
+    this._immersiveEligible = config.stage_type === "full";
 
     this._host.classList.toggle("mobile-edge-to-edge", edgeToEdge);
     this._host.classList.toggle(
@@ -84,6 +102,14 @@ export class CardLayoutController implements ReactiveController {
     );
     this._haLayout.configure(edgeToEdge);
     this._viewportFit.configure(fitViewport, browserEdgeToEdge);
+    if (!this._immersiveEligible) {
+      this._releaseCompanionImmersiveShell();
+    } else if (
+      !wasImmersiveEligible &&
+      this._committedCompanionPortrait === false
+    ) {
+      this._beginCompanionLandscapeSettlement();
+    }
     for (const value of ["auto", "fit-viewport", "fill-container"]) {
       this._host.classList.toggle(
         `height-mode-${value}`,
@@ -130,6 +156,7 @@ export class CardLayoutController implements ReactiveController {
       cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = undefined;
     this._cancelCompanionLandscapeSettlement();
+    this._releaseCompanionImmersiveShell();
     this._haLayout.release();
   }
 
@@ -199,7 +226,7 @@ export class CardLayoutController implements ReactiveController {
     const settlement = (this._companionSettlement ??=
       import("./companion-rotation-settlement").then(
         ({ CompanionRotationSettlement }) =>
-          new CompanionRotationSettlement(this._host),
+          new CompanionRotationSettlement(this._host, CLIENT_PROFILE.isAndroid),
       ));
     void settlement.then((controller) => {
       const boundary = this._sizeBoundary;
@@ -207,21 +234,61 @@ export class CardLayoutController implements ReactiveController {
         this._companionLandscapePending = false;
         return;
       }
-      controller.start(boundary, (inlineInset) => {
+      controller.start(boundary, (geometry) => {
         this._companionLandscapePending = false;
         if (this._companionPortraitQuery?.matches) return;
-        this._commitCompanionProfile(
-          false,
-          CLIENT_PROFILE.isAndroid ? inlineInset : 0,
-        );
+        this._commitCompanionProfile(false, geometry);
       });
     });
   }
 
-  private _commitCompanionProfile(portrait: boolean, inlineInset = 0): void {
-    this._host.style.setProperty("--wzc-stage-safe-inline", `${inlineInset}px`);
+  private _commitCompanionProfile(
+    portrait: boolean,
+    geometry?: CompanionLandscapeGeometry,
+  ): void {
+    if (portrait || !geometry || !this._canUseCompanionImmersiveShell()) {
+      this._releaseCompanionImmersiveShell();
+    } else {
+      this._applyCompanionImmersiveShell(geometry);
+    }
     this._committedCompanionPortrait = portrait;
     this._setLayoutProfile(companionStageLayoutProfile(portrait));
+  }
+
+  private _canUseCompanionImmersiveShell(): boolean {
+    return (
+      this._immersiveEligible &&
+      !this._host.classList.contains("card-picker-preview-host") &&
+      this._host.preview !== true
+    );
+  }
+
+  private _applyCompanionImmersiveShell(
+    geometry: CompanionLandscapeGeometry,
+  ): void {
+    const values: Readonly<
+      Record<(typeof IMMERSIVE_GEOMETRY_PROPERTIES)[number], number>
+    > = {
+      "--wzc-immersive-safe-bottom": geometry.safeBottom,
+      "--wzc-immersive-safe-left": geometry.safeLeft,
+      "--wzc-immersive-safe-right": geometry.safeRight,
+      "--wzc-immersive-safe-top": geometry.safeTop,
+      "--wzc-immersive-viewport-height": geometry.viewportHeight,
+      "--wzc-immersive-viewport-left": geometry.viewportLeft,
+      "--wzc-immersive-viewport-top": geometry.viewportTop,
+      "--wzc-immersive-viewport-width": geometry.viewportWidth,
+    };
+    for (const property of IMMERSIVE_GEOMETRY_PROPERTIES) {
+      this._host.style.setProperty(property, `${values[property]}px`);
+    }
+    this._host.classList.add("companion-landscape-immersive");
+  }
+
+  private _releaseCompanionImmersiveShell(): void {
+    this._host.classList.remove("companion-landscape-immersive");
+    for (const property of IMMERSIVE_GEOMETRY_PROPERTIES) {
+      this._host.style.removeProperty(property);
+    }
   }
 
   private _cancelCompanionLandscapeSettlement(): void {

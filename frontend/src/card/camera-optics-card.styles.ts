@@ -124,10 +124,6 @@ export const cardStyles = css`
     margin-block-end: calc(-1 * var(--wzc-safe-area-inset-bottom, 0px));
   }
 
-  :host(.android-companion) .stage-grid[data-stage-presentation="wide-short"] {
-    padding-inline: var(--wzc-stage-safe-inline);
-  }
-
   :host(.height-mode-fill-container) ha-card {
     block-size: 100%;
     height: 100%;
@@ -150,6 +146,43 @@ export const cardStyles = css`
     min-block-size: 0;
     padding: 0;
     container-type: inline-size;
+  }
+
+  :host(.companion-landscape-immersive) {
+    position: fixed !important;
+    top: var(--wzc-immersive-viewport-top) !important;
+    left: var(--wzc-immersive-viewport-left) !important;
+    z-index: 2147483000;
+    isolation: isolate;
+    box-sizing: border-box;
+    inline-size: var(--wzc-immersive-viewport-width) !important;
+    max-inline-size: none !important;
+    block-size: var(--wzc-immersive-viewport-height) !important;
+    height: var(--wzc-immersive-viewport-height) !important;
+    margin: 0 !important;
+    overflow: hidden;
+    overscroll-behavior: none;
+    padding-block: var(--wzc-immersive-safe-top)
+      var(--wzc-immersive-safe-bottom);
+    padding-inline: var(--wzc-immersive-safe-left)
+      var(--wzc-immersive-safe-right);
+    background: var(--wzc-card-background);
+  }
+
+  :host(.companion-landscape-immersive) :is(ha-card, .shell) {
+    inline-size: 100%;
+    block-size: 100% !important;
+    height: 100% !important;
+    min-block-size: 0;
+  }
+
+  :host(.companion-landscape-immersive) ha-card {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   .card-toast {

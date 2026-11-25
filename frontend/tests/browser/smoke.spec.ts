@@ -10426,7 +10426,7 @@ test("uses mobile viewport sizing without edge-to-edge on Companion tablets", as
   });
 });
 
-test("selects the Companion short-wide mobile Stage without leaving card flow", async ({
+test("commits the Companion short-wide Stage inside its immersive shell", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -10464,10 +10464,26 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   await page.goto("/");
   await waitForCameraOpticsDefinition(page);
   const card = page.locator("camera-optics-card");
+  await page.evaluate(() => {
+    const chrome = document.createElement("div");
+    chrome.id = "simulated-ha-chrome";
+    Object.assign(chrome.style, {
+      background: "rgb(255, 0, 0)",
+      height: "64px",
+      left: "0",
+      position: "fixed",
+      top: "0",
+      width: "100%",
+      zIndex: "100",
+    });
+    document.body.append(chrome);
+  });
   await card.evaluate((element) => {
     const host = element as HTMLElement & {
       setConfig(config: unknown): void;
     };
+    host.style.setProperty("--safe-area-inset-left", "18px");
+    host.style.setProperty("--safe-area-inset-right", "20px");
     host.setConfig({
       cameras: [
         {
@@ -10515,6 +10531,27 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(stage).toHaveAttribute("data-stage-variant", "default");
   await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
+  await expect(card).toHaveClass(/companion-landscape-immersive/);
+  await expect(card).toHaveCSS("position", "fixed");
+  await expect(card).toHaveCSS("padding-left", "18px");
+  await expect(card).toHaveCSS("padding-right", "20px");
+  const immersiveGeometry = await card.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      blockSize: bounds.height,
+      inlineSize: bounds.width,
+      left: bounds.left,
+      ownsTopPoint: document.elementFromPoint(10, 10) === element,
+      top: bounds.top,
+    };
+  });
+  expect(immersiveGeometry).toEqual({
+    blockSize: 390,
+    inlineSize: 844,
+    left: 0,
+    ownsTopPoint: true,
+    top: 0,
+  });
   await expect(talk).toHaveAttribute("presentation", "overlay");
   await expect(light).toHaveAttribute("presentation", "overlay");
   await expect(cameraComposition.locator("wzc-two-way-talk")).toHaveCount(1);
@@ -10530,7 +10567,6 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   ).toHaveCount(0);
   await expect(activityNavigation).toHaveJSProperty("hideSlideshow", true);
   await expect(cameraComposition.locator("wzc-slideshow")).toHaveCount(1);
-  await expect(card).not.toHaveCSS("position", "fixed");
   const grouping = await stage.evaluate((element) => {
     const camera = element.querySelector<HTMLElement>(
       '[data-layout-node$="default-camera-surface"]',
@@ -10618,6 +10654,8 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  await expect(card).not.toHaveClass(/companion-landscape-immersive/);
+  await expect(card).not.toHaveCSS("position", "fixed");
   const rotationFrames = await page.evaluate(async () => {
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -10644,6 +10682,7 @@ test("selects the Companion short-wide mobile Stage without leaving card flow", 
   });
   await expect(stage).toHaveAttribute("data-stage-variant", "phone");
   await expect(stage).toHaveAttribute("data-stage-presentation", "compact");
+  await expect(card).not.toHaveClass(/companion-landscape-immersive/);
 });
 
 test("mirrors Android Companion landscape safe areas", async ({ page }) => {
@@ -10678,8 +10717,9 @@ test("mirrors Android Companion landscape safe areas", async ({ page }) => {
   const stage = card.locator(".stage-grid");
   await expect(stage).toHaveAttribute("data-stage-presentation", "wide-short");
   await expect(card).toHaveClass(/android-companion/);
-  await expect(stage).toHaveCSS("padding-left", "24px");
-  await expect(stage).toHaveCSS("padding-right", "24px");
+  await expect(card).toHaveClass(/companion-landscape-immersive/);
+  await expect(card).toHaveCSS("padding-left", "24px");
+  await expect(card).toHaveCSS("padding-right", "24px");
 });
 
 test("commits delayed Android landscape safe area with the Stage", async ({
@@ -10717,16 +10757,47 @@ test("commits delayed Android landscape safe area with the Stage", async ({
   });
 
   await expect(stage).toHaveAttribute("data-stage-variant", "default");
-  await expect(stage).toHaveCSS("padding-left", "26px");
-  await expect(stage).toHaveCSS("padding-right", "26px");
+  await expect(card).toHaveClass(/companion-landscape-immersive/);
+  await expect(card).toHaveCSS("padding-left", "26px");
+  await expect(card).toHaveCSS("padding-right", "26px");
 
   await card.evaluate((element) => {
     const host = element as HTMLElement;
     host.style.setProperty("--safe-area-inset-right", "34px");
   });
   await page.waitForTimeout(100);
-  await expect(stage).toHaveCSS("padding-left", "26px");
-  await expect(stage).toHaveCSS("padding-right", "26px");
+  await expect(card).toHaveCSS("padding-left", "26px");
+  await expect(card).toHaveCSS("padding-right", "26px");
+});
+
+test("keeps non-Full Companion Stages in Home Assistant flow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      get: () =>
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Home Assistant/2026.9 Mobile/HomeAssistant, like Safari",
+    });
+  });
+  await page.goto("/");
+  await waitForCameraOpticsDefinition(page);
+  const card = page.locator("camera-optics-card");
+  await card.evaluate((element) => {
+    (element as HTMLElement & { setConfig(config: unknown): void }).setConfig({
+      cameras: [{ entity_id: "camera.front" }],
+      stage_type: "camera_only",
+      type: "custom:camera-optics-card",
+    });
+  });
+
+  await expect(card.locator(".stage-grid")).toHaveAttribute(
+    "data-stage-presentation",
+    "wide-short",
+  );
+  await expect(card).not.toHaveClass(/companion-landscape-immersive/);
+  await expect(card).not.toHaveCSS("position", "fixed");
 });
 
 test("keeps a phone browser on the compact Stage in landscape", async ({

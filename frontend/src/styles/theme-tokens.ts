@@ -234,7 +234,14 @@ export const themeTokens = css`
       --safe-area-inset-right,
       env(safe-area-inset-right, 0px)
     );
-    --wzc-stage-safe-inline: 0px;
+    --wzc-immersive-safe-bottom: 0px;
+    --wzc-immersive-safe-left: 0px;
+    --wzc-immersive-safe-right: 0px;
+    --wzc-immersive-safe-top: 0px;
+    --wzc-immersive-viewport-height: 100dvh;
+    --wzc-immersive-viewport-left: 0px;
+    --wzc-immersive-viewport-top: 0px;
+    --wzc-immersive-viewport-width: 100dvw;
     --wzc-media-safe-area-underlap: 0px;
     --wzc-stage-module-gap: clamp(0.5rem, 1.5cqi, 1rem);
     --wzc-card-outer-shadow: var(--wzc-shadow-medium);

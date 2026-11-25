@@ -215,13 +215,13 @@ Review and recording modules in the built-in Stage consume the active
 physical-camera scope published through context; overlapping grouped
 recordings remain separate source rows. The independently loadable Events
 module remains available to user-created Stage Designs.
-Stage slots do not consume device safe-area insets: a Stage is contained inside
-the Home Assistant card, not attached to a physical viewport edge. The outer
-mobile Stage has one host-owned exception in Android Companion landscape: it
-mirrors the larger system-UI inline inset onto both sides because that WebView
-may expose only the occupied edge. The value never enters slot, module, or
-Camera-overlay geometry. A true viewport-edge presentation such as fullscreen
-owns its own safe-area treatment.
+Stage slots do not consume device safe-area insets. The Companion Full Stage
+has one host-owned landscape exception: its CSS immersive card shell meets the
+physical viewport edge and therefore owns the viewport safe areas. On Android,
+that shell mirrors the larger system-UI inline inset onto both sides because
+the WebView may expose only the occupied edge. Insets never enter slot, module,
+or Camera-overlay geometry. Browser-native fullscreen remains independently
+owned by the media presentation.
 
 Module-stack selection state is owned by the Stage runtime and published through
 typed Stage context; it is not owned by any child module. An independently
@@ -271,8 +271,10 @@ headings.
   its own variant.
 - Companion mobile is the narrow host-policy exception: authoritative browser
   orientation enters its `default` variant only after host, visual-viewport,
-  and safe-area geometry settle. A physically narrow card exits a stale
-  `default` variant immediately; resize dimensions never enter it.
+  and safe-area geometry settle. The Full Stage enters its viewport-covering
+  CSS immersive shell in that same commit. A physically narrow card exits a
+  stale `default` variant and immersive shell immediately; resize dimensions
+  never enter either.
 - No Stage variant mounts before the first real layout-profile measurement;
   the runtime has no provisional default geometry.
 - The built-in mobile Full Stage keeps two stable nested surfaces across its

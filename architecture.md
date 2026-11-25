@@ -850,8 +850,11 @@ a saved layout contains:
 - Explicit fractional or intrinsic-content sizing for each logical grid row.
 - Explicit standard/mobile physical-client eligibility, independent of
   `default` and `phone` responsive variants. Physical phone eligibility does
-  not change when its container widens on rotation. Orientation does not
-  activate a viewport-level layout or change the mobile flow.
+  not change when its container widens on rotation. Orientation does not change
+  the mobile flow. The Full Stage has one host-owned viewport exception:
+  Companion mobile landscape may enter a CSS immersive shell that covers Home
+  Assistant chrome without invoking the browser Fullscreen API. Modules and
+  Stage slots remain container-owned inside that shell.
 - Responsive variants whose corresponding nodes reuse stable IDs.
 - Responsive selection is two-dimensional without becoming device-specific:
   container inline size selects structural variants, while bounded available

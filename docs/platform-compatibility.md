@@ -39,20 +39,20 @@ new browser API makes another platform easier or faster.
   viewport edge, such as fullscreen. Card-contained Stage, carousel, control,
   toast, and dialog surfaces use their own local geometry; applying viewport
   safe-area values there would offset the same control differently by host
-  device. A phone edge-to-edge card in `fit_viewport` mode is the narrow
+  device. A phone edge-to-edge card in `fit_viewport` mode is one narrow
   exception: its outer card boundary underlaps the complete bottom inset so
   media tiles can travel behind host chrome. CameraOptics does not draw a cover
   surface over that content. The complete hardware inset remains retained for
   underlap and scroll clearance. Floating media-list controls are offset above
-  that complete inset and never occupy the unsafe band. Android Companion
-  landscape is a second narrow exception: the outer mobile Stage mirrors the
-  larger reported inline inset onto both sides because Android WebView may
-  report an inset only on the edge containing system UI. The mirrored value
-  does not enter Camera overlay or module-local geometry, and iOS retains its
-  native two-sided values. In Companion, the edge-to-edge card overlaps Home
-  Assistant's equal trailing safe-area space without adding that inset to the
-  card viewport height, so the outer window remains fixed; only the media
-  viewport scrolls beneath the safe area. Home Assistant's
+  that complete inset and never occupy the unsafe band. In Companion, the
+  edge-to-edge card overlaps Home Assistant's equal trailing safe-area space
+  without adding that inset to the card viewport height, so the outer window
+  remains fixed; only the media viewport scrolls beneath the safe area.
+  Companion Full Stage landscape is a second viewport-edge exception: its
+  CameraOptics-owned CSS immersive shell covers Home Assistant chrome, applies
+  all safe-area padding at the shell boundary, and prevents that geometry from
+  entering Stage slots or Camera overlays. Android mirrors the larger inline
+  inset onto both sides; iOS retains its reported left and right values. Home Assistant's
   Companion-aware safe-area custom property is authoritative and the browser
   environment inset is only its fallback. Respect text scaling, reduced
   motion, orientation changes, and Home Assistant theme tokens where they
@@ -152,11 +152,12 @@ and safe-area geometry before that commit. A physically narrow card may leave
 the landscape structure immediately while the host's orientation media state
 catches up, preventing a stale two-column Stage from painting in portrait.
 Other transient window, visual-viewport, and container dimensions cannot enter
-the landscape variant. Phone browsers and phone PWAs remain on the compact,
+the landscape variant. A Companion Full Stage covers Home Assistant chrome
+with a CameraOptics CSS immersive shell in the same settled commit; this is not
+the browser Fullscreen API. Phone browsers and phone PWAs remain on the compact,
 single-column mobile Stage in both orientations because CameraOptics cannot own
 their browser chrome. Tablet browsers, desktop browsers, and Catalyst remain
-container-responsive. This policy does not enter native fullscreen or remove
-Home Assistant chrome.
+container-responsive.
 
 For the browser-only Stage policy, a touch device whose physical CSS display
 has a short edge below the canonical `600px` Stage boundary is treated as a

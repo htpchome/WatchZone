@@ -113,15 +113,18 @@ camera or make the media region unusable. Module minimums derive from current
 CSS geometry, so supported theme or user changes to tile sizing also change the
 minimum without a parallel pixel constant.
 
-Phone orientation does not activate a viewport overlay or fullscreen
-presentation. The mobile Stage remains in normal Home Assistant flow. Narrow
+Phone-browser orientation does not activate a viewport overlay or fullscreen
+presentation. Its mobile Stage remains in normal Home Assistant flow. Narrow
 containers use the compact stacked variant. Companion mobile instead makes one
 structural selection from authoritative browser orientation: compact in
-portrait or square and `wide-short` in landscape. Entry into `wide-short`
-waits for stable host, visual-viewport, and safe-area geometry. A card that has
-already become physically narrow leaves a stale landscape structure
-immediately, while transient dimensions cannot enter `wide-short`. Other
-containers at least `600px` wide may use the static
+portrait or square and `wide-short` in landscape. A Full Stage enters a
+CameraOptics-owned CSS immersive shell with the same landscape commit; that
+shell covers Home Assistant chrome but does not invoke the browser Fullscreen
+API. Entry waits for stable host, visual-viewport, and safe-area geometry, and
+the shell applies those safe areas before exposing the landscape structure. A
+card that has already become physically narrow leaves the shell and stale
+landscape structure immediately, while transient dimensions cannot enter
+`wide-short`. Other containers at least `600px` wide may use the static
 wide variant, with short available height identified by the shared
 `wide-short` presentation profile. Both variants preserve a Camera plus Camera
 Navigation surface and a Control Bar plus Activity surface.
