@@ -2,7 +2,7 @@
 
 DOMAIN = "camera_optics"
 NAME = "CameraOptics"
-VERSION = "0.0.5-dev.62"
+VERSION = "0.0.5-dev.63"
 CONFIG_ENTRY_VERSION = 2
 
 DATA_RUNTIME = "runtime"

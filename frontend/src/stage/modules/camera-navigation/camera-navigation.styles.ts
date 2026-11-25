@@ -68,16 +68,49 @@ export const cameraNavigationStyles = css`
     justify-content: center;
     inline-size: 100%;
     block-size: 100%;
-  }
-
-  .items.overflowing::part(container) {
-    justify-content: flex-start;
+    overflow: hidden;
   }
 
   .viewport {
+    position: relative;
     min-inline-size: 0;
     block-size: 100%;
     overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  .measurement {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: var(--wzc-camera-navigation-gap);
+    inline-size: max-content;
+    padding: var(--wzc-camera-navigation-padding);
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .measurement-item {
+    display: inline-flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 0.25rem;
+    min-block-size: var(--wzc-camera-navigation-item-size);
+    padding: 0.25rem var(--wzc-camera-navigation-item-padding);
+    font-size: inherit;
+    font-weight: var(--wzc-font-weight-medium);
+    white-space: nowrap;
+  }
+
+  .measurement-icon,
+  .measurement-icon svg {
+    display: block;
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
   }
 
   .overflow-slot {

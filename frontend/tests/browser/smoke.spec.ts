@@ -7518,7 +7518,7 @@ test("keeps the HA pre-editor wrapper stable with bounded navigation observation
   expect(navigationObservations).toBeLessThanOrEqual(4);
 });
 
-test("scrolls overflow camera navigation with directional counts", async ({
+test("pages camera navigation without partial camera labels", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -7549,48 +7549,98 @@ test("scrolls overflow camera navigation with directional counts", async ({
 
   const navigation = page.locator("wzc-camera-navigation");
   const cameraButtons = navigation.locator(".items button");
-  await expect(cameraButtons).toHaveCount(8);
   await navigation.evaluate((element) => {
     element.style.inlineSize = "20rem";
   });
-  const viewport = navigation.locator(".items .segmented-control");
+  await expect.poll(() => cameraButtons.count()).toBeGreaterThan(1);
+  await expect.poll(() => cameraButtons.count()).toBeLessThan(8);
+  const viewport = navigation.locator(".viewport");
   const previous = navigation.locator(
     ".overflow-slot.previous .overflow-control",
   );
   const next = navigation.locator(".overflow-slot.next .overflow-control");
-  await viewport.evaluate((element) => {
-    element.scrollLeft = 0;
-    element.dispatchEvent(new Event("scroll"));
-  });
   await expect(previous).toHaveCount(0);
   await expect(next).toBeVisible();
+  const firstPageValues = await cameraButtons.evaluateAll((buttons) =>
+    buttons.map((button) => (button as HTMLElement).dataset.value ?? ""),
+  );
+  const firstPageGeometry = await cameraButtons.evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const root = button.getRootNode();
+      const viewport =
+        root instanceof ShadowRoot
+          ? (root.host.closest(".viewport") as HTMLElement | null)
+          : null;
+      const label = button.querySelector<HTMLElement>(".option-label");
+      if (!viewport || !label) throw new Error("Navigation page is incomplete");
+      const viewportRect = viewport.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      return {
+        fullyInside:
+          buttonRect.left >= viewportRect.left - 1 &&
+          buttonRect.right <= viewportRect.right + 1,
+        labelFits: label.scrollWidth <= label.clientWidth + 1,
+      };
+    }),
+  );
+  expect(firstPageGeometry.every(({ fullyInside }) => fullyInside)).toBe(true);
+  expect(firstPageGeometry.every(({ labelFits }) => labelFits)).toBe(true);
   const initialNext = await next.evaluate((button) => ({
     count: Number(button.querySelector(".overflow-count")?.textContent),
     label: button.getAttribute("aria-label"),
   }));
   const initialNextCount = initialNext.count;
-  expect(initialNextCount).toBeGreaterThan(0);
+  expect(initialNextCount).toBe(8 - firstPageValues.length);
   expect(initialNext.label).toBe(`Show ${initialNextCount} later cameras`);
-  await expect(viewport).toHaveCSS("overflow-x", "auto");
-  await expect(viewport).toHaveCSS("touch-action", /pan-x/);
-  await expect(viewport).toHaveCSS("scroll-snap-type", "x");
+  await expect(viewport).toHaveCSS("overflow", "hidden");
+  await expect(viewport).toHaveCSS("touch-action", "pan-y");
   const pagePosition = await page.evaluate(() => ({
     x: window.scrollX,
     y: window.scrollY,
   }));
   await next.evaluate((button) => (button as HTMLButtonElement).click());
   await expect
-    .poll(() => viewport.evaluate((element) => element.scrollLeft))
-    .toBeGreaterThan(0);
-  await expect(previous).toBeVisible();
-  await expect
-    .poll(async () =>
-      (await next.count()) === 0
-        ? 0
-        : Number(await next.locator(".overflow-count").textContent()),
+    .poll(() =>
+      cameraButtons.first().evaluate((button) => button.dataset.value),
     )
-    .toBeLessThan(initialNextCount);
+    .not.toBe(firstPageValues[0]);
+  await expect(previous).toBeVisible();
+  await expect(previous.locator(".overflow-count")).toHaveText(
+    String(firstPageValues.length),
+  );
 
+  const secondPageFirst = await cameraButtons
+    .first()
+    .getAttribute("data-value");
+  if ((await next.count()) > 0) {
+    await viewport.dispatchEvent("pointerdown", {
+      clientX: 200,
+      clientY: 20,
+      isPrimary: true,
+      pointerId: 1,
+    });
+    await viewport.dispatchEvent("pointerup", {
+      clientX: 100,
+      clientY: 22,
+      isPrimary: true,
+      pointerId: 1,
+    });
+    await expect
+      .poll(() => cameraButtons.first().getAttribute("data-value"))
+      .not.toBe(secondPageFirst);
+  }
+
+  while ((await next.count()) > 0) {
+    const before = Number(await next.locator(".overflow-count").textContent());
+    await next.evaluate((button) => (button as HTMLButtonElement).click());
+    await expect
+      .poll(async () =>
+        (await next.count()) === 0
+          ? 0
+          : Number(await next.locator(".overflow-count").textContent()),
+      )
+      .toBeLessThan(before);
+  }
   await cameraButtons
     .last()
     .evaluate((button) => (button as HTMLButtonElement).click());

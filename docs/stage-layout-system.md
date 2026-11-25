@@ -278,6 +278,9 @@ headings.
 - The built-in mobile Full Stage keeps two stable nested surfaces across its
   variants: Camera plus Camera Navigation, and Control Bar plus the active
   Reviews, Recordings, Exports, or PTZ stack.
+- Camera Navigation owns container-measured pages of consecutive, fully visible
+  camera labels. Its controls and horizontal swipe advance exactly one page,
+  while selection and resize reveal the page containing the active camera.
 - In the `wide-short` presentation, the Activity surface is constrained to the
   Camera plus Camera Navigation surface height; its active media list owns the
   internal scrolling and cannot extend the Stage row.

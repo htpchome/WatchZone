@@ -250,9 +250,13 @@ selectors and Camera Navigation consume the exact same
 `--wzc-selection-bar-background` token without an editor-only outline or color
 override. Compact segmented selectors use the semantic small shadow on their
 outer track. Camera Navigation retains its separately configurable bar corners
-and outer shadow. Its nested scrolling segmented-control track remains
-transparent, borderless, and shadowless so the outer navigation surface is not
-painted twice.
+and outer shadow. Its nested segmented-control track remains transparent,
+borderless, and shadowless so the outer navigation surface is not painted
+twice. Camera Navigation divides consecutive cameras into container-measured
+pages containing only complete labels. Swipe and overflow controls advance one
+page; resizing and external camera selection keep the selected camera's page
+visible. The paging policy is identical across physical clients and Stage
+variants.
 
 The isolated editor bridge applies the editor-shell role to Home Assistant's
 owning card-edit dialog for its complete lifetime, including Home Assistant's

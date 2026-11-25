@@ -10,8 +10,10 @@ import {
   type LocalizeFunction,
 } from "../../../core/localization";
 import { cameraNavigationStyles } from "./camera-navigation.styles";
-import type { SegmentedControlValueDetail } from "../../../ui/segmented-control";
-import type { SegmentedControl } from "../../../ui/segmented-control";
+import type {
+  SegmentedControlOption,
+  SegmentedControlValueDetail,
+} from "../../../ui/segmented-control";
 import "../../../ui/segmented-control";
 import { renderIcon } from "../../../ui/icons";
 import { CameraNavigationOverflowController } from "./overflow.controller";
@@ -57,6 +59,34 @@ export class CameraNavigationModule extends LitElement {
     if (this._state.items.length === 0) return nothing;
     const selectedValue =
       this._state.activeSelectionId ?? this._state.activeEntityId ?? "";
+    const options: readonly SegmentedControlOption[] = this._state.items.map(
+      ({ activity, entityId, label, position }) => ({
+        accessibleLabel: activity
+          ? this.localize(`camera.activity_${activity}`, {
+              camera: label,
+            })
+          : label,
+        indicator: activity
+          ? {
+              icon: "alertCircle" as const,
+              tone:
+                activity === "alert"
+                  ? ("danger" as const)
+                  : ("warning" as const),
+            }
+          : undefined,
+        label,
+        leadingIcon: position
+          ? (`arrow${position[0]?.toUpperCase()}${position.slice(1)}` as
+              "arrowDown" | "arrowLeft" | "arrowRight" | "arrowUp")
+          : undefined,
+        value: entityId,
+      }),
+    );
+    const visibleOptions = options.slice(
+      this._overflow.startIndex,
+      this._overflow.endIndex,
+    );
     return html`<nav
       class=${[
         "bar",
@@ -88,37 +118,36 @@ export class CameraNavigationModule extends LitElement {
       </span>
       <div class="viewport">
         <wzc-segmented-control
-          class=${this._overflow.overflowing ? "items overflowing" : "items"}
+          class="items"
           appearance="navigation"
           mode="tab"
           .label=${this.localize("camera.navigation")}
-          .options=${this._state.items.map(
-            ({ activity, entityId, label, position }) => ({
-              accessibleLabel: activity
-                ? this.localize(`camera.activity_${activity}`, {
-                    camera: label,
-                  })
-                : label,
-              indicator: activity
-                ? {
-                    icon: "alertCircle" as const,
-                    tone:
-                      activity === "alert"
-                        ? ("danger" as const)
-                        : ("warning" as const),
-                  }
-                : undefined,
-              label,
-              leadingIcon: position
-                ? (`arrow${position[0]?.toUpperCase()}${position.slice(1)}` as
-                    "arrowDown" | "arrowLeft" | "arrowRight" | "arrowUp")
-                : undefined,
-              value: entityId,
-            }),
-          )}
+          .options=${visibleOptions}
           .value=${selectedValue}
           @wzc-segmented-control-value=${this._select}
         ></wzc-segmented-control>
+        <span class="measurement" aria-hidden="true">
+          ${options.map(
+            ({ indicator, label, leadingIcon, value }) =>
+              html`<span class="measurement-item" data-value=${value}>
+                ${
+                  leadingIcon
+                    ? html`<span class="measurement-icon"
+                        >${renderIcon(leadingIcon)}</span
+                      >`
+                    : nothing
+                }
+                ${
+                  indicator
+                    ? html`<span class="measurement-icon"
+                        >${renderIcon(indicator.icon)}</span
+                      >`
+                    : nothing
+                }
+                <span>${label}</span>
+              </span>`,
+          )}
+        </span>
       </div>
       <span class="overflow-slot next">
         ${
@@ -145,20 +174,12 @@ export class CameraNavigationModule extends LitElement {
   protected updated(): void {
     const selectedValue =
       this._state.activeSelectionId ?? this._state.activeEntityId ?? "";
-    const items =
-      this.renderRoot.querySelector<SegmentedControl>(".items") ?? undefined;
-    if (!items) {
-      this._overflow.observe(undefined, undefined, selectedValue);
-      return;
-    }
-    void items.updateComplete.then(() => {
-      if (
-        !this.isConnected ||
-        this.renderRoot.querySelector(".items") !== items
-      )
-        return;
-      this._overflow.observe(items.scrollViewport, items, selectedValue);
-    });
+    this._overflow.observe(
+      this.renderRoot.querySelector<HTMLElement>(".viewport") ?? undefined,
+      this.renderRoot.querySelector<HTMLElement>(".measurement") ?? undefined,
+      selectedValue,
+      this._state.items.map(({ entityId }) => entityId),
+    );
   }
 
   private _subscribe(): void {
